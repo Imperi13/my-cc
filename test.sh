@@ -19,4 +19,10 @@ assert() {
 assert 0 0
 assert 42 42
 
+assert 41 " 12 + 34 - 5"
+
+assert 34 " 2 *  (11 + 2*3 )"
+
+assert 34 " -2 * ( 5 -2 *11)"
+
 echo OK
