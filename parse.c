@@ -1,14 +1,18 @@
 #include "mycc.h"
 
-bool consume(char op){
-  if (token->kind != TK_RESERVED || token->str[0] != op)
+bool consume(char* op){
+  if (token->kind != TK_RESERVED || 
+      strlen(op) != token->len ||
+      memcmp(token->str,op,token->len))
     return false;
   token = token->next;
   return true;
 }
 
-void expect(char op) {
-  if (token->kind != TK_RESERVED || token->str[0] != op)
+void expect(char* op) {
+  if (token->kind != TK_RESERVED || 
+      strlen(op) != token->len ||
+      memcmp(token->str,op,token->len))
     error("not '%c' op",op);
   token = token->next;
 }
@@ -25,10 +29,11 @@ bool at_eof(){
   return token->kind == TK_EOF;
 }
 
-Token *new_token(TokenKind kind,Token *cur,char *str) {
+Token *new_token(TokenKind kind,Token *cur,char *str,int len) {
   Token *tok = calloc(1,sizeof(Token));
   tok->kind = kind;
   tok->str = str;
+  tok->len = len;
   cur->next = tok;
   return tok;
 }
@@ -44,13 +49,19 @@ Token *tokenize(char *p){
      continue;
    }
 
+   if(strncmp(p,">=",2) == 0 || strncmp(p,"<=",2) ==0 || strncmp(p,"==",2) == 0 || strncmp(p,"!=",2) == 0){
+     cur = new_token(TK_RESERVED,cur,p,2);
+     p+=2;
+     continue;
+   }
+
    if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
-     cur = new_token(TK_RESERVED,cur,p++);
+     cur = new_token(TK_RESERVED,cur,p++,1);
      continue;
    }
 
    if (isdigit(*p)) {
-     cur = new_token(TK_NUM,cur,p);
+     cur = new_token(TK_NUM,cur,p,1);
      cur->val = strtol(p,&p,10);
      continue;
    }
@@ -58,6 +69,14 @@ Token *tokenize(char *p){
    error("cannot tokenize");
  }
 
- new_token(TK_EOF,cur,p);
+ new_token(TK_EOF,cur,p,1);
  return head.next;
+}
+
+void debug_token() {
+  Token *cur = token;
+  while(cur != NULL){
+    fprintf(stderr,"kind:%d , len :%d , str: %s",cur->kind,cur->len,cur->str);
+    cur = cur->next;
+  }
 }
