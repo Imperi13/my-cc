@@ -25,4 +25,8 @@ assert 34 " 2 *  (11 + 2*3 )"
 
 assert 34 " -2 * ( 5 -2 *11)"
 
+assert 1 "10!=20"
+assert 0 "100 < 20 + 30"
+assert 1 "100 >= 50 * 2 "
+
 echo OK

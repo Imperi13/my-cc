@@ -55,6 +55,11 @@ Token *tokenize(char *p){
      continue;
    }
 
+   if(*p == '<' || *p == '>' ){
+     cur = new_token(TK_RESERVED,cur,p++,1);
+     continue;
+   }
+
    if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
      cur = new_token(TK_RESERVED,cur,p++,1);
      continue;
