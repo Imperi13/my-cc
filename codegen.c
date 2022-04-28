@@ -16,6 +16,38 @@ Node *new_node_num(int val) {
 }
 
 Node *expr() {
+  return equality();
+}
+
+Node *equality() {
+  Node *node = relational();
+  for(;;) {
+    if(consume("=="))
+      node = new_node(ND_EQUAL,node,relational());
+    else if(consume("!="))
+      node = new_node(ND_NOT_EQUAL,node,relational());
+    else
+      return node;
+  }
+}
+
+Node *relational() {
+  Node *node = add();
+  for(;;) {
+    if(consume("<"))
+      node = new_node(ND_SMALLER,node,add());
+    else if(consume("<="))
+      node = new_node(ND_SMALLER_EQUAL,node,add());
+    else if (consume(">"))
+      node = new_node(ND_GREATER,node,add());
+    else if (consume(">="))
+      node = new_node(ND_GREATER_EQUAL,node,add());
+    else
+      return node;
+  }
+}
+
+Node *add() {
   Node *node = mul();
   
   for(;;) {
@@ -86,6 +118,8 @@ void gen(Node *node) {
       printf("  cqo\n");
       printf("  idiv rdi\n");
       break;
+    default:
+      error("invalid op");
   }
 
   printf("  push rax\n");

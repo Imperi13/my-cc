@@ -61,22 +61,24 @@ Token *tokenize(char *p){
    }
 
    if (isdigit(*p)) {
+     char *prev = p;
      cur = new_token(TK_NUM,cur,p,1);
      cur->val = strtol(p,&p,10);
+     cur->len = p-prev;
      continue;
    }
 
    error("cannot tokenize");
  }
 
- new_token(TK_EOF,cur,p,1);
+ new_token(TK_EOF,cur,p,0);
  return head.next;
 }
 
 void debug_token() {
   Token *cur = token;
   while(cur != NULL){
-    fprintf(stderr,"kind:%d , len :%d , str: %s",cur->kind,cur->len,cur->str);
+    fprintf(stderr,"kind:%d , len :%d , str: %.*s\n",cur->kind,cur->len,cur->len,cur->str);
     cur = cur->next;
   }
 }

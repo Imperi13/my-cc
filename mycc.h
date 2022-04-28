@@ -10,6 +10,12 @@ typedef enum {
   ND_SUB,
   ND_MUL,
   ND_DIV,
+  ND_EQUAL,
+  ND_NOT_EQUAL,
+  ND_GREATER,
+  ND_GREATER_EQUAL,
+  ND_SMALLER,
+  ND_SMALLER_EQUAL,
   ND_NUM,
 } NodeKind;
 
@@ -58,6 +64,9 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
 Node *new_node_num(int val);
 
 Node *expr();
+Node *equality();
+Node *relational();
+Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
