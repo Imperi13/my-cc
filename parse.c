@@ -9,6 +9,14 @@ bool consume(char* op){
   return true;
 }
 
+Token *consume_ident(){
+  if (token->kind != TK_IDENT)
+    return NULL;
+  Token *tok = token;
+  token = token->next;
+  return tok;
+}
+
 void expect(char* op) {
   if (token->kind != TK_RESERVED || 
       strlen(op) != token->len ||
@@ -60,7 +68,12 @@ Token *tokenize(char *p){
      continue;
    }
 
-   if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
+   if ('a' <= *p && *p <= 'z') {
+     cur = new_token(TK_IDENT,cur,p++,1);
+     continue;
+   }
+
+   if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '=' || *p == ';') {
      cur = new_token(TK_RESERVED,cur,p++,1);
      continue;
    }
