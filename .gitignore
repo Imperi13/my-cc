@@ -53,4 +53,5 @@ dkms.conf
 
 *.s
 tmp*
+.gdb_history
 mycc
