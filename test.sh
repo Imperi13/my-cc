@@ -31,4 +31,6 @@ assert 1 "100 >= 50 * 2 ;"
 
 assert 10 "a=2;b=20;b/a;"
 
+assert 10 "two=2;twenty=20;twenty/two;"
+
 echo OK
