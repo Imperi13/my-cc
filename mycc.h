@@ -48,9 +48,21 @@ struct Token{
   int len;
 };
 
+typedef struct LVar LVar;
+
+struct LVar {
+  LVar *next;
+  char *name;
+  int len;
+  int offset;
+};
+
+extern const char variable_letters[];
+
 extern Token *token;
 extern char *user_input;
 extern Node *code[100];
+extern LVar *locals;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
@@ -63,6 +75,8 @@ bool at_eof();
 
 Token *new_token(TokenKind kind,Token *cur, char *str,int len);
 Token *tokenize(char *p);
+
+LVar *find_lvar(Token *tok);
 
 void debug_token();
 

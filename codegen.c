@@ -15,13 +15,6 @@ Node *new_node_num(int val) {
   return node;
 }
 
-Node *new_node_ident(char ident){
-  Node *node = calloc(1,sizeof(Node));
-  node->kind = ND_LVAR;
-  node->offset = (ident - 'a' + 1)*8;
-  return node;
-}
-
 void program() {
   int i = 0;
   while(!at_eof())
@@ -116,8 +109,27 @@ Node *primary() {
   }
 
   Token *tok = consume_ident();
-  if(tok)
-    return new_node_ident(tok->str[0]);
+  if(tok){
+    Node *node = calloc(1,sizeof(Node));
+    node->kind = ND_LVAR;
+
+    LVar *lvar = find_lvar(tok);
+    if(lvar) {
+      node->offset=lvar->offset;
+    } else {
+      lvar = calloc(1,sizeof(LVar));
+      lvar->next = locals;
+      lvar->name = tok->str;
+      lvar->len = tok->len;
+      if(locals)
+        lvar->offset = locals->offset + 8;
+      else
+        lvar->offset = 8;
+      node->offset = lvar->offset;
+      locals = lvar;
+    }
+    return node;
+  }
 
   return new_node_num(expect_number());
 }

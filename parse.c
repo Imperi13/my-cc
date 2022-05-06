@@ -46,6 +46,8 @@ Token *new_token(TokenKind kind,Token *cur,char *str,int len) {
   return tok;
 }
 
+const char variable_letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
 Token *tokenize(char *p){
  Token head;
  head.next = NULL;
@@ -68,11 +70,6 @@ Token *tokenize(char *p){
      continue;
    }
 
-   if ('a' <= *p && *p <= 'z') {
-     cur = new_token(TK_IDENT,cur,p++,1);
-     continue;
-   }
-
    if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '=' || *p == ';') {
      cur = new_token(TK_RESERVED,cur,p++,1);
      continue;
@@ -86,11 +83,27 @@ Token *tokenize(char *p){
      continue;
    }
 
+   if (strspn(p,variable_letters) > 0){
+     int len = strspn(p,variable_letters);
+     cur = new_token(TK_IDENT,cur,p,len);
+     p+=len;
+     continue;
+   }
+
    error("cannot tokenize");
  }
 
  new_token(TK_EOF,cur,p,0);
  return head.next;
+}
+
+LVar *locals;
+
+LVar *find_lvar(Token *tok){
+  for(LVar *var = locals; var; var = var->next)
+    if (var->len == tok->len && !memcmp(tok->str,var->name,var->len))
+      return var;
+  return NULL;
 }
 
 void debug_token() {
