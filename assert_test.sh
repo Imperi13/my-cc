@@ -39,4 +39,6 @@ assert 45 "test/variable3.in"
 
 assert 10 "test/return1.in"
 
+assert 4 "test/if_stmt1.in"
+
 echo OK

@@ -25,6 +25,16 @@ void program() {
 Node *stmt() {
   Node *node;
 
+  if(consume_kind(TK_IF)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_IF;
+    expect("(");
+    node -> expr = expr();
+    expect(")");
+    node -> lhs = stmt();
+    return node;
+  }
+
   if(consume_kind(TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
@@ -142,6 +152,8 @@ Node *primary() {
   return new_node_num(expect_number());
 }
 
+int label_count = 0;
+
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR)
     error("not lval");
@@ -177,6 +189,15 @@ void gen(Node *node) {
       printf("  mov rsp,rbp\n");
       printf("  pop rbp\n");
       printf("  ret\n");
+      return;
+    case ND_IF:
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lend%d\n",label_count);
+      gen(node->lhs);
+      printf(".Lend%d:\n",label_count);
+      label_count++;
       return;
     default:
       break;
