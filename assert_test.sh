@@ -49,4 +49,7 @@ assert 45 "test/while_stmt2.in"
 
 assert 45 "test/for_stmt1.in"
 
+assert 3 "test/block1.in"
+assert 4 "test/block2.in"
+
 echo OK

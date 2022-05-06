@@ -24,10 +24,12 @@ typedef enum {
   ND_IFELSE,
   ND_WHILE,
   ND_FOR,
+  ND_BLOCK,
   ND_NUM,
 } NodeKind;
 
 typedef struct Node Node;
+typedef struct StmtList StmtList;
 
 struct Node {
   NodeKind kind;
@@ -36,8 +38,15 @@ struct Node {
   Node *expr;
   Node *init_expr;
   Node *update_expr;
+  StmtList *front;
+  StmtList *back;
   int val;
   int offset;
+};
+
+struct StmtList {
+  StmtList *next;
+  Node *stmt;
 };
 
 typedef enum {
