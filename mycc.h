@@ -18,6 +18,7 @@ typedef enum {
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
   ND_LVAR,
+  ND_RETURN,
   ND_NUM,
 } NodeKind;
 
@@ -33,6 +34,7 @@ struct Node {
 
 typedef enum {
   TK_RESERVED,
+  TK_RETURN,
   TK_IDENT,
   TK_NUM,
   TK_EOF,
@@ -68,10 +70,12 @@ void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 
 bool consume(char* op);
-Token *consume_ident();
+Token *consume_kind();
 void expect(char* op);
 int expect_number();
 bool at_eof();
+
+bool is_alnum(char c);
 
 Token *new_token(TokenKind kind,Token *cur, char *str,int len);
 Token *tokenize(char *p);

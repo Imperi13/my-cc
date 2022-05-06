@@ -33,4 +33,8 @@ assert 10 "a=2;b=20;b/a;"
 
 assert 10 "two=2;twenty=20;twenty/two;"
 
+assert 45 "three=3;three = three + 12;three = three * 3;"
+
+assert 10 "two= 2; five = 5; return two*five;two = 3;"
+
 echo OK
