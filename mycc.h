@@ -21,6 +21,7 @@ typedef enum {
   ND_LVAR,
   ND_RETURN,
   ND_IF,
+  ND_IFELSE,
   ND_NUM,
 } NodeKind;
 
@@ -39,6 +40,7 @@ typedef enum {
   TK_RESERVED,
   TK_RETURN,
   TK_IF,
+  TK_ELSE,
   TK_IDENT,
   TK_NUM,
   TK_EOF,

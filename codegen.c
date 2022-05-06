@@ -32,6 +32,11 @@ Node *stmt() {
     node -> expr = expr();
     expect(")");
     node -> lhs = stmt();
+
+    if(consume_kind(TK_ELSE)){
+      node -> kind = ND_IFELSE;
+      node -> rhs = stmt();
+    }
     return node;
   }
 
@@ -164,6 +169,7 @@ void gen_lval(Node *node) {
 }
 
 void gen(Node *node) {
+  int now_count;
   switch(node->kind) {
     case ND_NUM:
       printf("  push %d\n",node->val);
@@ -191,13 +197,27 @@ void gen(Node *node) {
       printf("  ret\n");
       return;
     case ND_IF:
+      now_count = label_count;
+      label_count++;
       gen(node->expr);
       printf("  pop rax\n");
       printf("  cmp rax,0\n");
-      printf("  je .Lend%d\n",label_count);
+      printf("  je .Lend%d\n",now_count);
       gen(node->lhs);
-      printf(".Lend%d:\n",label_count);
+      printf(".Lend%d:\n",now_count);
+      return;
+    case ND_IFELSE:
+      now_count = label_count;
       label_count++;
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lelse%d\n",now_count);
+      gen(node->lhs);
+      printf("  jmp .Lend%d\n",now_count);
+      printf(".Lelse%d:\n",now_count);
+      gen(node->rhs);
+      printf(".Lend%d:\n",now_count);
       return;
     default:
       break;
