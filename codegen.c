@@ -25,6 +25,23 @@ void program() {
 Node *stmt() {
   Node *node;
 
+  if(consume("{")){
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_BLOCK;
+    while(!consume("}")){
+      StmtList *push_stmt=calloc(1,sizeof(StmtList));
+      push_stmt->stmt = stmt();
+      if(!node->back){
+        node->front=push_stmt;
+        node->back=push_stmt;
+        continue;
+      }
+      node->back->next = push_stmt;
+      node->back = push_stmt;
+    }
+    return node;
+  }
+
   if(consume_kind(TK_IF)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_IF;
@@ -279,6 +296,14 @@ void gen(Node *node) {
         gen(node->update_expr);
       printf("  jmp .Lbegin%d\n",now_count);
       printf(".Lend%d:\n",now_count);
+      return;
+    case ND_BLOCK:
+      while(node->front){
+        gen(node->front->stmt);
+        node->front = node->front->next;
+        if(node->front)
+          printf("  pop rax\n");
+      }
       return;
     default:
       break;
