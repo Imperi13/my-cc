@@ -9,8 +9,8 @@ bool consume(char* op){
   return true;
 }
 
-Token *consume_ident(){
-  if (token->kind != TK_IDENT)
+Token *consume_kind(TokenKind kind) {
+  if (token->kind != kind)
     return NULL;
   Token *tok = token;
   token = token->next;
@@ -46,7 +46,14 @@ Token *new_token(TokenKind kind,Token *cur,char *str,int len) {
   return tok;
 }
 
-const char variable_letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const char variable_letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+
+bool is_alnum(char c) {
+  for(const char *p = variable_letters;*p!='\0';p++)
+    if(*p == c)
+      return true;
+  return false;
+}
 
 Token *tokenize(char *p){
  Token head;
@@ -54,7 +61,7 @@ Token *tokenize(char *p){
  Token *cur = &head;
 
  while(*p) {
-   if (isspace(*p)) {
+   if (isspace(*p) || *p == '\n') {
      p++;
      continue;
    }
@@ -80,6 +87,12 @@ Token *tokenize(char *p){
      cur = new_token(TK_NUM,cur,p,1);
      cur->val = strtol(p,&p,10);
      cur->len = p-prev;
+     continue;
+   }
+
+   if(strncmp(p,"return",6) == 0 && !is_alnum(p[6])) {
+     cur = new_token(TK_RETURN,cur,p,6);
+     p+=6;
      continue;
    }
 
