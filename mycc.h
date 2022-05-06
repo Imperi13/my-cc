@@ -23,6 +23,7 @@ typedef enum {
   ND_IF,
   ND_IFELSE,
   ND_WHILE,
+  ND_FOR,
   ND_NUM,
 } NodeKind;
 
@@ -33,6 +34,8 @@ struct Node {
   Node *lhs;
   Node *rhs;
   Node *expr;
+  Node *init_expr;
+  Node *update_expr;
   int val;
   int offset;
 };
@@ -43,6 +46,7 @@ typedef enum {
   TK_IF,
   TK_ELSE,
   TK_WHILE,
+  TK_FOR,
   TK_IDENT,
   TK_NUM,
   TK_EOF,
