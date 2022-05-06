@@ -9,7 +9,7 @@ mycc: $(OBJS)
 $(OBJS): mycc.h
 
 test: mycc
-	./test.sh
+	./assert_test.sh
 
 clean:
 	rm -f mycc *.o *~ tmp*

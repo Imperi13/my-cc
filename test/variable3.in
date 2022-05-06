@@ -1,0 +1,4 @@
+three=3;
+three = three + 12;
+three = three * 3;
+
