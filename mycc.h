@@ -20,6 +20,8 @@ typedef enum {
   ND_ASSIGN,
   ND_LVAR,
   ND_RETURN,
+  ND_IF,
+  ND_IFELSE,
   ND_NUM,
 } NodeKind;
 
@@ -29,6 +31,7 @@ struct Node {
   NodeKind kind;
   Node *lhs;
   Node *rhs;
+  Node *expr;
   int val;
   int offset;
 };
@@ -36,6 +39,8 @@ struct Node {
 typedef enum {
   TK_RESERVED,
   TK_RETURN,
+  TK_IF,
+  TK_ELSE,
   TK_IDENT,
   TK_NUM,
   TK_EOF,
@@ -66,6 +71,7 @@ extern Token *token;
 extern char *user_input;
 extern Node *code[100];
 extern LVar *locals;
+extern int label_count;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);

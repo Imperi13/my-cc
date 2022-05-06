@@ -25,6 +25,21 @@ void program() {
 Node *stmt() {
   Node *node;
 
+  if(consume_kind(TK_IF)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_IF;
+    expect("(");
+    node -> expr = expr();
+    expect(")");
+    node -> lhs = stmt();
+
+    if(consume_kind(TK_ELSE)){
+      node -> kind = ND_IFELSE;
+      node -> rhs = stmt();
+    }
+    return node;
+  }
+
   if(consume_kind(TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
@@ -142,6 +157,8 @@ Node *primary() {
   return new_node_num(expect_number());
 }
 
+int label_count = 0;
+
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR)
     error("not lval");
@@ -152,6 +169,7 @@ void gen_lval(Node *node) {
 }
 
 void gen(Node *node) {
+  int now_count;
   switch(node->kind) {
     case ND_NUM:
       printf("  push %d\n",node->val);
@@ -177,6 +195,29 @@ void gen(Node *node) {
       printf("  mov rsp,rbp\n");
       printf("  pop rbp\n");
       printf("  ret\n");
+      return;
+    case ND_IF:
+      now_count = label_count;
+      label_count++;
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lend%d\n",now_count);
+      gen(node->lhs);
+      printf(".Lend%d:\n",now_count);
+      return;
+    case ND_IFELSE:
+      now_count = label_count;
+      label_count++;
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lelse%d\n",now_count);
+      gen(node->lhs);
+      printf("  jmp .Lend%d\n",now_count);
+      printf(".Lelse%d:\n",now_count);
+      gen(node->rhs);
+      printf(".Lend%d:\n",now_count);
       return;
     default:
       break;
