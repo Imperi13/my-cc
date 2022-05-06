@@ -114,6 +114,12 @@ Token *tokenize(char *p){
      continue;
    }
 
+   if(strncmp(p,"for",3) == 0 && !is_alnum(p[3])) {
+     cur = new_token(TK_FOR,cur,p,3);
+     p += 3;
+     continue;
+   }
+
    if (strspn(p,variable_letters) > 0){
      int len = strspn(p,variable_letters);
      cur = new_token(TK_IDENT,cur,p,len);
