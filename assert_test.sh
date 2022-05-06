@@ -43,4 +43,8 @@ assert 4 "test/if_stmt1.in"
 assert 3 "test/if_stmt2.in"
 assert 20 "test/if_stmt3.in"
 
+assert 0 "test/while_stmt1.in"
+
+assert 45 "test/while_stmt2.in"
+
 echo OK

@@ -40,6 +40,16 @@ Node *stmt() {
     return node;
   }
 
+  if(consume_kind(TK_WHILE)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_WHILE;
+    expect("(");
+    node->expr = expr();
+    expect(")");
+    node->lhs = stmt();
+    return node;
+  }
+
   if(consume_kind(TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
@@ -217,6 +227,18 @@ void gen(Node *node) {
       printf("  jmp .Lend%d\n",now_count);
       printf(".Lelse%d:\n",now_count);
       gen(node->rhs);
+      printf(".Lend%d:\n",now_count);
+      return;
+    case ND_WHILE:
+      now_count = label_count;
+      label_count++;
+      printf(".Lbegin%d:\n",now_count);
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lend%d\n",now_count);
+      gen(node->lhs);
+      printf("  jmp .Lbegin%d\n",now_count);
       printf(".Lend%d:\n",now_count);
       return;
     default:
