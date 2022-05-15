@@ -84,7 +84,9 @@ extern const char variable_letters[];
 
 extern Token *token;
 extern char *user_input;
-extern Node *code[100];
+//extern Node *code[100];
+extern StmtList* code_front;
+extern StmtList* code_back;
 extern LVar *locals;
 extern int label_count;
 
@@ -121,7 +123,7 @@ Node *unary();
 Node *primary();
 
 void gen(Node *node);
-
+void codegen_all(FILE *output);
 
 
 

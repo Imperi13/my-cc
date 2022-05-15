@@ -17,10 +17,18 @@ Node *new_node_num(int val) {
 
 void program() {
   int i = 0;
-  while(!at_eof())
-    code[i++] = stmt();
-  code[i] = NULL;
-}
+  while(!at_eof()){
+    StmtList *push_stmt = calloc(1,sizeof(StmtList));
+    push_stmt -> stmt = stmt();
+    if(!code_back) {
+      code_front = push_stmt;
+      code_back = push_stmt;
+      continue;
+    }
+    code_back->next = push_stmt;
+    code_back = push_stmt;
+  }
+}   
 
 Node *stmt() {
   Node *node;
@@ -364,4 +372,30 @@ void gen(Node *node) {
   }
 
   printf("  push rax\n");
+}
+
+void codegen_all(FILE *output) {
+  int len = 0;
+  LVar *now = locals;
+  while(now){
+    len++;
+    now = now->next;
+  }
+
+  fprintf(output,".intel_syntax noprefix\n");
+  fprintf(output,".globl main\n");
+  fprintf(output,"main:\n");
+ 
+  fprintf(output,"  push rbp\n");
+  fprintf(output,"  mov rbp, rsp\n");
+  fprintf(output,"  sub rsp, %d\n",len*8);
+
+  for (StmtList *now = code_front;now;now = now->next) {
+    gen(now->stmt);
+    fprintf(output,"  pop rax\n");
+  }
+
+  fprintf(output,"  mov rsp, rbp\n");
+  fprintf(output,"  pop rbp\n");
+  fprintf(output,"  ret\n");
 }

@@ -31,7 +31,8 @@ char *read_file(char *path) {
 
 Token *token;
 char *user_input;
-Node *code[100];
+StmtList *code_front = NULL;
+StmtList *code_back = NULL;
 
 
 void error_at(char *loc, char *fmt, ...) {
@@ -59,29 +60,7 @@ int main(int argc,char **argv){
   //debug_token();
 
   program();
-
-  int len = 0;
-  LVar *now = locals;
-  while(now){
-    len++;
-    now = now->next;
-  }
-
-  printf(".intel_syntax noprefix\n");
-  printf(".globl main\n");
-  printf("main:\n");
- 
-  printf("  push rbp\n");
-  printf("  mov rbp, rsp\n");
-  printf("  sub rsp, %d\n",len*8);
-
-  for (int i=0;code[i];i++) {
-    gen(code[i]);
-    printf("  pop rax\n");
-  }
-
-  printf("  mov rsp, rbp\n");
-  printf("  pop rbp\n");
-  printf("  ret\n");
+  
+  codegen_all(stdout);
   return 0;
 }
