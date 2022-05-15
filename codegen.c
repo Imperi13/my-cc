@@ -192,6 +192,13 @@ Node *primary() {
   Token *tok = consume_kind(TK_IDENT);
   if(tok){
     Node *node = calloc(1,sizeof(Node));
+    if(consume("(")){
+      node->kind = ND_FUNCTION_CALL;
+      node->func_name = tok->str;
+      node->func_name_len = tok->len;
+      expect(")");
+      return node;
+    }
     node->kind = ND_LVAR;
 
     LVar *lvar = find_lvar(tok);
@@ -312,6 +319,16 @@ void gen(Node *node) {
         if(node->front)
           printf("  pop rax\n");
       }
+      return;
+    case ND_FUNCTION_CALL:
+      printf("  mov r8,rsp\n");
+      printf("  and rsp,0xfffffffffffffff0\n");
+      printf("  push r8\n");
+      printf("  push 0\n");
+      printf("  call %.*s\n",node->func_name_len,node->func_name);
+      printf("  pop r8\n");
+      printf("  pop rsp\n");
+      printf("  push rax\n");
       return;
     default:
       break;
