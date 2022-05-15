@@ -192,6 +192,13 @@ Node *primary() {
   Token *tok = consume_kind(TK_IDENT);
   if(tok){
     Node *node = calloc(1,sizeof(Node));
+    if(consume("(")){
+      node->kind = ND_FUNCTION_CALL;
+      node->func_name = tok->str;
+      node->func_name_len = tok->len;
+      expect(")");
+      return node;
+    }
     node->kind = ND_LVAR;
 
     LVar *lvar = find_lvar(tok);
@@ -274,6 +281,7 @@ void gen_lval(Node *node) {
 
 void gen(Node *node) {
   int now_count;
+  int stack_align;
   switch(node->kind) {
     case ND_NUM:
       gen_push_value(node->val);
@@ -359,6 +367,15 @@ void gen(Node *node) {
           gen_pop(REG_RAX);
       }
       return;
+    case ND_FUNCTION_CALL:
+      stack_align = stack_offset % 0x10;
+      if(stack_align != 0)
+        gen_push_value(0);
+      fprintf(output,"  call %.*s\n",node->func_name_len,node->func_name);
+      if(stack_align != 0)
+        gen_pop(REG_RDI);
+      gen_push(REG_RAX);
+      return;
     default:
       break;
   }
@@ -422,7 +439,7 @@ void gen(Node *node) {
 
 void codegen_all() {
   label_count = 0;
-  stack_offset = 0;
+  stack_offset = 8; //for stack alignment
 
   int len = 0;
   LVar *now = locals;
