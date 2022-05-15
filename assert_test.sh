@@ -55,4 +55,6 @@ assert 120 "test/block3.in"
 
 assert 55 "test/function_call1.in"
 
+assert 23 "test/function_call2.in"
+
 echo OK
