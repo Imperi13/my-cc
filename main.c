@@ -31,7 +31,8 @@ char *read_file(char *path) {
 
 Token *token;
 char *user_input;
-Node *code[100];
+StmtList *code_front = NULL;
+StmtList *code_back = NULL;
 
 
 void error_at(char *loc, char *fmt, ...) {
