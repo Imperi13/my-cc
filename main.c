@@ -33,7 +33,7 @@ Token *token;
 char *user_input;
 StmtList *code_front = NULL;
 StmtList *code_back = NULL;
-
+FILE *output;
 
 void error_at(char *loc, char *fmt, ...) {
   va_list ap;
@@ -60,7 +60,8 @@ int main(int argc,char **argv){
   //debug_token();
 
   program();
-  
-  codegen_all(stdout);
+ 
+  output = stdout;
+  codegen_all();
   return 0;
 }

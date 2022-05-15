@@ -88,7 +88,7 @@ extern char *user_input;
 extern StmtList* code_front;
 extern StmtList* code_back;
 extern LVar *locals;
-extern int label_count;
+extern FILE *output;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
@@ -123,7 +123,7 @@ Node *unary();
 Node *primary();
 
 void gen(Node *node);
-void codegen_all(FILE *output);
+void codegen_all();
 
 
 

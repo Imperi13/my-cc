@@ -216,6 +216,49 @@ Node *primary() {
 }
 
 int label_count = 0;
+int stack_offset = 0;
+
+typedef enum {
+  REG_RAX,
+  REG_RDI,
+  REG_RBP,
+} Register;
+
+void gen_pop(Register reg){
+  switch(reg){
+    case REG_RAX:
+      fprintf(output,"  pop rax\n");
+      break;
+    case REG_RDI:
+      fprintf(output,"  pop rdi\n");
+      break;
+    case REG_RBP:
+      fprintf(output,"  pop rbp\n");
+      break;
+    default:
+      error("not implemented");
+  }
+  stack_offset -= 8;
+}
+
+void gen_push(Register reg){
+  switch(reg){
+    case REG_RAX:
+      fprintf(output,"  push rax\n");
+      break;
+    case REG_RDI:
+      fprintf(output,"  push rdi\n");
+      break;
+    default:
+      error("not implemented");
+  }
+  stack_offset += 8;
+}
+
+void gen_push_value(int val){
+  fprintf(output,"  push %d\n",val);
+  stack_offset += 8;
+}
 
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR)
@@ -374,7 +417,10 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-void codegen_all(FILE *output) {
+void codegen_all() {
+  label_count = 0;
+  stack_offset = 0;
+
   int len = 0;
   LVar *now = locals;
   while(now){
