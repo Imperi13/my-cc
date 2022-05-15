@@ -121,7 +121,7 @@ Node *unary();
 Node *primary();
 
 void gen(Node *node);
-
+void codegen_all(FILE *output);
 
 
 

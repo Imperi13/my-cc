@@ -365,3 +365,29 @@ void gen(Node *node) {
 
   printf("  push rax\n");
 }
+
+void codegen_all(FILE *output) {
+  int len = 0;
+  LVar *now = locals;
+  while(now){
+    len++;
+    now = now->next;
+  }
+
+  fprintf(output,".intel_syntax noprefix\n");
+  fprintf(output,".globl main\n");
+  fprintf(output,"main:\n");
+ 
+  fprintf(output,"  push rbp\n");
+  fprintf(output,"  mov rbp, rsp\n");
+  fprintf(output,"  sub rsp, %d\n",len*8);
+
+  for (int i=0;code[i];i++) {
+    gen(code[i]);
+    fprintf(output,"  pop rax\n");
+  }
+
+  fprintf(output,"  mov rsp, rbp\n");
+  fprintf(output,"  pop rbp\n");
+  fprintf(output,"  ret\n");
+}
