@@ -1,137 +1,24 @@
 #include "mycc.h"
 
-bool consume(char* op){
-  if (token->kind != TK_RESERVED || 
-      strlen(op) != token->len ||
-      memcmp(token->str,op,token->len))
-    return false;
-  token = token->next;
-  return true;
+void error(char *fmt, ...) {
+  va_list ap;
+  va_start(ap,fmt);
+  vfprintf(stderr,fmt,ap);
+  fprintf(stderr,"\n");
+  exit(1);
 }
 
-Token *consume_kind(TokenKind kind) {
-  if (token->kind != kind)
-    return NULL;
-  Token *tok = token;
-  token = token->next;
-  return tok;
-}
+void error_at(char *loc, char *fmt, ...) {
+  va_list ap;
+  va_start(ap,fmt);
 
-void expect(char* op) {
-  if (token->kind != TK_RESERVED || 
-      strlen(op) != token->len ||
-      memcmp(token->str,op,token->len))
-    error("not '%c' op",op);
-  token = token->next;
-}
-
-int expect_number(){
-  if (token->kind != TK_NUM)
-    error("not number");
-  int val = token->val;
-  token = token->next;
-  return val;
-}
-
-bool at_eof(){
-  return token->kind == TK_EOF;
-}
-
-Token *new_token(TokenKind kind,Token *cur,char *str,int len) {
-  Token *tok = calloc(1,sizeof(Token));
-  tok->kind = kind;
-  tok->str = str;
-  tok->len = len;
-  cur->next = tok;
-  return tok;
-}
-
-const char variable_letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
-
-bool is_alnum(char c) {
-  for(const char *p = variable_letters;*p!='\0';p++)
-    if(*p == c)
-      return true;
-  return false;
-}
-
-Token *tokenize(char *p){
- Token head;
- head.next = NULL;
- Token *cur = &head;
-
- while(*p) {
-   if (isspace(*p) || *p == '\n') {
-     p++;
-     continue;
-   }
-
-   if(strncmp(p,">=",2) == 0 || strncmp(p,"<=",2) ==0 || strncmp(p,"==",2) == 0 || strncmp(p,"!=",2) == 0){
-     cur = new_token(TK_RESERVED,cur,p,2);
-     p+=2;
-     continue;
-   }
-
-   if(*p == '<' || *p == '>' ){
-     cur = new_token(TK_RESERVED,cur,p++,1);
-     continue;
-   }
-
-   if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '=' || *p == ';' || *p == '{' || *p == '}') {
-     cur = new_token(TK_RESERVED,cur,p++,1);
-     continue;
-   }
-
-   if (isdigit(*p)) {
-     char *prev = p;
-     cur = new_token(TK_NUM,cur,p,1);
-     cur->val = strtol(p,&p,10);
-     cur->len = p-prev;
-     continue;
-   }
-
-   if(strncmp(p,"return",6) == 0 && !is_alnum(p[6])) {
-     cur = new_token(TK_RETURN,cur,p,6);
-     p+=6;
-     continue;
-   }
-
-   if(strncmp(p,"if",2) == 0 && !is_alnum(p[2])) {
-     cur = new_token(TK_IF,cur,p,2);
-     p+=2;
-     continue;
-   }
-
-   if(strncmp(p,"else",4) == 0 && !is_alnum(p[4])) {
-     cur = new_token(TK_ELSE,cur,p,4);
-     p+=4;
-     continue;
-   }
-
-   if(strncmp(p,"while",5) == 0 && !is_alnum(p[5])) {
-     cur = new_token(TK_WHILE,cur,p,5);
-     p+=5;
-     continue;
-   }
-
-   if(strncmp(p,"for",3) == 0 && !is_alnum(p[3])) {
-     cur = new_token(TK_FOR,cur,p,3);
-     p += 3;
-     continue;
-   }
-
-   if (strspn(p,variable_letters) > 0){
-     int len = strspn(p,variable_letters);
-     cur = new_token(TK_IDENT,cur,p,len);
-     p+=len;
-     continue;
-   }
-
-   error("cannot tokenize");
- }
-
- new_token(TK_EOF,cur,p,0);
- return head.next;
+  int pos = loc - user_input;
+  fprintf(stderr, "%s\n", user_input);
+  fprintf(stderr,"%*s",pos, " ");
+  fprintf(stderr,"^ ");
+  vfprintf(stderr,fmt,ap);
+  fprintf(stderr, "\n");
+  exit(1);
 }
 
 LVar *locals;
@@ -143,10 +30,224 @@ LVar *find_lvar(Token *tok){
   return NULL;
 }
 
-void debug_token() {
-  Token *cur = token;
-  while(cur != NULL){
-    fprintf(stderr,"kind:%d , len :%d , str: %.*s\n",cur->kind,cur->len,cur->len,cur->str);
-    cur = cur->next;
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+  Node *node = calloc(1,sizeof(Node));
+  node->kind = kind;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_num(int val) {
+  Node *node = calloc(1,sizeof(Node));
+  node->kind = ND_NUM;
+  node->val = val;
+  return node;
+}
+
+void program() {
+  int i = 0;
+  while(!at_eof()){
+    StmtList *push_stmt = calloc(1,sizeof(StmtList));
+    push_stmt -> stmt = stmt();
+    if(!code_back) {
+      code_front = push_stmt;
+      code_back = push_stmt;
+      continue;
+    }
+    code_back->next = push_stmt;
+    code_back = push_stmt;
   }
+}   
+
+Node *stmt() {
+  Node *node;
+
+  if(consume("{")){
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_BLOCK;
+    while(!consume("}")){
+      StmtList *push_stmt=calloc(1,sizeof(StmtList));
+      push_stmt->stmt = stmt();
+      if(!node->back){
+        node->front=push_stmt;
+        node->back=push_stmt;
+        continue;
+      }
+      node->back->next = push_stmt;
+      node->back = push_stmt;
+    }
+    return node;
+  }
+
+  if(consume_kind(TK_IF)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_IF;
+    expect("(");
+    node -> expr = expr();
+    expect(")");
+    node -> lhs = stmt();
+
+    if(consume_kind(TK_ELSE)){
+      node -> kind = ND_IFELSE;
+      node -> rhs = stmt();
+    }
+    return node;
+  }
+
+  if(consume_kind(TK_WHILE)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_WHILE;
+    expect("(");
+    node->expr = expr();
+    expect(")");
+    node->lhs = stmt();
+    return node;
+  }
+
+  if(consume_kind(TK_FOR)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_FOR;
+    expect("(");
+    if(!consume(";")){
+      node->init_expr = expr();
+      expect(";");
+    }
+    if(!consume(";")){
+      node->expr=expr();
+      expect(";");
+    }else{
+      node->expr=new_node_num(1);
+    }
+    if(!consume(")")){
+      node->update_expr=expr();
+      expect(")");
+    }
+
+    node->lhs=stmt();
+    return node;
+  }
+
+  if(consume_kind(TK_RETURN)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_RETURN;
+    node->lhs = expr();
+  }else{
+    node = expr();
+  }
+  expect(";");
+  return node;
+}
+
+Node *expr() {
+  return assign();
+}
+
+Node *assign() {
+  Node *node = equality();
+  if (consume("="))
+    node = new_node(ND_ASSIGN,node,assign());
+  return node;
+}
+
+Node *equality() {
+  Node *node = relational();
+  for(;;) {
+    if(consume("=="))
+      node = new_node(ND_EQUAL,node,relational());
+    else if(consume("!="))
+      node = new_node(ND_NOT_EQUAL,node,relational());
+    else
+      return node;
+  }
+}
+
+Node *relational() {
+  Node *node = add();
+  for(;;) {
+    if(consume("<"))
+      node = new_node(ND_SMALLER,node,add());
+    else if(consume("<="))
+      node = new_node(ND_SMALLER_EQUAL,node,add());
+    else if (consume(">"))
+      node = new_node(ND_GREATER,node,add());
+    else if (consume(">="))
+      node = new_node(ND_GREATER_EQUAL,node,add());
+    else
+      return node;
+  }
+}
+
+Node *add() {
+  Node *node = mul();
+  
+  for(;;) {
+    if(consume("+"))
+      node = new_node(ND_ADD, node,mul());
+    else if(consume("-"))
+      node = new_node(ND_SUB,node,mul());
+    else
+      return node;
+  }
+}
+
+Node *mul() {
+  Node *node = unary();
+
+  for(;;) {
+    if(consume("*"))
+      node = new_node(ND_MUL,node,unary());
+    else if(consume("/"))
+      node = new_node(ND_DIV,node,unary());
+    else 
+      return node;
+  }
+}
+
+Node *unary() {
+  if(consume("+"))
+    return primary();
+  if(consume("-"))
+    return new_node(ND_SUB,new_node_num(0), primary());
+  return primary();
+}
+
+Node *primary() {
+  if(consume("(")){
+    Node *node = expr();
+    expect(")");
+    return node;
+  }
+
+  Token *tok = consume_kind(TK_IDENT);
+  if(tok){
+    Node *node = calloc(1,sizeof(Node));
+    if(consume("(")){
+      node->kind = ND_FUNCTION_CALL;
+      node->func_name = tok->str;
+      node->func_name_len = tok->len;
+      expect(")");
+      return node;
+    }
+    node->kind = ND_LVAR;
+
+    LVar *lvar = find_lvar(tok);
+    if(lvar) {
+      node->offset=lvar->offset;
+    } else {
+      lvar = calloc(1,sizeof(LVar));
+      lvar->next = locals;
+      lvar->name = tok->str;
+      lvar->len = tok->len;
+      if(locals)
+        lvar->offset = locals->offset + 8;
+      else
+        lvar->offset = 8;
+      node->offset = lvar->offset;
+      locals = lvar;
+    }
+    return node;
+  }
+
+  return new_node_num(expect_number());
 }
