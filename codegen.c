@@ -1,5 +1,7 @@
 #include "mycc.h"
 
+char call_register[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
+
 int label_count = 0;
 
 void gen_lval(Node *node) {
@@ -13,6 +15,7 @@ void gen_lval(Node *node) {
 
 void gen(Node *node) {
   int now_count;
+  int arg_count;
   switch(node->kind) {
     case ND_NUM:
       printf("  push %d\n",node->val);
@@ -91,10 +94,10 @@ void gen(Node *node) {
       printf(".Lend%d:\n",now_count);
       return;
     case ND_BLOCK:
-      while(node->front){
-        gen(node->front->stmt);
-        node->front = node->front->next;
-        if(node->front)
+      while(node->stmt_front){
+        gen(node->stmt_front->stmt);
+        node->stmt_front = node->stmt_front->next;
+        if(node->stmt_front)
           printf("  pop rax\n");
       }
       return;
@@ -103,6 +106,17 @@ void gen(Node *node) {
       printf("  and rsp,0xfffffffffffffff0\n");
       printf("  push r8\n");
       printf("  push 0\n");
+      arg_count = 0;
+      while(node->expr_front){
+        if(arg_count >= 6)
+          error("more than 6 arguments is not implemented");
+        gen(node->expr_front->expr);
+        node->expr_front = node->expr_front->next;
+        arg_count++;
+      }
+      for(int i=arg_count-1;i>=0;i--){
+        printf("  pop %s\n",call_register[i]);
+      }
       printf("  call %.*s\n",node->func_name_len,node->func_name);
       printf("  pop r8\n");
       printf("  pop rsp\n");

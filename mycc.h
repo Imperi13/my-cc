@@ -31,6 +31,7 @@ typedef enum {
 
 typedef struct Node Node;
 typedef struct StmtList StmtList;
+typedef struct ExprList ExprList;
 
 struct Node {
   NodeKind kind;
@@ -39,10 +40,12 @@ struct Node {
   Node *expr;
   Node *init_expr;
   Node *update_expr;
-  StmtList *front;
-  StmtList *back;
+  StmtList *stmt_front;
+  StmtList *stmt_back;
   char *func_name;
   int func_name_len;
+  ExprList *expr_front;
+  ExprList *expr_back;
   int val;
   int offset;
 };
@@ -50,6 +53,11 @@ struct Node {
 struct StmtList {
   StmtList *next;
   Node *stmt;
+};
+
+struct ExprList {
+  ExprList *next;
+  Node *expr;
 };
 
 typedef enum {
