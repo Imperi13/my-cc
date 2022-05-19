@@ -1,4 +1,4 @@
-main() {
+int main() {
   return -2 *(5 - 2*11);
 }
 

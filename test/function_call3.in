@@ -1,4 +1,7 @@
-main() {
+int main() {
+  int a;
+  int b;
+  int c;
   a = ten();
   b = a-5;
 

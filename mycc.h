@@ -19,6 +19,7 @@ typedef enum {
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
   ND_LVAR,
+  ND_LVAR_DEFINE,
   ND_ADDR,
   ND_DEREF,
   ND_RETURN,
@@ -70,6 +71,7 @@ typedef enum {
   TK_WHILE,
   TK_FOR,
   TK_IDENT,
+  TK_INT,
   TK_NUM,
   TK_EOF,
 } TokenKind;
@@ -117,6 +119,7 @@ void error_at(char *loc, char *fmt, ...);
 bool consume(char* op);
 Token *consume_kind();
 void expect(char* op);
+Token *expect_kind(TokenKind kind);
 int expect_number();
 bool at_eof();
 
