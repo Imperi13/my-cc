@@ -64,4 +64,6 @@ assert 5 "test/function_definition1.in"
 assert 25 "test/function_definition2.in"
 assert 34 "test/function_definition3.in"
 
+assert 3 "test/addr_deref1.in"
+
 echo OK

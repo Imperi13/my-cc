@@ -23,8 +23,6 @@ char *read_file(char *path) {
 
 Token *token;
 char *user_input;
-StmtList *code_front = NULL;
-StmtList *code_back = NULL;
 
 int main(int argc,char **argv){
   if(argc != 2){
