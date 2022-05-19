@@ -69,13 +69,13 @@ Node *stmt() {
     while(!consume("}")){
       StmtList *push_stmt=calloc(1,sizeof(StmtList));
       push_stmt->stmt = stmt();
-      if(!node->back){
-        node->front=push_stmt;
-        node->back=push_stmt;
+      if(!node->stmt_back){
+        node->stmt_front=push_stmt;
+        node->stmt_back=push_stmt;
         continue;
       }
-      node->back->next = push_stmt;
-      node->back = push_stmt;
+      node->stmt_back->next = push_stmt;
+      node->stmt_back = push_stmt;
     }
     return node;
   }
@@ -222,13 +222,30 @@ Node *primary() {
   Token *tok = consume_kind(TK_IDENT);
   if(tok){
     Node *node = calloc(1,sizeof(Node));
+
     if(consume("(")){
       node->kind = ND_FUNCTION_CALL;
       node->func_name = tok->str;
       node->func_name_len = tok->len;
-      expect(")");
+      
+      while(!consume(")")){
+        ExprList *push_expr = calloc(1,sizeof(ExprList));
+        push_expr->expr = expr();
+
+        if(!node->expr_back){
+          node->expr_front = push_expr;
+          node->expr_back = push_expr;
+        }else{
+          node->expr_back->next = push_expr;
+          node->expr_back = push_expr;
+        }
+
+        consume(",");
+      }
+
       return node;
     }
+
     node->kind = ND_LVAR;
 
     LVar *lvar = find_lvar(tok);
