@@ -62,5 +62,6 @@ assert 32 "test/function_call4.in"
 
 assert 5 "test/function_definition1.in"
 assert 25 "test/function_definition2.in"
+assert 34 "test/function_definition3.in"
 
 echo OK
