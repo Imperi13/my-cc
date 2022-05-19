@@ -1,4 +1,6 @@
-two=2;
-twenty=20;
-twenty/two;
+main() {
+  two=2;
+  twenty=20;
+  return twenty/two;
+}
 

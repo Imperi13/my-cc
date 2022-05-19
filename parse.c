@@ -21,12 +21,20 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-LVar *locals;
+Function *functions;
+Function *now_function;
 
 LVar *find_lvar(Token *tok){
-  for(LVar *var = locals; var; var = var->next)
+  for(LVar *var = now_function->locals; var; var = var->next)
     if (var->len == tok->len && !memcmp(tok->str,var->name,var->len))
       return var;
+  return NULL;
+}
+
+Function *find_function(Token *tok) {
+  for(Function *func = functions;func;func = func->next)
+    if(func->func_name_len == tok->len && !memcmp(tok->str,func->func_name,func->func_name_len))
+      return func;
   return NULL;
 }
 
@@ -46,19 +54,74 @@ Node *new_node_num(int val) {
 }
 
 void program() {
-  int i = 0;
   while(!at_eof()){
-    StmtList *push_stmt = calloc(1,sizeof(StmtList));
-    push_stmt -> stmt = stmt();
-    if(!code_back) {
-      code_front = push_stmt;
-      code_back = push_stmt;
+    Function *push_function = func_definition();
+    if(!functions) {
+      functions = push_function;
       continue;
     }
-    code_back->next = push_stmt;
-    code_back = push_stmt;
+    push_function -> next = functions;
+    functions = push_function;
   }
-}   
+}
+
+Function *func_definition() {
+  Function *func_def = calloc(1,sizeof(Function));
+  now_function = func_def;
+
+  Token *tok = consume_kind(TK_IDENT);
+  if(!tok)
+    error("invalid func definition");
+
+  Function *double_define = find_function(tok);
+  if(double_define)
+    error("already defined");
+
+  func_def->func_name = tok->str;
+  func_def->func_name_len = tok->len;
+  func_def->arg_count = 0;
+
+  expect("(");
+  if(!consume(")")){
+    do{
+      tok = consume_kind(TK_IDENT);
+      LVar *lvar = find_lvar(tok);
+      if(lvar)
+        error("duplicate arguments");
+      lvar = calloc(1,sizeof(LVar));
+      lvar->next = now_function->locals;
+      lvar->name = tok->str;
+      lvar->len = tok->len;
+      if(now_function->locals)
+        lvar->offset = now_function->locals->offset + 8;
+      else
+        lvar->offset = 8;
+      now_function->locals = lvar;
+
+      func_def->arg_count++;
+
+      if(func_def->arg_count > 6)
+        error("more than 6 args is not implemented");
+    }while(consume(","));
+    expect(")");
+  }
+
+  expect("{");
+
+  while(!consume("}")){
+    StmtList *push_stmt = calloc(1,sizeof(StmtList));
+    push_stmt->stmt = stmt();
+    if(!func_def->code_front){
+      func_def->code_front = push_stmt;
+      func_def->code_back = push_stmt;
+      continue;
+    }
+    func_def->code_back->next = push_stmt;
+    func_def->code_back = push_stmt;
+  }
+
+  return func_def;
+}
 
 Node *stmt() {
   Node *node;
@@ -253,15 +316,15 @@ Node *primary() {
       node->offset=lvar->offset;
     } else {
       lvar = calloc(1,sizeof(LVar));
-      lvar->next = locals;
+      lvar->next = now_function->locals;
       lvar->name = tok->str;
       lvar->len = tok->len;
-      if(locals)
-        lvar->offset = locals->offset + 8;
+      if(now_function->locals)
+        lvar->offset = now_function->locals->offset + 8;
       else
         lvar->offset = 8;
       node->offset = lvar->offset;
-      locals = lvar;
+      now_function->locals = lvar;
     }
     return node;
   }

@@ -183,28 +183,41 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-void codegen_all(FILE *output) {
+void gen_function(Function *func) {
   int len = 0;
-  LVar *now = locals;
+  LVar *now = func->locals;
   while(now){
     len++;
     now = now->next;
   }
 
-  fprintf(output,".intel_syntax noprefix\n");
-  fprintf(output,".globl main\n");
-  fprintf(output,"main:\n");
- 
-  fprintf(output,"  push rbp\n");
-  fprintf(output,"  mov rbp, rsp\n");
-  fprintf(output,"  sub rsp, %d\n",len*8);
+  printf(".globl %.*s\n",func->func_name_len,func->func_name);
+  printf("%.*s:\n",func->func_name_len,func->func_name);
 
-  for (StmtList *now = code_front;now;now = now->next) {
-    gen(now->stmt);
-    fprintf(output,"  pop rax\n");
+  printf("  push rbp\n");
+  printf("  mov rbp, rsp\n");
+  printf("  sub rsp, %d\n",len*8);
+
+  for(int i = 0;i < func->arg_count;i++){
+    printf(" mov rax, rbp\n");
+    printf("  sub rax, %d\n",8+i*8);
+    printf("  mov [rax], %s\n",call_register[i]);
   }
 
-  fprintf(output,"  mov rsp, rbp\n");
-  fprintf(output,"  pop rbp\n");
-  fprintf(output,"  ret\n");
+  for(StmtList *stmt = func->code_front;stmt;stmt = stmt->next) {
+    gen(stmt->stmt);
+    printf("  pop rax\n");
+  }
+
+  printf("  mov rsp, rbp\n");
+  printf("  pop rbp\n");
+  printf("  ret\n");
+}
+
+void codegen_all(FILE *output) {
+  fprintf(output,".intel_syntax noprefix\n");
+  
+  for(Function *now = functions;now;now = now->next){
+    gen_function(now);
+  }
 }

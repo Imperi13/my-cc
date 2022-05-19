@@ -1,0 +1,11 @@
+big_func(a,aa,aaa,aaaa,aaaaa,aaaaaa){
+  return a+aa+aaa+aaaa+aaaaa+aaaaaa;
+}
+
+small_func(){
+  return 10;
+}
+
+main() {
+  return big_func(small_func(),1,2,3,4,5);
+}
