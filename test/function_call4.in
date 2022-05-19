@@ -1,3 +1,5 @@
-c = calc(ten(),3,2,5,1,4);
-c;
+main() {
+  c = calc(ten(),3,2,5,1,4);
+  return c;
+}
 

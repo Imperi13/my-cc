@@ -1,5 +1,7 @@
-two= 2;
-five = 5;
-return two*five;
-two = 3;
+main() {
+  two= 2;
+  five = 5;
+  return two*five;
+  two = 3;
+}
 

@@ -1,7 +1,9 @@
-a = ten();
-b = a-5;
+main() {
+  a = ten();
+  b = a-5;
 
-c = add(a+3,b+ten());
+  c = add(a+3,b+ten());
 
-c;
+  return c;
+}
 

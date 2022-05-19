@@ -91,6 +91,18 @@ struct LVar {
   int offset;
 };
 
+typedef struct Function Function;
+
+struct Function {
+  Function *next;
+  StmtList *code_front;
+  StmtList *code_back;
+  LVar *locals;
+  char *func_name;
+  int func_name_len;
+  int arg_count;
+};
+
 extern const char variable_letters[];
 
 extern Token *token;
@@ -98,7 +110,7 @@ extern char *user_input;
 //extern Node *code[100];
 extern StmtList* code_front;
 extern StmtList* code_back;
-extern LVar *locals;
+extern Function *functions;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
@@ -122,6 +134,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
 Node *new_node_num(int val);
 
 void program();
+Function *func_definition();
 Node *stmt();
 Node *expr();
 Node *assign();
@@ -133,6 +146,7 @@ Node *unary();
 Node *primary();
 
 void gen(Node *node);
+void gen_function(Function *func);
 void codegen_all(FILE *output);
 
 

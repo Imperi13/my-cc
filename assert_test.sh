@@ -8,6 +8,8 @@ assert() {
   ./tmp
   actual="$?"
 
+  echo "testcase: $2"
+
   if [ "$actual" = "$expected" ]; then
     cat "$input"
     echo "=> $actual"
@@ -57,5 +59,8 @@ assert 55 "test/function_call1.in"
 assert 23 "test/function_call2.in"
 assert 28 "test/function_call3.in"
 assert 32 "test/function_call4.in"
+
+assert 5 "test/function_definition1.in"
+assert 25 "test/function_definition2.in"
 
 echo OK

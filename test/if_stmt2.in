@@ -1,8 +1,10 @@
-a=20;
-b=10;
-if(a/b==3)
-  a = 40;
-else
-  a = 30;
-a/b;
+main() {
+  a=20;
+  b=10;
+  if(a/b==3)
+    a = 40;
+  else
+    a = 30;
+  return a/b;
+}
 
