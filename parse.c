@@ -66,6 +66,7 @@ void program() {
 }
 
 Function *func_definition() {
+  expect_kind(TK_INT);
   Function *func_def = calloc(1,sizeof(Function));
   now_function = func_def;
 
@@ -84,6 +85,7 @@ Function *func_definition() {
   expect("(");
   if(!consume(")")){
     do{
+      expect_kind(TK_INT);
       tok = consume_kind(TK_IDENT);
       LVar *lvar = find_lvar(tok);
       if(lvar)
@@ -195,6 +197,23 @@ Node *stmt() {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr();
+  }else if(consume_kind(TK_INT)){
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_LVAR_DEFINE;
+
+    Token *tok = expect_kind(TK_IDENT);
+    LVar *lvar = find_lvar(tok);
+    if(lvar)
+      error("duplicate local variables");
+    lvar = calloc(1,sizeof(LVar));
+    lvar->next = now_function->locals;
+    lvar->name = tok->str;
+    lvar->len = tok->len;
+    if(now_function->locals)
+      lvar->offset = now_function->locals->offset + 8;
+    else 
+      lvar->offset = 8;
+    now_function->locals = lvar;
   }else{
     node = expr();
   }
@@ -316,20 +335,9 @@ Node *primary() {
     node->kind = ND_LVAR;
 
     LVar *lvar = find_lvar(tok);
-    if(lvar) {
-      node->offset=lvar->offset;
-    } else {
-      lvar = calloc(1,sizeof(LVar));
-      lvar->next = now_function->locals;
-      lvar->name = tok->str;
-      lvar->len = tok->len;
-      if(now_function->locals)
-        lvar->offset = now_function->locals->offset + 8;
-      else
-        lvar->offset = 8;
-      node->offset = lvar->offset;
-      now_function->locals = lvar;
-    }
+    if(!lvar)
+      error("ident '%.*s' is not defined",tok->len,tok->str);
+    node->offset=lvar->offset;
     return node;
   }
 

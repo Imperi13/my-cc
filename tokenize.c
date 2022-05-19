@@ -25,6 +25,14 @@ void expect(char* op) {
   token = token->next;
 }
 
+Token *expect_kind(TokenKind kind) {
+  if(token->kind != kind)
+    error("not expect TokenKind");
+  Token *tok = token;
+  token = token->next;
+  return tok;
+}
+
 int expect_number(){
   if (token->kind != TK_NUM)
     error("not number");
@@ -116,6 +124,12 @@ Token *tokenize(char *p){
 
    if(strncmp(p,"for",3) == 0 && !is_alnum(p[3])) {
      cur = new_token(TK_FOR,cur,p,3);
+     p += 3;
+     continue;
+   }
+
+   if(strncmp(p,"int",3) == 0 && !is_alnum(p[3])) {
+     cur = new_token(TK_INT,cur,p,3);
      p += 3;
      continue;
    }

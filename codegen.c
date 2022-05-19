@@ -20,6 +20,9 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n",node->val);
       return;
+    case ND_LVAR_DEFINE:
+      printf("  push rax\n");
+      return;
     case ND_LVAR:
       gen_lval(node);
       printf("  pop rax\n");
