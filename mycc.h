@@ -19,6 +19,8 @@ typedef enum {
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
   ND_LVAR,
+  ND_ADDR,
+  ND_DEREF,
   ND_RETURN,
   ND_IF,
   ND_IFELSE,
@@ -107,9 +109,6 @@ extern const char variable_letters[];
 
 extern Token *token;
 extern char *user_input;
-//extern Node *code[100];
-extern StmtList* code_front;
-extern StmtList* code_back;
 extern Function *functions;
 
 void error(char *fmt, ...);
