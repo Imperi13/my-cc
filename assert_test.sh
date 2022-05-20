@@ -4,7 +4,7 @@ assert() {
   input="$2"
 
   ./mycc "$input" > tmp.s
-  gcc -o tmp tmp.s util/ten.o util/add.o util/many_arg.o
+  gcc -o tmp tmp.s util/ten.o util/add.o util/many_arg.o util/alloc4.o
   ./tmp
   actual="$?"
 
@@ -67,5 +67,7 @@ assert 34 "test/function_definition3.in"
 assert 3 "test/addr_deref1.in"
 assert 3 "test/addr_deref2.in"
 assert 3 "test/addr_deref3.in"
+
+assert 12 "test/ptr_add1.in"
 
 echo OK

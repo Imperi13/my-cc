@@ -4,6 +4,12 @@ char call_register[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 
 int label_count = 0;
 
+int type_size(Type *a){
+  if(a->ty == INT)
+    return 4;
+  return 8;
+}
+
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR && node->kind != ND_DEREF)
     error("not lval");
@@ -151,9 +157,15 @@ void gen(Node *node) {
 
   switch (node->kind) {
     case ND_ADD:
+      if(node->lhs->type->ty == PTR)
+        printf("  imul rdi, %d\n",type_size(node->lhs->type->ptr_to));
+      else if(node->rhs->type->ty == PTR)
+        printf("  imul rax, %d\n",type_size(node->rhs->type->ptr_to));
       printf("  add rax,rdi\n");
       break;
     case ND_SUB:
+      if(node->lhs->type->ty == PTR)
+        printf(" imul rdi, %d\n",type_size(node->lhs->type->ptr_to));
       printf("  sub rax,rdi\n");
       break;
     case ND_MUL:
