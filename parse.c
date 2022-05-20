@@ -338,8 +338,6 @@ Node *add() {
       Node *rhs = mul();
       if(lhs->type->ty == INT && rhs->type->ty == INT)
         lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
-      else if(lhs->type->ty == INT)
-        lhs = new_node(ND_SUB,lhs,rhs,rhs->type);
       else if(rhs->type->ty == INT)
         lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
       else
