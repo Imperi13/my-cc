@@ -74,6 +74,7 @@ struct ExprList {
 typedef enum {
   TK_RESERVED,
   TK_RETURN,
+  TK_SIZEOF,
   TK_IF,
   TK_ELSE,
   TK_WHILE,
@@ -127,7 +128,7 @@ void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 
 bool consume(char* op);
-Token *consume_kind();
+Token *consume_kind(TokenKind kind);
 void expect(char* op);
 Token *expect_kind(TokenKind kind);
 int expect_number();
@@ -144,6 +145,8 @@ void debug_token();
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type);
 Node *new_node_num(int val);
+
+int type_size(Type *a);
 
 void program();
 Function *func_definition();
