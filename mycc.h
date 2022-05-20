@@ -107,6 +107,13 @@ struct Function {
   int arg_count;
 };
 
+typedef struct Type Type;
+
+struct Type {
+  enum {INT,PTR,} ty;
+  Type *ptr_to;
+};
+
 extern const char variable_letters[];
 
 extern Token *token;

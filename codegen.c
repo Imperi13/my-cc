@@ -5,8 +5,13 @@ char call_register[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 int label_count = 0;
 
 void gen_lval(Node *node) {
-  if (node->kind != ND_LVAR)
+  if (node->kind != ND_LVAR && node->kind != ND_DEREF)
     error("not lval");
+
+  if(node->kind == ND_DEREF){
+    gen(node->lhs);
+    return;
+  }
 
   printf("  mov rax, rbp\n");
   printf("  sub rax, %d\n",node->offset);

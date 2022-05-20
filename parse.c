@@ -53,6 +53,28 @@ Node *new_node_num(int val) {
   return node;
 }
 
+Type *parse_type() {
+  if(!consume_kind(TK_INT))
+    return NULL;
+  Type *type = calloc(1,sizeof(Type));
+  type->ty = INT;
+  while(consume("*")){
+    Type *now = calloc(1,sizeof(Type));
+    now->ty = PTR;
+    now->ptr_to = type;
+    type = now;
+  }
+  return type;
+}
+
+bool is_same_type(Type *a,Type *b){
+  if(a->ty == INT && b->ty == INT)
+    return true;
+  if(a->ty != b->ty)
+    return false;
+  return is_same_type(a->ptr_to,b->ptr_to);
+}
+
 void program() {
   while(!at_eof()){
     Function *push_function = func_definition();
@@ -66,7 +88,10 @@ void program() {
 }
 
 Function *func_definition() {
-  expect_kind(TK_INT);
+  Type *return_type = parse_type();
+  if(!return_type)
+    error("not type");
+
   Function *func_def = calloc(1,sizeof(Function));
   now_function = func_def;
 
@@ -85,7 +110,10 @@ Function *func_definition() {
   expect("(");
   if(!consume(")")){
     do{
-      expect_kind(TK_INT);
+      Type *arg_type = parse_type();
+      if(!arg_type)
+        error("not type");
+
       tok = consume_kind(TK_IDENT);
       LVar *lvar = find_lvar(tok);
       if(lvar)
@@ -193,11 +221,13 @@ Node *stmt() {
     return node;
   }
 
+  Type *lvar_type;
+
   if(consume_kind(TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr();
-  }else if(consume_kind(TK_INT)){
+  }else if(lvar_type = parse_type(),lvar_type){
     node = calloc(1,sizeof(Node));
     node->kind = ND_LVAR_DEFINE;
 
