@@ -83,7 +83,21 @@ bool is_same_type(Type *a,Type *b){
 int type_size(Type *a){
   if(a->ty == INT)
     return 4;
+  if(a->ty == ARRAY)
+    return a->array_size * type_size(a->ptr_to);
   return 8;
+}
+
+int type_alignment(Type *a){
+  if(a->ty == INT)
+    return 4;
+  if(a->ty == ARRAY)
+    return type_alignment(a->ptr_to);
+  return 8;
+}
+
+int offset_alignment(int start,int data_size,int alignment){
+  return ((start+data_size + alignment - 1)/alignment)*alignment;
 }
 
 void program() {
@@ -130,18 +144,29 @@ Function *func_definition() {
       LVar *lvar = find_lvar(tok);
       if(lvar)
         error("duplicate arguments");
+
       lvar = calloc(1,sizeof(LVar));
       lvar->next = now_function->locals;
       lvar->name = tok->str;
       lvar->len = tok->len;
       lvar->type = arg_type;
       if(now_function->locals)
-        lvar->offset = now_function->locals->offset + 8;
+        lvar->offset = offset_alignment(now_function->locals->offset,type_size(arg_type),type_alignment(arg_type));
       else
-        lvar->offset = 8;
+        lvar->offset = offset_alignment(0,type_size(arg_type),type_alignment(arg_type));
       now_function->locals = lvar;
 
       func_def->arg_count++;
+      ArgList *push_type = calloc(1,sizeof(ArgList));
+      push_type->type = arg_type;
+      push_type->lvar = lvar;
+      if(!func_def->arg_front){
+        func_def->arg_front = push_type;
+        func_def->arg_back = push_type;
+      }else{
+        func_def->arg_back->next = push_type;
+        func_def->arg_back = push_type;
+      }
 
       if(func_def->arg_count > 6)
         error("more than 6 args is not implemented");
@@ -157,10 +182,10 @@ Function *func_definition() {
     if(!func_def->code_front){
       func_def->code_front = push_stmt;
       func_def->code_back = push_stmt;
-      continue;
+    }else{
+      func_def->code_back->next = push_stmt;
+      func_def->code_back = push_stmt;
     }
-    func_def->code_back->next = push_stmt;
-    func_def->code_back = push_stmt;
   }
 
   return func_def;
@@ -254,9 +279,9 @@ Node *stmt() {
     lvar->len = tok->len;
     lvar->type = lvar_type;
     if(now_function->locals)
-      lvar->offset = now_function->locals->offset + 8;
+      lvar->offset = offset_alignment(now_function->locals->offset,type_size(lvar_type),type_alignment(lvar_type));
     else 
-      lvar->offset = 8;
+      lvar->offset = offset_alignment(0,type_size(lvar_type),type_alignment(lvar_type));
     now_function->locals = lvar;
   }else{
     node = expr();

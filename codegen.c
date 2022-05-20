@@ -1,6 +1,7 @@
 #include "mycc.h"
 
-char call_register[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
+char call_register64[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
+char call_register32[][4] = {"edi","esi","edx","ecx","r8d","r9d"};
 
 int label_count = 0;
 
@@ -32,7 +33,10 @@ void gen(Node *node) {
     case ND_LVAR:
       gen_lval(node);
       printf("  pop rax\n");
-      printf("  mov rax, [rax]\n");
+      if(type_size(node->type) == 8)
+        printf("  mov rax, [rax]\n");
+      else if(type_size(node->type) == 4)
+        printf("  mov eax, [rax]\n");
       printf("  push rax\n");
       return ;
     case ND_ASSIGN:
@@ -41,7 +45,10 @@ void gen(Node *node) {
 
       printf("  pop rdi\n");
       printf("  pop rax\n");
-      printf("  mov [rax], rdi\n");
+      if(type_size(node->rhs->type) == 8)
+        printf("  mov [rax], rdi\n");
+      else if(type_size(node->rhs->type) == 4)
+        printf("  mov [rax], edi\n");
       printf("  push rdi\n");
       return;
     case ND_ADDR:
@@ -133,7 +140,7 @@ void gen(Node *node) {
         arg_count++;
       }
       for(int i=arg_count-1;i>=0;i--){
-        printf("  pop %s\n",call_register[i]);
+        printf("  pop %s\n",call_register64[i]);
       }
       printf("  call %.*s\n",node->func_name_len,node->func_name);
       printf("  pop r8\n");
@@ -208,24 +215,26 @@ void gen(Node *node) {
 }
 
 void gen_function(Function *func) {
-  int len = 0;
-  LVar *now = func->locals;
-  while(now){
-    len++;
-    now = now->next;
-  }
+  int stack_offset = 0;
+  if(func->locals)
+    stack_offset = func->locals->offset;
 
   printf(".globl %.*s\n",func->func_name_len,func->func_name);
   printf("%.*s:\n",func->func_name_len,func->func_name);
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, %d\n",len*8);
+  printf("  sub rsp, %d\n",offset_alignment(0,stack_offset,8));
 
+  ArgList *now_arg = func->arg_front;
   for(int i = 0;i < func->arg_count;i++){
     printf(" mov rax, rbp\n");
-    printf("  sub rax, %d\n",8+i*8);
-    printf("  mov [rax], %s\n",call_register[i]);
+    printf("  sub rax, %d\n",now_arg->lvar->offset);
+    if(type_size(now_arg->type) == 8)
+      printf("  mov [rax], %s\n",call_register64[i]);
+    else if(type_size(now_arg->type) == 4)
+      printf("  mov [rax], %s\n",call_register32[i]);
+    now_arg = now_arg->next;
   }
 
   for(StmtList *stmt = func->code_front;stmt;stmt = stmt->next) {
