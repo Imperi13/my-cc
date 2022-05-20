@@ -4,11 +4,6 @@ char call_register[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 
 int label_count = 0;
 
-int type_size(Type *a){
-  if(a->ty == INT)
-    return 4;
-  return 8;
-}
 
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR && node->kind != ND_DEREF)

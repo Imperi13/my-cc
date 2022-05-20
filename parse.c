@@ -80,6 +80,12 @@ bool is_same_type(Type *a,Type *b){
   return is_same_type(a->ptr_to,b->ptr_to);
 }
 
+int type_size(Type *a){
+  if(a->ty == INT)
+    return 4;
+  return 8;
+}
+
 void program() {
   while(!at_eof()){
     Function *push_function = func_definition();
@@ -367,6 +373,11 @@ Node *mul() {
 }
 
 Node *unary() {
+  if(consume_kind(TK_SIZEOF)){
+    Node *node = unary();
+    return new_node_num(type_size(node->type));
+  }
+
   if(consume("+"))
     return primary();
   if(consume("-")){

@@ -70,4 +70,7 @@ assert 3 "test/addr_deref3.in"
 
 assert 12 "test/ptr_add1.in"
 
+assert 4 "test/sizeof1.in"
+assert 8 "test/sizeof2.in"
+
 echo OK
