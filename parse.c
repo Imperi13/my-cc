@@ -38,17 +38,22 @@ Function *find_function(Token *tok) {
   return NULL;
 }
 
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type) {
   Node *node = calloc(1,sizeof(Node));
   node->kind = kind;
   node->lhs = lhs;
   node->rhs = rhs;
+  node->type = type;
   return node;
 }
 
 Node *new_node_num(int val) {
   Node *node = calloc(1,sizeof(Node));
+  Type *type = calloc(1,sizeof(Type));
+  type->ty = INT;
+
   node->kind = ND_NUM;
+  node->type = type;
   node->val = val;
   return node;
 }
@@ -103,6 +108,7 @@ Function *func_definition() {
   if(double_define)
     error("already defined");
 
+  func_def->return_type = return_type;
   func_def->func_name = tok->str;
   func_def->func_name_len = tok->len;
   func_def->arg_count = 0;
@@ -122,6 +128,7 @@ Function *func_definition() {
       lvar->next = now_function->locals;
       lvar->name = tok->str;
       lvar->len = tok->len;
+      lvar->type = arg_type;
       if(now_function->locals)
         lvar->offset = now_function->locals->offset + 8;
       else
@@ -239,6 +246,7 @@ Node *stmt() {
     lvar->next = now_function->locals;
     lvar->name = tok->str;
     lvar->len = tok->len;
+    lvar->type = lvar_type;
     if(now_function->locals)
       lvar->offset = now_function->locals->offset + 8;
     else 
@@ -256,75 +264,132 @@ Node *expr() {
 }
 
 Node *assign() {
-  Node *node = equality();
-  if (consume("="))
-    node = new_node(ND_ASSIGN,node,assign());
-  return node;
+  Node *lhs = equality();
+  if (consume("=")){
+    Node *rhs = assign();
+    if(!is_same_type(lhs->type,rhs->type))
+      error("invalid argument type to assign =");
+    lhs = new_node(ND_ASSIGN,lhs,rhs,rhs->type);
+  }
+  return lhs;
 }
 
 Node *equality() {
-  Node *node = relational();
+  Node *lhs = relational();
   for(;;) {
-    if(consume("=="))
-      node = new_node(ND_EQUAL,node,relational());
-    else if(consume("!="))
-      node = new_node(ND_NOT_EQUAL,node,relational());
-    else
-      return node;
+    if(consume("==")){
+      Node *rhs = relational();
+      if(!is_same_type(lhs->type,rhs->type))
+        error("invalid argument type to equality ==");
+      lhs = new_node(ND_EQUAL,lhs,rhs,lhs->type);
+    }else if(consume("!=")){
+      Node *rhs = relational();
+      if(!is_same_type(lhs->type,rhs->type))
+        error("invalid argument type to equality !=");
+      lhs = new_node(ND_NOT_EQUAL,lhs,rhs,lhs->type);
+    }else
+      return lhs;
   }
 }
 
 Node *relational() {
-  Node *node = add();
+  Node *lhs = add();
   for(;;) {
-    if(consume("<"))
-      node = new_node(ND_SMALLER,node,add());
-    else if(consume("<="))
-      node = new_node(ND_SMALLER_EQUAL,node,add());
-    else if (consume(">"))
-      node = new_node(ND_GREATER,node,add());
-    else if (consume(">="))
-      node = new_node(ND_GREATER_EQUAL,node,add());
-    else
-      return node;
+    if(consume("<")){
+      Node *rhs = add();
+      if(!is_same_type(lhs->type,rhs->type))
+        error("invalid argument type to relational <");
+      lhs = new_node(ND_SMALLER,lhs,rhs,lhs->type);
+    }else if(consume("<=")){
+      Node *rhs = add();
+      if(!is_same_type(lhs->type,rhs->type))
+        error("invalid argument type to relational <=");
+      lhs = new_node(ND_SMALLER_EQUAL,lhs,rhs,lhs->type);
+    }else if (consume(">")){
+      Node *rhs = add();
+      if(!is_same_type(lhs->type,rhs->type))
+        error("invalid argument type to relational >");
+      lhs = new_node(ND_GREATER,lhs,rhs,lhs->type);
+    }else if (consume(">=")){
+      Node *rhs = add();
+      if(!is_same_type(lhs->type,rhs->type))
+        error("invalid argument type to relational >=");
+      lhs = new_node(ND_GREATER_EQUAL,lhs,rhs,lhs->type);
+    }else
+      return lhs;
   }
 }
 
 Node *add() {
-  Node *node = mul();
+  Node *lhs = mul();
   
   for(;;) {
-    if(consume("+"))
-      node = new_node(ND_ADD, node,mul());
-    else if(consume("-"))
-      node = new_node(ND_SUB,node,mul());
-    else
-      return node;
+    if(consume("+")){
+      Node *rhs = mul();
+      if(lhs->type->ty == INT && rhs->type->ty == INT)
+        lhs = new_node(ND_ADD,lhs,rhs,lhs->type);
+      else if(lhs->type->ty == INT)
+        lhs = new_node(ND_ADD,lhs,rhs,rhs->type);
+      else if(rhs->type->ty == INT)
+        lhs = new_node(ND_ADD,lhs,rhs,lhs->type);
+      else
+        error("invalid argument type to add +");
+    }else if(consume("-")){
+      Node *rhs = mul();
+      if(lhs->type->ty == INT && rhs->type->ty == INT)
+        lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
+      else if(lhs->type->ty == INT)
+        lhs = new_node(ND_SUB,lhs,rhs,rhs->type);
+      else if(rhs->type->ty == INT)
+        lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
+      else
+        error("invalid argument type to sub -");
+    }else
+      return lhs;
   }
 }
 
 Node *mul() {
-  Node *node = unary();
+  Node *lhs = unary();
 
   for(;;) {
-    if(consume("*"))
-      node = new_node(ND_MUL,node,unary());
-    else if(consume("/"))
-      node = new_node(ND_DIV,node,unary());
-    else 
-      return node;
+    if(consume("*")){
+      Node *rhs = unary();
+      if(lhs->type->ty != INT || rhs->type->ty != INT)
+        error("invalid argument type to mul * ");
+      lhs = new_node(ND_MUL,lhs,rhs,lhs->type);
+    }else if(consume("/")){
+      Node *rhs = unary();
+      if(lhs->type->ty != INT || rhs->type->ty != INT)
+        error("invali argument type to div /");
+      lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
+    }else 
+      return lhs;
   }
 }
 
 Node *unary() {
   if(consume("+"))
     return primary();
-  if(consume("-"))
-    return new_node(ND_SUB,new_node_num(0), primary());
-  if(consume("*"))
-    return new_node(ND_DEREF,unary(),NULL);
-  if(consume("&"))
-    return new_node(ND_ADDR,unary(),NULL);
+  if(consume("-")){
+    Node *node = primary();
+    if(node->type->ty != INT)
+      error("invalid argument type ptr to unary");
+    return new_node(ND_SUB,new_node_num(0), node,node->type);
+  }
+  if(consume("*")){
+    Node *node = unary();
+    if(node->type->ty != PTR)
+      error("not dereference to type int");
+    return new_node(ND_DEREF,node,NULL,node->type->ptr_to);
+  }
+  if(consume("&")){
+    Node *node = unary();
+    Type *type = calloc(1,sizeof(Type));
+    type->ty = PTR;
+    type->ptr_to = node->type;
+    return new_node(ND_ADDR,node,NULL,type);
+  }
   return primary();
 }
 
@@ -341,6 +406,12 @@ Node *primary() {
 
     if(consume("(")){
       node->kind = ND_FUNCTION_CALL;
+
+      // 関数の返り値は全部intということにしている
+      Type *return_type = calloc(1,sizeof(Type));
+      return_type->ty = INT;
+
+      node->type = return_type;
       node->func_name = tok->str;
       node->func_name_len = tok->len;
       
@@ -368,6 +439,7 @@ Node *primary() {
     if(!lvar)
       error("ident '%.*s' is not defined",tok->len,tok->str);
     node->offset=lvar->offset;
+    node->type = lvar->type;
     return node;
   }
 

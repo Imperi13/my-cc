@@ -32,12 +32,20 @@ typedef enum {
   ND_NUM,
 } NodeKind;
 
+typedef struct Type Type;
+
+struct Type {
+  enum {INT,PTR,} ty;
+  Type *ptr_to;
+};
+
 typedef struct Node Node;
 typedef struct StmtList StmtList;
 typedef struct ExprList ExprList;
 
 struct Node {
   NodeKind kind;
+  Type *type;
   Node *lhs;
   Node *rhs;
   Node *expr;
@@ -90,6 +98,7 @@ typedef struct LVar LVar;
 
 struct LVar {
   LVar *next;
+  Type *type;
   char *name;
   int len;
   int offset;
@@ -99,19 +108,13 @@ typedef struct Function Function;
 
 struct Function {
   Function *next;
+  Type *return_type;
   StmtList *code_front;
   StmtList *code_back;
   LVar *locals;
   char *func_name;
   int func_name_len;
   int arg_count;
-};
-
-typedef struct Type Type;
-
-struct Type {
-  enum {INT,PTR,} ty;
-  Type *ptr_to;
 };
 
 extern const char variable_letters[];
@@ -139,7 +142,7 @@ LVar *find_lvar(Token *tok);
 
 void debug_token();
 
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type);
 Node *new_node_num(int val);
 
 void program();
