@@ -72,10 +72,47 @@ Type *parse_type() {
   return type;
 }
 
+LVar *parse_lvar_definition() {
+  Type *base_type = parse_type();
+  if(!base_type)
+    return NULL;
+  Token *tok = consume_kind(TK_IDENT);
+  if(!tok)
+    error("error at var_def");
+
+  if(consume("[")){
+    Type *var_type = calloc(1,sizeof(Type));
+    var_type->ty = ARRAY;
+    var_type->ptr_to = base_type;
+    var_type->array_size = expect_number();
+    expect("]");
+
+    base_type = var_type;
+  }
+  
+  LVar *lvar = find_lvar(tok);
+  if(lvar)
+    error("duplicate local variables");
+
+  lvar = calloc(1,sizeof(LVar));
+  lvar->name = tok->str;
+  lvar->len = tok->len;
+  lvar->type = base_type;
+  return lvar;
+}
+
 bool is_same_type(Type *a,Type *b){
   if(a->ty == INT && b->ty == INT)
     return true;
   if(a->ty != b->ty)
+    return false;
+  return is_same_type(a->ptr_to,b->ptr_to);
+}
+
+bool is_convertible(Type *a,Type *b){
+  if(a->ty == INT && b->ty == INT)
+    return true;
+  if(a->ty == INT || b->ty == INT)
     return false;
   return is_same_type(a->ptr_to,b->ptr_to);
 }
@@ -259,29 +296,21 @@ Node *stmt() {
     return node;
   }
 
-  Type *lvar_type;
+  LVar *lvar;
 
   if(consume_kind(TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr();
-  }else if(lvar_type = parse_type(),lvar_type){
+  }else if(lvar = parse_lvar_definition(),lvar){
     node = calloc(1,sizeof(Node));
     node->kind = ND_LVAR_DEFINE;
 
-    Token *tok = expect_kind(TK_IDENT);
-    LVar *lvar = find_lvar(tok);
-    if(lvar)
-      error("duplicate local variables");
-    lvar = calloc(1,sizeof(LVar));
     lvar->next = now_function->locals;
-    lvar->name = tok->str;
-    lvar->len = tok->len;
-    lvar->type = lvar_type;
     if(now_function->locals)
-      lvar->offset = offset_alignment(now_function->locals->offset,type_size(lvar_type),type_alignment(lvar_type));
+      lvar->offset = offset_alignment(now_function->locals->offset,type_size(lvar->type),type_alignment(lvar->type));
     else 
-      lvar->offset = offset_alignment(0,type_size(lvar_type),type_alignment(lvar_type));
+      lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
     now_function->locals = lvar;
   }else{
     node = expr();
@@ -298,8 +327,10 @@ Node *assign() {
   Node *lhs = equality();
   if (consume("=")){
     Node *rhs = assign();
-    if(!is_same_type(lhs->type,rhs->type))
+    if(!is_convertible(lhs->type,rhs->type))
       error("invalid argument type to assign =");
+    if(lhs->type->ty == ARRAY)
+      error("not assignable ARRAY");
     lhs = new_node(ND_ASSIGN,lhs,rhs,rhs->type);
   }
   return lhs;
@@ -357,21 +388,32 @@ Node *add() {
   for(;;) {
     if(consume("+")){
       Node *rhs = mul();
+
       if(lhs->type->ty == INT && rhs->type->ty == INT)
         lhs = new_node(ND_ADD,lhs,rhs,lhs->type);
-      else if(lhs->type->ty == INT)
-        lhs = new_node(ND_ADD,lhs,rhs,rhs->type);
-      else if(rhs->type->ty == INT)
-        lhs = new_node(ND_ADD,lhs,rhs,lhs->type);
-      else
+      else if(lhs->type->ty == INT){
+        Type *convert_type = calloc(1,sizeof(Type));
+        convert_type->ty = PTR;
+        convert_type->ptr_to = rhs->type->ptr_to;
+        lhs = new_node(ND_ADD,lhs,rhs,convert_type);
+      }else if(rhs->type->ty == INT){
+        Type *convert_type = calloc(1,sizeof(Type));
+        convert_type->ty = PTR;
+        convert_type->ptr_to = lhs->type->ptr_to;
+        lhs = new_node(ND_ADD,lhs,rhs,convert_type);
+      }else
         error("invalid argument type to add +");
     }else if(consume("-")){
       Node *rhs = mul();
+
       if(lhs->type->ty == INT && rhs->type->ty == INT)
         lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
-      else if(rhs->type->ty == INT)
-        lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
-      else
+      else if(rhs->type->ty == INT){
+        Type *convert_type = calloc(1,sizeof(Type));
+        convert_type->ty = PTR;
+        convert_type->ptr_to = lhs->type->ptr_to;
+        lhs = new_node(ND_SUB,lhs,rhs,convert_type);
+      }else
         error("invalid argument type to sub -");
     }else
       return lhs;
@@ -413,7 +455,7 @@ Node *unary() {
   }
   if(consume("*")){
     Node *node = unary();
-    if(node->type->ty != PTR)
+    if(node->type->ty != PTR && node->type->ty != ARRAY)
       error("not dereference to type int");
     return new_node(ND_DEREF,node,NULL,node->type->ptr_to);
   }
