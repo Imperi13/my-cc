@@ -73,4 +73,9 @@ assert 12 "test/ptr_add1.in"
 assert 4 "test/sizeof1.in"
 assert 8 "test/sizeof2.in"
 
+assert 10 "test/array1.in"
+assert 3 "test/array2.in"
+assert 34 "test/array3.in"
+assert 34 "test/array4.in"
+
 echo OK

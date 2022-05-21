@@ -35,8 +35,9 @@ typedef enum {
 typedef struct Type Type;
 
 struct Type {
-  enum {INT,PTR,} ty;
+  enum {INT,PTR,ARRAY} ty;
   Type *ptr_to;
+  size_t array_size;
 };
 
 typedef struct Node Node;
@@ -105,11 +106,20 @@ struct LVar {
   int offset;
 };
 
+typedef struct ArgList ArgList;
 typedef struct Function Function;
+
+struct ArgList{
+  ArgList *next;
+  Type *type;
+  LVar *lvar;
+};
 
 struct Function {
   Function *next;
   Type *return_type;
+  ArgList *arg_front;
+  ArgList *arg_back;
   StmtList *code_front;
   StmtList *code_back;
   LVar *locals;
@@ -147,6 +157,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type);
 Node *new_node_num(int val);
 
 int type_size(Type *a);
+int offset_alignment(int start,int data_size,int alignment);
 
 void program();
 Function *func_definition();
@@ -158,6 +169,7 @@ Node *relational();
 Node *add();
 Node *mul();
 Node *unary();
+Node *postfix();
 Node *primary();
 
 void gen(Node *node);
