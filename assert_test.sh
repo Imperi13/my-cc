@@ -29,6 +29,8 @@ assert 34 "test/sisoku1.in"
 
 assert 34 "test/sisoku2.in"
 
+assert 2 "test/mod1.in"
+
 assert 1 "test/ne1.in"
 assert 0 "test/cmpl1.in"
 assert 1 "test/cmpge1.in"

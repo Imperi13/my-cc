@@ -451,9 +451,14 @@ Node *mul() {
     }else if(consume("/")){
       Node *rhs = unary();
       if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error("invali argument type to div /");
+        error("invalid argument type to div /");
       lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
-    }else 
+    }else if(consume("%")){
+      Node *rhs = unary();
+      if(lhs->type->ty != INT || rhs->type->ty != INT)
+        error("invalid argument type to mod %");
+      lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
+    }else
       return lhs;
   }
 }

@@ -11,6 +11,7 @@ typedef enum {
   ND_SUB,
   ND_MUL,
   ND_DIV,
+  ND_MOD,
   ND_EQUAL,
   ND_NOT_EQUAL,
   ND_GREATER,
