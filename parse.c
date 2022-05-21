@@ -58,6 +58,39 @@ Node *new_node_num(int val) {
   return node;
 }
 
+Node *new_add_node(Node *lhs,Node *rhs) {
+  Node *node = calloc(1,sizeof(Node));
+  node->kind = ND_ADD;
+  node->lhs = lhs;
+  node->rhs = rhs;
+
+  if(lhs->type->ty == INT && rhs->type->ty == INT)
+    node->type = lhs->type;
+  else if(lhs->type->ty == INT){
+    node->type = calloc(1,sizeof(Type));
+    node->type->ty = PTR;
+    node->type->ptr_to = rhs->type->ptr_to;
+  }else if(rhs->type->ty == INT){
+    node->type = calloc(1,sizeof(Type));
+    node->type->ty = PTR;
+    node->type->ptr_to = lhs->type->ptr_to;
+  }else
+    error("invalid argument type to add +");
+
+  return node;
+}
+
+Node *new_deref_node(Node *lhs) {
+  Node *node = calloc(1,sizeof(Node));
+  node->kind = ND_DEREF;
+  node->lhs = lhs;
+
+  if(lhs->type->ty != PTR && lhs->type->ty != ARRAY)
+    error("not dereference to type int");
+  node->type = lhs->type->ptr_to;
+  return node;
+}
+
 Type *parse_type() {
   if(!consume_kind(TK_INT))
     return NULL;
@@ -388,21 +421,7 @@ Node *add() {
   for(;;) {
     if(consume("+")){
       Node *rhs = mul();
-
-      if(lhs->type->ty == INT && rhs->type->ty == INT)
-        lhs = new_node(ND_ADD,lhs,rhs,lhs->type);
-      else if(lhs->type->ty == INT){
-        Type *convert_type = calloc(1,sizeof(Type));
-        convert_type->ty = PTR;
-        convert_type->ptr_to = rhs->type->ptr_to;
-        lhs = new_node(ND_ADD,lhs,rhs,convert_type);
-      }else if(rhs->type->ty == INT){
-        Type *convert_type = calloc(1,sizeof(Type));
-        convert_type->ty = PTR;
-        convert_type->ptr_to = lhs->type->ptr_to;
-        lhs = new_node(ND_ADD,lhs,rhs,convert_type);
-      }else
-        error("invalid argument type to add +");
+      lhs = new_add_node(lhs,rhs);
     }else if(consume("-")){
       Node *rhs = mul();
 
@@ -446,9 +465,9 @@ Node *unary() {
   }
 
   if(consume("+"))
-    return primary();
+    return unary();
   if(consume("-")){
-    Node *node = primary();
+    Node *node = unary();
     if(node->type->ty != INT)
       error("invalid argument type ptr to unary");
     return new_node(ND_SUB,new_node_num(0), node,node->type);
@@ -466,7 +485,21 @@ Node *unary() {
     type->ptr_to = node->type;
     return new_node(ND_ADDR,node,NULL,type);
   }
-  return primary();
+  return postfix();
+}
+
+Node *postfix() {
+  Node *lhs = primary();
+
+  for(;;){
+    if(consume("[")){
+      Node *rhs = expr();
+      Node *add_node = new_add_node(lhs,rhs);
+      lhs = new_deref_node(add_node);
+      expect("]");
+    }else
+      return lhs;
+  }
 }
 
 Node *primary() {
