@@ -157,6 +157,7 @@ void debug_token();
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type);
 Node *new_node_num(int val);
 
+bool is_convertible(Type *a,Type *b);
 int type_size(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 

@@ -80,4 +80,7 @@ assert 3 "test/array2.in"
 assert 34 "test/array3.in"
 assert 34 "test/array4.in"
 
+assert 45 "test/add_assign1.in"
+assert 15 "test/add_assign2.in"
+
 echo OK
