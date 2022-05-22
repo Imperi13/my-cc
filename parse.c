@@ -513,6 +513,9 @@ Node *postfix() {
       Node *add_node = new_add_node(lhs,rhs);
       lhs = new_deref_node(add_node);
       expect("]");
+    }else if(consume("++")){
+      Node *add_node = new_add_node(lhs,new_node_num(1));
+      lhs = new_assign_node(lhs,add_node);
     }else
       return lhs;
   }

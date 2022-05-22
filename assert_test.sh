@@ -83,4 +83,6 @@ assert 34 "test/array4.in"
 assert 45 "test/add_assign1.in"
 assert 15 "test/add_assign2.in"
 
+assert 45 "test/post_increment1.in"
+
 echo OK
