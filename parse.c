@@ -91,6 +91,17 @@ Node *new_deref_node(Node *lhs) {
   return node;
 }
 
+Node *new_assign_node(Node *lhs,Node *rhs) {
+  if(!is_convertible(lhs->type,rhs->type))
+    error("invalid argument type to assign =");
+  if(lhs->kind != ND_LVAR && lhs->kind != ND_DEREF)
+    error("lhs is not lvalue");
+  if(lhs->type->ty == ARRAY)
+    error("cannot assign to ARRAY");
+  Node *node = new_node(ND_ASSIGN,lhs,rhs,rhs->type);
+  return node;
+}
+
 Type *parse_type() {
   if(!consume_kind(TK_INT))
     return NULL;
@@ -360,11 +371,11 @@ Node *assign() {
   Node *lhs = equality();
   if (consume("=")){
     Node *rhs = assign();
-    if(!is_convertible(lhs->type,rhs->type))
-      error("invalid argument type to assign =");
-    if(lhs->type->ty == ARRAY)
-      error("not assignable ARRAY");
-    lhs = new_node(ND_ASSIGN,lhs,rhs,rhs->type);
+    lhs = new_assign_node(lhs,rhs);
+  }else if(consume("+=")){
+    Node *rhs = assign();
+    Node *add_node = new_add_node(lhs,rhs);
+    lhs = new_assign_node(lhs,add_node);
   }
   return lhs;
 }
@@ -451,9 +462,14 @@ Node *mul() {
     }else if(consume("/")){
       Node *rhs = unary();
       if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error("invali argument type to div /");
+        error("invalid argument type to div /");
       lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
-    }else 
+    }else if(consume("%")){
+      Node *rhs = unary();
+      if(lhs->type->ty != INT || rhs->type->ty != INT)
+        error("invalid argument type to mod %");
+      lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
+    }else
       return lhs;
   }
 }
@@ -497,6 +513,9 @@ Node *postfix() {
       Node *add_node = new_add_node(lhs,rhs);
       lhs = new_deref_node(add_node);
       expect("]");
+    }else if(consume("++")){
+      Node *add_node = new_add_node(lhs,new_node_num(1));
+      lhs = new_assign_node(lhs,add_node);
     }else
       return lhs;
   }

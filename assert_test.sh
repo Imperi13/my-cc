@@ -29,6 +29,8 @@ assert 34 "test/sisoku1.in"
 
 assert 34 "test/sisoku2.in"
 
+assert 2 "test/mod1.in"
+
 assert 1 "test/ne1.in"
 assert 0 "test/cmpl1.in"
 assert 1 "test/cmpge1.in"
@@ -77,5 +79,10 @@ assert 10 "test/array1.in"
 assert 3 "test/array2.in"
 assert 34 "test/array3.in"
 assert 34 "test/array4.in"
+
+assert 45 "test/add_assign1.in"
+assert 15 "test/add_assign2.in"
+
+assert 45 "test/post_increment1.in"
 
 echo OK
