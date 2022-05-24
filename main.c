@@ -21,7 +21,6 @@ char *read_file(char *path) {
   return buf;
 }
 
-Token *token;
 char *user_input;
 
 int main(int argc,char **argv){
@@ -31,11 +30,11 @@ int main(int argc,char **argv){
   }
 
   user_input = read_file(argv[1]);
-  token = tokenize(user_input);
+  Token *token = tokenize(user_input);
 
   //debug_token();
 
-  program();
+  program(token);
   
   codegen_all(stdout);
   return 0;

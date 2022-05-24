@@ -131,19 +131,18 @@ struct Function {
 
 extern const char variable_letters[];
 
-extern Token *token;
 extern char *user_input;
 extern Function *functions;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 
-bool consume(char* op);
-Token *consume_kind(TokenKind kind);
-void expect(char* op);
-Token *expect_kind(TokenKind kind);
-int expect_number();
-bool at_eof();
+bool consume(Token **rest,Token *token,char* op);
+Token *consume_kind(Token **rest,Token *token,TokenKind kind);
+void expect(Token **rest,Token *token,char* op);
+Token *expect_kind(Token **rest,Token *token,TokenKind kind);
+int expect_number(Token **rest,Token *token);
+bool at_eof(Token *token);
 
 bool is_alnum(char c);
 
@@ -152,7 +151,7 @@ Token *tokenize(char *p);
 
 LVar *find_lvar(Token *tok);
 
-void debug_token();
+void debug_token(Token *token);
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type);
 Node *new_node_num(int val);
@@ -161,18 +160,18 @@ bool is_convertible(Type *a,Type *b);
 int type_size(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 
-void program();
-Function *func_definition();
-Node *stmt();
-Node *expr();
-Node *assign();
-Node *equality();
-Node *relational();
-Node *add();
-Node *mul();
-Node *unary();
-Node *postfix();
-Node *primary();
+void program(Token *tok);
+Function *func_definition(Token **rest,Token *tok);
+Node *stmt(Token **rest,Token *tok);
+Node *expr(Token **rest,Token *tok);
+Node *assign(Token **rest,Token *tok);
+Node *equality(Token **rest,Token *tok);
+Node *relational(Token **rest,Token *tok);
+Node *add(Token **rest,Token *tok);
+Node *mul(Token **rest,Token *tok);
+Node *unary(Token **rest,Token *tok);
+Node *postfix(Token **rest,Token *tok);
+Node *primary(Token **rest,Token *tok);
 
 void gen(Node *node);
 void gen_function(Function *func);
