@@ -144,7 +144,7 @@ struct Global {
 extern const char variable_letters[];
 
 extern char *user_input;
-extern Global *functions;
+extern Global *globals;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);

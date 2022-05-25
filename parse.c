@@ -21,7 +21,7 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-Global *functions;
+Global *globals;
 Global *now_function;
 
 LVar *find_lvar(Token *tok){
@@ -32,7 +32,7 @@ LVar *find_lvar(Token *tok){
 }
 
 Global *find_function(Token *tok) {
-  for(Global *func = functions;func;func = func->next)
+  for(Global *func = globals;func;func = func->next)
     if(func->len == tok->len && !memcmp(tok->str,func->name,func->len))
       return func;
   return NULL;
@@ -191,12 +191,12 @@ int offset_alignment(int start,int data_size,int alignment){
 void program(Token *tok) {
   while(!at_eof(tok)){
     Global *push_function = func_definition(&tok,tok);
-    if(!functions) {
-      functions = push_function;
+    if(!globals) {
+      globals = push_function;
       continue;
     }
-    push_function -> next = functions;
-    functions = push_function;
+    push_function -> next = globals;
+    globals = push_function;
   }
 }
 

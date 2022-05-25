@@ -260,7 +260,7 @@ void gen_function(Global *func) {
 void codegen_all(FILE *output) {
   fprintf(output,".intel_syntax noprefix\n");
   
-  for(Global *now = functions;now;now = now->next){
+  for(Global *now = globals;now;now = now->next){
     gen_function(now);
   }
 }
