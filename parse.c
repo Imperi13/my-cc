@@ -21,8 +21,8 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-Function *functions;
-Function *now_function;
+Global *functions;
+Global *now_function;
 
 LVar *find_lvar(Token *tok){
   for(LVarList *var = now_function->locals; var; var = var->next)
@@ -31,9 +31,9 @@ LVar *find_lvar(Token *tok){
   return NULL;
 }
 
-Function *find_function(Token *tok) {
-  for(Function *func = functions;func;func = func->next)
-    if(func->func_name_len == tok->len && !memcmp(tok->str,func->func_name,func->func_name_len))
+Global *find_function(Token *tok) {
+  for(Global *func = functions;func;func = func->next)
+    if(func->len == tok->len && !memcmp(tok->str,func->name,func->len))
       return func;
   return NULL;
 }
@@ -190,7 +190,7 @@ int offset_alignment(int start,int data_size,int alignment){
 
 void program(Token *tok) {
   while(!at_eof(tok)){
-    Function *push_function = func_definition(&tok,tok);
+    Global *push_function = func_definition(&tok,tok);
     if(!functions) {
       functions = push_function;
       continue;
@@ -200,26 +200,30 @@ void program(Token *tok) {
   }
 }
 
-Function *func_definition(Token **rest,Token *tok) {
+Global *func_definition(Token **rest,Token *tok) {
   Type *return_type = parse_type(&tok,tok);
   if(!return_type)
     error("not type");
 
-  Function *func_def = calloc(1,sizeof(Function));
+  Global *func_def = calloc(1,sizeof(Global));
   now_function = func_def;
 
   Token *ident = consume_kind(&tok,tok,TK_IDENT);
   if(!ident)
     error("invalid func definition");
 
-  Function *double_define = find_function(ident);
+  Global *double_define = find_function(ident);
   if(double_define)
     error("already defined");
 
-  func_def->return_type = return_type;
-  func_def->func_name = ident->str;
-  func_def->func_name_len = ident->len;
-  func_def->arg_count = 0;
+  Type *type = calloc(1,sizeof(Type));
+  type->ty = FUNC;
+  type->return_type = return_type;
+
+  func_def->type = type;
+  func_def->name = ident->str;
+  func_def->len = ident->len;
+  func_def->arg_size = 0;
 
   expect(&tok,tok,"(");
   if(!consume(&tok,tok,")")){
@@ -228,12 +232,23 @@ Function *func_definition(Token **rest,Token *tok) {
       if(!arg_type)
         error("not type");
 
+      TypeList *push_argtype = calloc(1,sizeof(TypeList));
+      push_argtype->type = arg_type;
+
+      if(!type->argtype_front){
+        type->argtype_front = push_argtype;
+        type->argtype_back = push_argtype;
+      }else{
+        type->argtype_back->next = push_argtype;
+        type->argtype_back = push_argtype;
+      }
+
       ident = consume_kind(&tok,tok,TK_IDENT);
       LVar *lvar = find_lvar(ident);
       if(lvar)
         error("duplicate arguments");
 
-      LVarList *push_lvar = calloc(1,sizeof(LVar));
+      LVarList *push_lvar = calloc(1,sizeof(LVarList));
       lvar = calloc(1,sizeof(LVar));
       push_lvar->lvar = lvar;
       push_lvar->next = now_function->locals;
@@ -246,7 +261,7 @@ Function *func_definition(Token **rest,Token *tok) {
         lvar->offset = offset_alignment(0,type_size(arg_type),type_alignment(arg_type));
       now_function->locals = push_lvar;
 
-      func_def->arg_count++;
+      func_def->arg_size++;
       LVarList *push_arg = calloc(1,sizeof(LVarList));
       push_arg->lvar = lvar;
       if(!func_def->arg_front){
@@ -257,7 +272,7 @@ Function *func_definition(Token **rest,Token *tok) {
         func_def->arg_back = push_arg;
       }
 
-      if(func_def->arg_count > 6)
+      if(func_def->arg_size > 6)
         error("more than 6 args is not implemented");
     }while(consume(&tok,tok,","));
     expect(&tok,tok,")");

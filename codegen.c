@@ -224,20 +224,20 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-void gen_function(Function *func) {
+void gen_function(Global *func) {
   int stack_offset = 0;
   if(func->locals)
     stack_offset = func->locals->lvar->offset;
 
-  printf(".globl %.*s\n",func->func_name_len,func->func_name);
-  printf("%.*s:\n",func->func_name_len,func->func_name);
+  printf(".globl %.*s\n",func->len,func->name);
+  printf("%.*s:\n",func->len,func->name);
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
   printf("  sub rsp, %d\n",offset_alignment(0,stack_offset,8));
 
   LVarList *now_arg = func->arg_front;
-  for(int i = 0;i < func->arg_count;i++){
+  for(int i = 0;i < func->arg_size;i++){
     printf(" mov rax, rbp\n");
     printf("  sub rax, %d\n",now_arg->lvar->offset);
     if(type_size(now_arg->lvar->type) == 8)
@@ -260,7 +260,7 @@ void gen_function(Function *func) {
 void codegen_all(FILE *output) {
   fprintf(output,".intel_syntax noprefix\n");
   
-  for(Function *now = functions;now;now = now->next){
+  for(Global *now = functions;now;now = now->next){
     gen_function(now);
   }
 }

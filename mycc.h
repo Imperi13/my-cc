@@ -6,6 +6,32 @@
 #include <string.h>
 #include <errno.h>
 
+typedef enum{
+  INT,
+  PTR,
+  ARRAY,
+  FUNC,
+} TypeKind;
+
+typedef struct Type Type;
+typedef struct TypeList TypeList;
+
+struct Type {
+  TypeKind ty;
+  Type *ptr_to;
+  size_t array_size;
+
+  // for FUNC
+  Type *return_type;
+  TypeList *argtype_front;
+  TypeList *argtype_back;
+};
+
+struct TypeList {
+  TypeList *next;
+  Type *type;
+};
+
 typedef enum {
   ND_ADD,
   ND_SUB,
@@ -32,14 +58,6 @@ typedef enum {
   ND_FUNCTION_CALL,
   ND_NUM,
 } NodeKind;
-
-typedef struct Type Type;
-
-struct Type {
-  enum {INT,PTR,ARRAY} ty;
-  Type *ptr_to;
-  size_t array_size;
-};
 
 typedef struct Node Node;
 typedef struct NodeList NodeList;
@@ -106,25 +124,27 @@ struct LVarList {
   LVar *lvar;
 };
 
-typedef struct Function Function;
+typedef struct Global Global;
 
-struct Function {
-  Function *next;
-  Type *return_type;
+struct Global {
+  Global *next;
+  Type *type;
+  char *name;
+  int len;
+
+  // for function
   LVarList *arg_front;
   LVarList *arg_back;
+  LVarList *locals;
   NodeList *code_front;
   NodeList *code_back;
-  LVarList *locals;
-  char *func_name;
-  int func_name_len;
-  int arg_count;
+  int arg_size;
 };
 
 extern const char variable_letters[];
 
 extern char *user_input;
-extern Function *functions;
+extern Global *functions;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
@@ -153,7 +173,7 @@ int type_size(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 
 void program(Token *tok);
-Function *func_definition(Token **rest,Token *tok);
+Global *func_definition(Token **rest,Token *tok);
 Node *stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
 Node *assign(Token **rest,Token *tok);
@@ -166,7 +186,7 @@ Node *postfix(Token **rest,Token *tok);
 Node *primary(Token **rest,Token *tok);
 
 void gen(Node *node);
-void gen_function(Function *func);
+void gen_function(Global *func);
 void codegen_all(FILE *output);
 
 
