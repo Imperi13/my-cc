@@ -152,35 +152,16 @@ bool at_eof(Token *token);
 
 bool is_alnum(char c);
 
-Token *new_token(TokenKind kind,Token *cur, char *str,int len);
 Token *tokenize(char *p);
 
-Obj *find_lvar(Token *tok);
-
 void debug_token(Token *token);
-
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type);
-Node *new_node_num(int val);
 
 bool is_convertible(Type *a,Type *b);
 int type_size(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 
 void program(Token *tok);
-Obj *func_definition(Token **rest,Token *tok);
-Node *stmt(Token **rest,Token *tok);
-Node *expr(Token **rest,Token *tok);
-Node *assign(Token **rest,Token *tok);
-Node *equality(Token **rest,Token *tok);
-Node *relational(Token **rest,Token *tok);
-Node *add(Token **rest,Token *tok);
-Node *mul(Token **rest,Token *tok);
-Node *unary(Token **rest,Token *tok);
-Node *postfix(Token **rest,Token *tok);
-Node *primary(Token **rest,Token *tok);
 
-void gen(Node *node);
-void gen_function(Obj *func);
 void codegen_all(FILE *output);
 
 

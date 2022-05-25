@@ -1,5 +1,17 @@
 #include "mycc.h"
 
+Obj *func_definition(Token **rest,Token *tok);
+Node *stmt(Token **rest,Token *tok);
+Node *expr(Token **rest,Token *tok);
+Node *assign(Token **rest,Token *tok);
+Node *equality(Token **rest,Token *tok);
+Node *relational(Token **rest,Token *tok);
+Node *add(Token **rest,Token *tok);
+Node *mul(Token **rest,Token *tok);
+Node *unary(Token **rest,Token *tok);
+Node *postfix(Token **rest,Token *tok);
+Node *primary(Token **rest,Token *tok);
+
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap,fmt);
