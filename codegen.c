@@ -125,7 +125,7 @@ void gen(Node *node) {
       return;
     case ND_BLOCK:
       while(node->stmt_front){
-        gen(node->stmt_front->stmt);
+        gen(node->stmt_front->node);
         node->stmt_front = node->stmt_front->next;
         if(node->stmt_front)
           printf("  pop rax\n");
@@ -140,7 +140,7 @@ void gen(Node *node) {
       while(node->expr_front){
         if(arg_count >= 6)
           error("more than 6 arguments is not implemented");
-        gen(node->expr_front->expr);
+        gen(node->expr_front->node);
         node->expr_front = node->expr_front->next;
         arg_count++;
       }
@@ -227,7 +227,7 @@ void gen(Node *node) {
 void gen_function(Function *func) {
   int stack_offset = 0;
   if(func->locals)
-    stack_offset = func->locals->offset;
+    stack_offset = func->locals->lvar->offset;
 
   printf(".globl %.*s\n",func->func_name_len,func->func_name);
   printf("%.*s:\n",func->func_name_len,func->func_name);
@@ -236,19 +236,19 @@ void gen_function(Function *func) {
   printf("  mov rbp, rsp\n");
   printf("  sub rsp, %d\n",offset_alignment(0,stack_offset,8));
 
-  ArgList *now_arg = func->arg_front;
+  LVarList *now_arg = func->arg_front;
   for(int i = 0;i < func->arg_count;i++){
     printf(" mov rax, rbp\n");
     printf("  sub rax, %d\n",now_arg->lvar->offset);
-    if(type_size(now_arg->type) == 8)
+    if(type_size(now_arg->lvar->type) == 8)
       printf("  mov [rax], %s\n",call_register64[i]);
-    else if(type_size(now_arg->type) == 4)
+    else if(type_size(now_arg->lvar->type) == 4)
       printf("  mov [rax], %s\n",call_register32[i]);
     now_arg = now_arg->next;
   }
 
-  for(StmtList *stmt = func->code_front;stmt;stmt = stmt->next) {
-    gen(stmt->stmt);
+  for(NodeList *stmt = func->code_front;stmt;stmt = stmt->next) {
+    gen(stmt->node);
     printf("  pop rax\n");
   }
 

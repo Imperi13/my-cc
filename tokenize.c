@@ -1,47 +1,49 @@
 #include "mycc.h"
 
-bool consume(char* op){
+bool consume(Token **rest,Token *token,char* op){
   if (token->kind != TK_RESERVED || 
       strlen(op) != token->len ||
-      memcmp(token->str,op,token->len))
+      memcmp(token->str,op,token->len)){
+    *rest = token;
     return false;
-  token = token->next;
+  }
+  *rest = token->next;
   return true;
 }
 
-Token *consume_kind(TokenKind kind) {
-  if (token->kind != kind)
+Token *consume_kind(Token **rest,Token *token,TokenKind kind) {
+  if (token->kind != kind){
+    *rest = token;
     return NULL;
-  Token *tok = token;
-  token = token->next;
-  return tok;
+  }
+  *rest = token->next;
+  return token;
 }
 
-void expect(char* op) {
+void expect(Token **rest,Token *token,char* op) {
   if (token->kind != TK_RESERVED || 
       strlen(op) != token->len ||
       memcmp(token->str,op,token->len))
     error("not '%c' op",op);
-  token = token->next;
+  *rest = token->next;
 }
 
-Token *expect_kind(TokenKind kind) {
+Token *expect_kind(Token **rest,Token *token,TokenKind kind) {
   if(token->kind != kind)
     error("not expect TokenKind");
-  Token *tok = token;
-  token = token->next;
-  return tok;
+  *rest = token->next;
+  return token;
 }
 
-int expect_number(){
+int expect_number(Token **rest,Token *token){
   if (token->kind != TK_NUM)
     error("not number");
   int val = token->val;
-  token = token->next;
+  *rest = token->next;
   return val;
 }
 
-bool at_eof(){
+bool at_eof(Token *token){
   return token->kind == TK_EOF;
 }
 
@@ -154,7 +156,7 @@ Token *tokenize(char *p){
  return head.next;
 }
 
-void debug_token() {
+void debug_token(Token *token) {
   Token *cur = token;
   while(cur != NULL){
     fprintf(stderr,"kind:%d , len :%d , str: %.*s\n",cur->kind,cur->len,cur->len,cur->str);

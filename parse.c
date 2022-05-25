@@ -25,9 +25,9 @@ Function *functions;
 Function *now_function;
 
 LVar *find_lvar(Token *tok){
-  for(LVar *var = now_function->locals; var; var = var->next)
-    if (var->len == tok->len && !memcmp(tok->str,var->name,var->len))
-      return var;
+  for(LVarList *var = now_function->locals; var; var = var->next)
+    if (var->lvar->len == tok->len && !memcmp(tok->str,var->lvar->name,var->lvar->len))
+      return var->lvar;
   return NULL;
 }
 
@@ -102,46 +102,53 @@ Node *new_assign_node(Node *lhs,Node *rhs) {
   return node;
 }
 
-Type *parse_type() {
-  if(!consume_kind(TK_INT))
+Type *parse_type(Token **rest,Token *tok) {
+  if(!consume_kind(&tok,tok,TK_INT)){
+    *rest = tok;
     return NULL;
+  }
   Type *type = calloc(1,sizeof(Type));
   type->ty = INT;
-  while(consume("*")){
+  while(consume(&tok,tok,"*")){
     Type *now = calloc(1,sizeof(Type));
     now->ty = PTR;
     now->ptr_to = type;
     type = now;
   }
+  *rest = tok;
   return type;
 }
 
-LVar *parse_lvar_definition() {
-  Type *base_type = parse_type();
-  if(!base_type)
+LVar *parse_lvar_definition(Token **rest,Token *tok) {
+  Type *base_type = parse_type(&tok,tok);
+  if(!base_type){
+    *rest = tok;
     return NULL;
-  Token *tok = consume_kind(TK_IDENT);
-  if(!tok)
+  }
+  Token *ident = consume_kind(&tok,tok,TK_IDENT);
+  if(!ident)
     error("error at var_def");
 
-  if(consume("[")){
+  if(consume(&tok,tok,"[")){
     Type *var_type = calloc(1,sizeof(Type));
     var_type->ty = ARRAY;
     var_type->ptr_to = base_type;
-    var_type->array_size = expect_number();
-    expect("]");
+    var_type->array_size = expect_number(&tok,tok);
+    expect(&tok,tok,"]");
 
     base_type = var_type;
   }
   
-  LVar *lvar = find_lvar(tok);
+  LVar *lvar = find_lvar(ident);
   if(lvar)
     error("duplicate local variables");
 
   lvar = calloc(1,sizeof(LVar));
-  lvar->name = tok->str;
-  lvar->len = tok->len;
+  lvar->name = ident->str;
+  lvar->len = ident->len;
   lvar->type = base_type;
+
+  *rest = tok;
   return lvar;
 }
 
@@ -181,9 +188,9 @@ int offset_alignment(int start,int data_size,int alignment){
   return ((start+data_size + alignment - 1)/alignment)*alignment;
 }
 
-void program() {
-  while(!at_eof()){
-    Function *push_function = func_definition();
+void program(Token *tok) {
+  while(!at_eof(tok)){
+    Function *push_function = func_definition(&tok,tok);
     if(!functions) {
       functions = push_function;
       continue;
@@ -193,73 +200,74 @@ void program() {
   }
 }
 
-Function *func_definition() {
-  Type *return_type = parse_type();
+Function *func_definition(Token **rest,Token *tok) {
+  Type *return_type = parse_type(&tok,tok);
   if(!return_type)
     error("not type");
 
   Function *func_def = calloc(1,sizeof(Function));
   now_function = func_def;
 
-  Token *tok = consume_kind(TK_IDENT);
-  if(!tok)
+  Token *ident = consume_kind(&tok,tok,TK_IDENT);
+  if(!ident)
     error("invalid func definition");
 
-  Function *double_define = find_function(tok);
+  Function *double_define = find_function(ident);
   if(double_define)
     error("already defined");
 
   func_def->return_type = return_type;
-  func_def->func_name = tok->str;
-  func_def->func_name_len = tok->len;
+  func_def->func_name = ident->str;
+  func_def->func_name_len = ident->len;
   func_def->arg_count = 0;
 
-  expect("(");
-  if(!consume(")")){
+  expect(&tok,tok,"(");
+  if(!consume(&tok,tok,")")){
     do{
-      Type *arg_type = parse_type();
+      Type *arg_type = parse_type(&tok,tok);
       if(!arg_type)
         error("not type");
 
-      tok = consume_kind(TK_IDENT);
-      LVar *lvar = find_lvar(tok);
+      ident = consume_kind(&tok,tok,TK_IDENT);
+      LVar *lvar = find_lvar(ident);
       if(lvar)
         error("duplicate arguments");
 
+      LVarList *push_lvar = calloc(1,sizeof(LVar));
       lvar = calloc(1,sizeof(LVar));
-      lvar->next = now_function->locals;
-      lvar->name = tok->str;
-      lvar->len = tok->len;
+      push_lvar->lvar = lvar;
+      push_lvar->next = now_function->locals;
+      lvar->name = ident->str;
+      lvar->len = ident->len;
       lvar->type = arg_type;
       if(now_function->locals)
-        lvar->offset = offset_alignment(now_function->locals->offset,type_size(arg_type),type_alignment(arg_type));
+        lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(arg_type),type_alignment(arg_type));
       else
         lvar->offset = offset_alignment(0,type_size(arg_type),type_alignment(arg_type));
-      now_function->locals = lvar;
+      now_function->locals = push_lvar;
 
       func_def->arg_count++;
-      ArgList *push_type = calloc(1,sizeof(ArgList));
-      push_type->type = arg_type;
-      push_type->lvar = lvar;
+      LVarList *push_arg = calloc(1,sizeof(LVarList));
+      push_arg->lvar = lvar;
       if(!func_def->arg_front){
-        func_def->arg_front = push_type;
-        func_def->arg_back = push_type;
+        func_def->arg_front = push_arg;
+        func_def->arg_back = push_arg;
       }else{
-        func_def->arg_back->next = push_type;
-        func_def->arg_back = push_type;
+        func_def->arg_back->next = push_arg;
+        func_def->arg_back = push_arg;
       }
 
       if(func_def->arg_count > 6)
         error("more than 6 args is not implemented");
-    }while(consume(","));
-    expect(")");
+    }while(consume(&tok,tok,","));
+    expect(&tok,tok,")");
   }
 
-  expect("{");
+  expect(&tok,tok,"{");
 
-  while(!consume("}")){
-    StmtList *push_stmt = calloc(1,sizeof(StmtList));
-    push_stmt->stmt = stmt();
+  while(!consume(&tok,tok,"}")){
+    NodeList *push_stmt = calloc(1,sizeof(NodeList));
+    push_stmt->node = stmt(&tok,tok);
     if(!func_def->code_front){
       func_def->code_front = push_stmt;
       func_def->code_back = push_stmt;
@@ -269,18 +277,19 @@ Function *func_definition() {
     }
   }
 
+  *rest = tok;
   return func_def;
 }
 
-Node *stmt() {
+Node *stmt(Token **rest,Token *tok) {
   Node *node;
 
-  if(consume("{")){
+  if(consume(&tok,tok,"{")){
     node = calloc(1,sizeof(Node));
     node->kind = ND_BLOCK;
-    while(!consume("}")){
-      StmtList *push_stmt=calloc(1,sizeof(StmtList));
-      push_stmt->stmt = stmt();
+    while(!consume(&tok,tok,"}")){
+      NodeList *push_stmt=calloc(1,sizeof(NodeList));
+      push_stmt->node = stmt(&tok,tok);
       if(!node->stmt_back){
         node->stmt_front=push_stmt;
         node->stmt_back=push_stmt;
@@ -289,152 +298,173 @@ Node *stmt() {
       node->stmt_back->next = push_stmt;
       node->stmt_back = push_stmt;
     }
+
+    *rest = tok;
     return node;
   }
 
-  if(consume_kind(TK_IF)) {
+  if(consume_kind(&tok,tok,TK_IF)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_IF;
-    expect("(");
-    node -> expr = expr();
-    expect(")");
-    node -> lhs = stmt();
+    expect(&tok,tok,"(");
+    node -> expr = expr(&tok,tok);
+    expect(&tok,tok,")");
+    node -> lhs = stmt(&tok,tok);
 
-    if(consume_kind(TK_ELSE)){
+    if(consume_kind(&tok,tok,TK_ELSE)){
       node -> kind = ND_IFELSE;
-      node -> rhs = stmt();
+      node -> rhs = stmt(&tok,tok);
     }
+
+    *rest = tok;
     return node;
   }
 
-  if(consume_kind(TK_WHILE)) {
+  if(consume_kind(&tok,tok,TK_WHILE)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_WHILE;
-    expect("(");
-    node->expr = expr();
-    expect(")");
-    node->lhs = stmt();
+    expect(&tok,tok,"(");
+    node->expr = expr(&tok,tok);
+    expect(&tok,tok,")");
+    node->lhs = stmt(&tok,tok);
+
+    *rest = tok;
     return node;
   }
 
-  if(consume_kind(TK_FOR)) {
+  if(consume_kind(&tok,tok,TK_FOR)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_FOR;
-    expect("(");
-    if(!consume(";")){
-      node->init_expr = expr();
-      expect(";");
+    expect(&tok,tok,"(");
+    if(!consume(&tok,tok,";")){
+      node->init_expr = expr(&tok,tok);
+      expect(&tok,tok,";");
     }
-    if(!consume(";")){
-      node->expr=expr();
-      expect(";");
+    if(!consume(&tok,tok,";")){
+      node->expr=expr(&tok,tok);
+      expect(&tok,tok,";");
     }else{
       node->expr=new_node_num(1);
     }
-    if(!consume(")")){
-      node->update_expr=expr();
-      expect(")");
+    if(!consume(&tok,tok,")")){
+      node->update_expr=expr(&tok,tok);
+      expect(&tok,tok,")");
     }
 
-    node->lhs=stmt();
+    node->lhs=stmt(&tok,tok);
+
+    *rest = tok;
     return node;
   }
 
   LVar *lvar;
 
-  if(consume_kind(TK_RETURN)) {
+  if(consume_kind(&tok,tok,TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
-    node->lhs = expr();
-  }else if(lvar = parse_lvar_definition(),lvar){
+    node->lhs = expr(&tok,tok);
+  }else if(lvar = parse_lvar_definition(&tok,tok),lvar){
     node = calloc(1,sizeof(Node));
     node->kind = ND_LVAR_DEFINE;
 
-    lvar->next = now_function->locals;
+    LVarList *push_lvar = calloc(1,sizeof(LVarList));
+    push_lvar->lvar = lvar;
+    push_lvar->next = now_function->locals;
     if(now_function->locals)
-      lvar->offset = offset_alignment(now_function->locals->offset,type_size(lvar->type),type_alignment(lvar->type));
+      lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(lvar->type),type_alignment(lvar->type));
     else 
       lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
-    now_function->locals = lvar;
+    now_function->locals = push_lvar;
   }else{
-    node = expr();
+    node = expr(&tok,tok);
   }
-  expect(";");
+  expect(&tok,tok,";");
+
+  *rest = tok;
   return node;
 }
 
-Node *expr() {
-  return assign();
+Node *expr(Token **rest,Token *tok) {
+  Node *node = assign(&tok,tok);
+
+  *rest = tok;
+  return node;
 }
 
-Node *assign() {
-  Node *lhs = equality();
-  if (consume("=")){
-    Node *rhs = assign();
+Node *assign(Token **rest,Token *tok) {
+  Node *lhs = equality(&tok,tok);
+  if (consume(&tok,tok,"=")){
+    Node *rhs = assign(&tok,tok);
     lhs = new_assign_node(lhs,rhs);
-  }else if(consume("+=")){
-    Node *rhs = assign();
+  }else if(consume(&tok,tok,"+=")){
+    Node *rhs = assign(&tok,tok);
     Node *add_node = new_add_node(lhs,rhs);
     lhs = new_assign_node(lhs,add_node);
   }
+
+  *rest = tok;
   return lhs;
 }
 
-Node *equality() {
-  Node *lhs = relational();
+Node *equality(Token **rest,Token *tok) {
+  Node *lhs = relational(&tok,tok);
   for(;;) {
-    if(consume("==")){
-      Node *rhs = relational();
+    if(consume(&tok,tok,"==")){
+      Node *rhs = relational(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error("invalid argument type to equality ==");
       lhs = new_node(ND_EQUAL,lhs,rhs,lhs->type);
-    }else if(consume("!=")){
-      Node *rhs = relational();
+    }else if(consume(&tok,tok,"!=")){
+      Node *rhs = relational(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error("invalid argument type to equality !=");
       lhs = new_node(ND_NOT_EQUAL,lhs,rhs,lhs->type);
-    }else
+    }else{
+      *rest = tok;
       return lhs;
+    }
   }
 }
 
-Node *relational() {
-  Node *lhs = add();
+Node *relational(Token **rest,Token *tok) {
+  Node *lhs = add(&tok,tok);
   for(;;) {
-    if(consume("<")){
-      Node *rhs = add();
+    if(consume(&tok,tok,"<")){
+      Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error("invalid argument type to relational <");
       lhs = new_node(ND_SMALLER,lhs,rhs,lhs->type);
-    }else if(consume("<=")){
-      Node *rhs = add();
+    }else if(consume(&tok,tok,"<=")){
+      Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error("invalid argument type to relational <=");
       lhs = new_node(ND_SMALLER_EQUAL,lhs,rhs,lhs->type);
-    }else if (consume(">")){
-      Node *rhs = add();
+    }else if (consume(&tok,tok,">")){
+      Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error("invalid argument type to relational >");
       lhs = new_node(ND_GREATER,lhs,rhs,lhs->type);
-    }else if (consume(">=")){
-      Node *rhs = add();
+    }else if (consume(&tok,tok,">=")){
+      Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error("invalid argument type to relational >=");
       lhs = new_node(ND_GREATER_EQUAL,lhs,rhs,lhs->type);
-    }else
+    }else{
+      *rest = tok;
       return lhs;
+    }
   }
 }
 
-Node *add() {
-  Node *lhs = mul();
+Node *add(Token **rest,Token *tok) {
+  Node *lhs = mul(&tok,tok);
   
   for(;;) {
-    if(consume("+")){
-      Node *rhs = mul();
+    if(consume(&tok,tok,"+")){
+      Node *rhs = mul(&tok,tok);
       lhs = new_add_node(lhs,rhs);
-    }else if(consume("-")){
-      Node *rhs = mul();
+    }else if(consume(&tok,tok,"-")){
+      Node *rhs = mul(&tok,tok);
 
       if(lhs->type->ty == INT && rhs->type->ty == INT)
         lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
@@ -445,94 +475,121 @@ Node *add() {
         lhs = new_node(ND_SUB,lhs,rhs,convert_type);
       }else
         error("invalid argument type to sub -");
-    }else
+    }else{
+      *rest = tok;
       return lhs;
+    }
   }
 }
 
-Node *mul() {
-  Node *lhs = unary();
+Node *mul(Token **rest,Token *tok) {
+  Node *lhs = unary(&tok,tok);
 
   for(;;) {
-    if(consume("*")){
-      Node *rhs = unary();
+    if(consume(&tok,tok,"*")){
+      Node *rhs = unary(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error("invalid argument type to mul * ");
       lhs = new_node(ND_MUL,lhs,rhs,lhs->type);
-    }else if(consume("/")){
-      Node *rhs = unary();
+    }else if(consume(&tok,tok,"/")){
+      Node *rhs = unary(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error("invalid argument type to div /");
       lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
-    }else if(consume("%")){
-      Node *rhs = unary();
+    }else if(consume(&tok,tok,"%")){
+      Node *rhs = unary(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error("invalid argument type to mod %");
       lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
-    }else
+    }else{
+      *rest = tok;
       return lhs;
+    }
   }
 }
 
-Node *unary() {
-  if(consume_kind(TK_SIZEOF)){
-    Node *node = unary();
-    return new_node_num(type_size(node->type));
-  }
+Node *unary(Token **rest,Token *tok) {
+  if(consume_kind(&tok,tok,TK_SIZEOF)){
+    Node *node = unary(&tok,tok);
+    node = new_node_num(type_size(node->type));
 
-  if(consume("+"))
-    return unary();
-  if(consume("-")){
-    Node *node = unary();
-    if(node->type->ty != INT)
-      error("invalid argument type ptr to unary");
-    return new_node(ND_SUB,new_node_num(0), node,node->type);
-  }
-  if(consume("*")){
-    Node *node = unary();
-    if(node->type->ty != PTR && node->type->ty != ARRAY)
-      error("not dereference to type int");
-    return new_node(ND_DEREF,node,NULL,node->type->ptr_to);
-  }
-  if(consume("&")){
-    Node *node = unary();
-    Type *type = calloc(1,sizeof(Type));
-    type->ty = PTR;
-    type->ptr_to = node->type;
-    return new_node(ND_ADDR,node,NULL,type);
-  }
-  return postfix();
-}
-
-Node *postfix() {
-  Node *lhs = primary();
-
-  for(;;){
-    if(consume("[")){
-      Node *rhs = expr();
-      Node *add_node = new_add_node(lhs,rhs);
-      lhs = new_deref_node(add_node);
-      expect("]");
-    }else if(consume("++")){
-      Node *add_node = new_add_node(lhs,new_node_num(1));
-      lhs = new_assign_node(lhs,add_node);
-    }else
-      return lhs;
-  }
-}
-
-Node *primary() {
-  if(consume("(")){
-    Node *node = expr();
-    expect(")");
+    *rest = tok;
     return node;
   }
 
-  Token *tok = consume_kind(TK_IDENT);
-  if(tok){
+  if(consume(&tok,tok,"+")){
+    Node *node = unary(&tok,tok);
+    *rest = tok;
+    return node;
+  }
+  if(consume(&tok,tok,"-")){
+    Node *node = unary(&tok,tok);
+    if(node->type->ty != INT)
+      error("invalid argument type ptr to unary");
+    node =  new_node(ND_SUB,new_node_num(0), node,node->type);
+    
+    *rest = tok;
+    return node;
+  }
+  if(consume(&tok,tok,"*")){
+    Node *node = unary(&tok,tok);
+    if(node->type->ty != PTR && node->type->ty != ARRAY)
+      error("not dereference to type int");
+    node = new_node(ND_DEREF,node,NULL,node->type->ptr_to);
+
+    *rest = tok;
+    return node;
+  }
+  if(consume(&tok,tok,"&")){
+    Node *node = unary(&tok,tok);
+    Type *type = calloc(1,sizeof(Type));
+    type->ty = PTR;
+    type->ptr_to = node->type;
+    node = new_node(ND_ADDR,node,NULL,type);
+
+    *rest = tok;
+    return node;
+  }
+  
+  Node *node = postfix(&tok,tok);
+
+  *rest = tok;
+  return node;
+}
+
+Node *postfix(Token **rest,Token *tok) {
+  Node *lhs = primary(&tok,tok);
+
+  for(;;){
+    if(consume(&tok,tok,"[")){
+      Node *rhs = expr(&tok,tok);
+      Node *add_node = new_add_node(lhs,rhs);
+      lhs = new_deref_node(add_node);
+      expect(&tok,tok,"]");
+    }else if(consume(&tok,tok,"++")){
+      Node *add_node = new_add_node(lhs,new_node_num(1));
+      lhs = new_assign_node(lhs,add_node);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
+}
+
+Node *primary(Token **rest,Token *tok) {
+  if(consume(&tok,tok,"(")){
+    Node *node = expr(&tok,tok);
+    expect(&tok,tok,")");
+    
+    *rest = tok;
+    return node;
+  }
+
+  Token *ident = consume_kind(&tok,tok,TK_IDENT);
+  if(ident){
     Node *node = calloc(1,sizeof(Node));
 
-    if(consume("(")){
+    if(consume(&tok,tok,"(")){
       node->kind = ND_FUNCTION_CALL;
 
       // 関数の返り値は全部intということにしている
@@ -540,12 +597,12 @@ Node *primary() {
       return_type->ty = INT;
 
       node->type = return_type;
-      node->func_name = tok->str;
-      node->func_name_len = tok->len;
+      node->func_name = ident->str;
+      node->func_name_len = ident->len;
       
-      while(!consume(")")){
-        ExprList *push_expr = calloc(1,sizeof(ExprList));
-        push_expr->expr = expr();
+      while(!consume(&tok,tok,")")){
+        NodeList *push_expr = calloc(1,sizeof(NodeList));
+        push_expr->node = expr(&tok,tok);
 
         if(!node->expr_back){
           node->expr_front = push_expr;
@@ -555,21 +612,27 @@ Node *primary() {
           node->expr_back = push_expr;
         }
 
-        consume(",");
+        consume(&tok,tok,",");
       }
-
+  
+      *rest = tok;
       return node;
     }
 
     node->kind = ND_LVAR;
 
-    LVar *lvar = find_lvar(tok);
+    LVar *lvar = find_lvar(ident);
     if(!lvar)
-      error("ident '%.*s' is not defined",tok->len,tok->str);
+      error("ident '%.*s' is not defined",ident->len,ident->str);
     node->offset=lvar->offset;
     node->type = lvar->type;
+
+    *rest = tok;
     return node;
   }
 
-  return new_node_num(expect_number());
+  Node *node = new_node_num(expect_number(&tok,tok));
+
+  *rest = tok;
+  return node;
 }
