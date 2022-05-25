@@ -25,9 +25,9 @@ Function *functions;
 Function *now_function;
 
 LVar *find_lvar(Token *tok){
-  for(LVar *var = now_function->locals; var; var = var->next)
-    if (var->len == tok->len && !memcmp(tok->str,var->name,var->len))
-      return var;
+  for(LVarList *var = now_function->locals; var; var = var->next)
+    if (var->lvar->len == tok->len && !memcmp(tok->str,var->lvar->name,var->lvar->len))
+      return var->lvar;
   return NULL;
 }
 
@@ -233,27 +233,28 @@ Function *func_definition(Token **rest,Token *tok) {
       if(lvar)
         error("duplicate arguments");
 
+      LVarList *push_lvar = calloc(1,sizeof(LVar));
       lvar = calloc(1,sizeof(LVar));
-      lvar->next = now_function->locals;
+      push_lvar->lvar = lvar;
+      push_lvar->next = now_function->locals;
       lvar->name = ident->str;
       lvar->len = ident->len;
       lvar->type = arg_type;
       if(now_function->locals)
-        lvar->offset = offset_alignment(now_function->locals->offset,type_size(arg_type),type_alignment(arg_type));
+        lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(arg_type),type_alignment(arg_type));
       else
         lvar->offset = offset_alignment(0,type_size(arg_type),type_alignment(arg_type));
-      now_function->locals = lvar;
+      now_function->locals = push_lvar;
 
       func_def->arg_count++;
-      ArgList *push_type = calloc(1,sizeof(ArgList));
-      push_type->type = arg_type;
-      push_type->lvar = lvar;
+      LVarList *push_arg = calloc(1,sizeof(LVarList));
+      push_arg->lvar = lvar;
       if(!func_def->arg_front){
-        func_def->arg_front = push_type;
-        func_def->arg_back = push_type;
+        func_def->arg_front = push_arg;
+        func_def->arg_back = push_arg;
       }else{
-        func_def->arg_back->next = push_type;
-        func_def->arg_back = push_type;
+        func_def->arg_back->next = push_arg;
+        func_def->arg_back = push_arg;
       }
 
       if(func_def->arg_count > 6)
@@ -265,8 +266,8 @@ Function *func_definition(Token **rest,Token *tok) {
   expect(&tok,tok,"{");
 
   while(!consume(&tok,tok,"}")){
-    StmtList *push_stmt = calloc(1,sizeof(StmtList));
-    push_stmt->stmt = stmt(&tok,tok);
+    NodeList *push_stmt = calloc(1,sizeof(NodeList));
+    push_stmt->node = stmt(&tok,tok);
     if(!func_def->code_front){
       func_def->code_front = push_stmt;
       func_def->code_back = push_stmt;
@@ -287,8 +288,8 @@ Node *stmt(Token **rest,Token *tok) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_BLOCK;
     while(!consume(&tok,tok,"}")){
-      StmtList *push_stmt=calloc(1,sizeof(StmtList));
-      push_stmt->stmt = stmt(&tok,tok);
+      NodeList *push_stmt=calloc(1,sizeof(NodeList));
+      push_stmt->node = stmt(&tok,tok);
       if(!node->stmt_back){
         node->stmt_front=push_stmt;
         node->stmt_back=push_stmt;
@@ -366,12 +367,14 @@ Node *stmt(Token **rest,Token *tok) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_LVAR_DEFINE;
 
-    lvar->next = now_function->locals;
+    LVarList *push_lvar = calloc(1,sizeof(LVarList));
+    push_lvar->lvar = lvar;
+    push_lvar->next = now_function->locals;
     if(now_function->locals)
-      lvar->offset = offset_alignment(now_function->locals->offset,type_size(lvar->type),type_alignment(lvar->type));
+      lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(lvar->type),type_alignment(lvar->type));
     else 
       lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
-    now_function->locals = lvar;
+    now_function->locals = push_lvar;
   }else{
     node = expr(&tok,tok);
   }
@@ -598,8 +601,8 @@ Node *primary(Token **rest,Token *tok) {
       node->func_name_len = ident->len;
       
       while(!consume(&tok,tok,")")){
-        ExprList *push_expr = calloc(1,sizeof(ExprList));
-        push_expr->expr = expr(&tok,tok);
+        NodeList *push_expr = calloc(1,sizeof(NodeList));
+        push_expr->node = expr(&tok,tok);
 
         if(!node->expr_back){
           node->expr_front = push_expr;

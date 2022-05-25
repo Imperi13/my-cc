@@ -42,8 +42,7 @@ struct Type {
 };
 
 typedef struct Node Node;
-typedef struct StmtList StmtList;
-typedef struct ExprList ExprList;
+typedef struct NodeList NodeList;
 
 struct Node {
   NodeKind kind;
@@ -53,24 +52,19 @@ struct Node {
   Node *expr;
   Node *init_expr;
   Node *update_expr;
-  StmtList *stmt_front;
-  StmtList *stmt_back;
+  NodeList *stmt_front;
+  NodeList *stmt_back;
   char *func_name;
   int func_name_len;
-  ExprList *expr_front;
-  ExprList *expr_back;
+  NodeList *expr_front;
+  NodeList *expr_back;
   int val;
   int offset;
 };
 
-struct StmtList {
-  StmtList *next;
-  Node *stmt;
-};
-
-struct ExprList {
-  ExprList *next;
-  Node *expr;
+struct NodeList {
+  NodeList *next;
+  Node *node;
 };
 
 typedef enum {
@@ -98,32 +92,30 @@ struct Token{
 };
 
 typedef struct LVar LVar;
+typedef struct LVarList LVarList;
 
 struct LVar {
-  LVar *next;
   Type *type;
   char *name;
   int len;
   int offset;
 };
 
-typedef struct ArgList ArgList;
-typedef struct Function Function;
-
-struct ArgList{
-  ArgList *next;
-  Type *type;
+struct LVarList {
+  LVarList *next;
   LVar *lvar;
 };
+
+typedef struct Function Function;
 
 struct Function {
   Function *next;
   Type *return_type;
-  ArgList *arg_front;
-  ArgList *arg_back;
-  StmtList *code_front;
-  StmtList *code_back;
-  LVar *locals;
+  LVarList *arg_front;
+  LVarList *arg_back;
+  NodeList *code_front;
+  NodeList *code_back;
+  LVarList *locals;
   char *func_name;
   int func_name_len;
   int arg_count;
