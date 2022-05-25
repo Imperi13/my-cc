@@ -109,42 +109,36 @@ struct Token{
   int len;
 };
 
-typedef struct LVar LVar;
-typedef struct LVarList LVarList;
 
-struct LVar {
+typedef struct Obj Obj;
+typedef struct ObjList ObjList;
+
+struct Obj {
   Type *type;
   char *name;
   int len;
+
+  // for lvar
   int offset;
-};
-
-struct LVarList {
-  LVarList *next;
-  LVar *lvar;
-};
-
-typedef struct Global Global;
-
-struct Global {
-  Global *next;
-  Type *type;
-  char *name;
-  int len;
 
   // for function
-  LVarList *arg_front;
-  LVarList *arg_back;
-  LVarList *locals;
+  ObjList *arg_front;
+  ObjList *arg_back;
+  ObjList *locals;
   NodeList *code_front;
   NodeList *code_back;
   int arg_size;
 };
 
+struct ObjList {
+  ObjList *next;
+  Obj *obj;
+};
+
 extern const char variable_letters[];
 
 extern char *user_input;
-extern Global *globals;
+extern ObjList *globals;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
@@ -161,7 +155,7 @@ bool is_alnum(char c);
 Token *new_token(TokenKind kind,Token *cur, char *str,int len);
 Token *tokenize(char *p);
 
-LVar *find_lvar(Token *tok);
+Obj *find_lvar(Token *tok);
 
 void debug_token(Token *token);
 
@@ -173,7 +167,7 @@ int type_size(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 
 void program(Token *tok);
-Global *func_definition(Token **rest,Token *tok);
+Obj *func_definition(Token **rest,Token *tok);
 Node *stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
 Node *assign(Token **rest,Token *tok);
@@ -186,7 +180,7 @@ Node *postfix(Token **rest,Token *tok);
 Node *primary(Token **rest,Token *tok);
 
 void gen(Node *node);
-void gen_function(Global *func);
+void gen_function(Obj *func);
 void codegen_all(FILE *output);
 
 

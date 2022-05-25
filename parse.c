@@ -21,20 +21,20 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-Global *globals;
-Global *now_function;
+ObjList *globals;
+Obj *now_function;
 
-LVar *find_lvar(Token *tok){
-  for(LVarList *var = now_function->locals; var; var = var->next)
-    if (var->lvar->len == tok->len && !memcmp(tok->str,var->lvar->name,var->lvar->len))
-      return var->lvar;
+Obj *find_lvar(Token *tok){
+  for(ObjList *var = now_function->locals; var; var = var->next)
+    if (var->obj->len == tok->len && !memcmp(tok->str,var->obj->name,var->obj->len))
+      return var->obj;
   return NULL;
 }
 
-Global *find_function(Token *tok) {
-  for(Global *func = globals;func;func = func->next)
-    if(func->len == tok->len && !memcmp(tok->str,func->name,func->len))
-      return func;
+Obj *find_function(Token *tok) {
+  for(ObjList *func = globals;func;func = func->next)
+    if(func->obj->len == tok->len && !memcmp(tok->str,func->obj->name,func->obj->len))
+      return func->obj;
   return NULL;
 }
 
@@ -119,7 +119,7 @@ Type *parse_type(Token **rest,Token *tok) {
   return type;
 }
 
-LVar *parse_lvar_definition(Token **rest,Token *tok) {
+Obj *parse_lvar_definition(Token **rest,Token *tok) {
   Type *base_type = parse_type(&tok,tok);
   if(!base_type){
     *rest = tok;
@@ -139,11 +139,11 @@ LVar *parse_lvar_definition(Token **rest,Token *tok) {
     base_type = var_type;
   }
   
-  LVar *lvar = find_lvar(ident);
+  Obj *lvar = find_lvar(ident);
   if(lvar)
     error("duplicate local variables");
 
-  lvar = calloc(1,sizeof(LVar));
+  lvar = calloc(1,sizeof(Obj));
   lvar->name = ident->str;
   lvar->len = ident->len;
   lvar->type = base_type;
@@ -190,7 +190,8 @@ int offset_alignment(int start,int data_size,int alignment){
 
 void program(Token *tok) {
   while(!at_eof(tok)){
-    Global *push_function = func_definition(&tok,tok);
+    ObjList *push_function = calloc(1,sizeof(ObjList));
+    push_function->obj = func_definition(&tok,tok);
     if(!globals) {
       globals = push_function;
       continue;
@@ -200,19 +201,19 @@ void program(Token *tok) {
   }
 }
 
-Global *func_definition(Token **rest,Token *tok) {
+Obj *func_definition(Token **rest,Token *tok) {
   Type *return_type = parse_type(&tok,tok);
   if(!return_type)
     error("not type");
 
-  Global *func_def = calloc(1,sizeof(Global));
+  Obj *func_def = calloc(1,sizeof(Obj));
   now_function = func_def;
 
   Token *ident = consume_kind(&tok,tok,TK_IDENT);
   if(!ident)
     error("invalid func definition");
 
-  Global *double_define = find_function(ident);
+  Obj *double_define = find_function(ident);
   if(double_define)
     error("already defined");
 
@@ -244,26 +245,26 @@ Global *func_definition(Token **rest,Token *tok) {
       }
 
       ident = consume_kind(&tok,tok,TK_IDENT);
-      LVar *lvar = find_lvar(ident);
+      Obj *lvar = find_lvar(ident);
       if(lvar)
         error("duplicate arguments");
 
-      LVarList *push_lvar = calloc(1,sizeof(LVarList));
-      lvar = calloc(1,sizeof(LVar));
-      push_lvar->lvar = lvar;
+      ObjList *push_lvar = calloc(1,sizeof(ObjList));
+      lvar = calloc(1,sizeof(Obj));
+      push_lvar->obj = lvar;
       push_lvar->next = now_function->locals;
       lvar->name = ident->str;
       lvar->len = ident->len;
       lvar->type = arg_type;
       if(now_function->locals)
-        lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(arg_type),type_alignment(arg_type));
+        lvar->offset = offset_alignment(now_function->locals->obj->offset,type_size(arg_type),type_alignment(arg_type));
       else
         lvar->offset = offset_alignment(0,type_size(arg_type),type_alignment(arg_type));
       now_function->locals = push_lvar;
 
       func_def->arg_size++;
-      LVarList *push_arg = calloc(1,sizeof(LVarList));
-      push_arg->lvar = lvar;
+      ObjList *push_arg = calloc(1,sizeof(ObjList));
+      push_arg->obj = lvar;
       if(!func_def->arg_front){
         func_def->arg_front = push_arg;
         func_def->arg_back = push_arg;
@@ -372,7 +373,7 @@ Node *stmt(Token **rest,Token *tok) {
     return node;
   }
 
-  LVar *lvar;
+  Obj *lvar;
 
   if(consume_kind(&tok,tok,TK_RETURN)) {
     node = calloc(1,sizeof(Node));
@@ -382,11 +383,11 @@ Node *stmt(Token **rest,Token *tok) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_LVAR_DEFINE;
 
-    LVarList *push_lvar = calloc(1,sizeof(LVarList));
-    push_lvar->lvar = lvar;
+    ObjList *push_lvar = calloc(1,sizeof(ObjList));
+    push_lvar->obj = lvar;
     push_lvar->next = now_function->locals;
     if(now_function->locals)
-      lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(lvar->type),type_alignment(lvar->type));
+      lvar->offset = offset_alignment(now_function->locals->obj->offset,type_size(lvar->type),type_alignment(lvar->type));
     else 
       lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
     now_function->locals = push_lvar;
@@ -636,7 +637,7 @@ Node *primary(Token **rest,Token *tok) {
 
     node->kind = ND_LVAR;
 
-    LVar *lvar = find_lvar(ident);
+    Obj *lvar = find_lvar(ident);
     if(!lvar)
       error("ident '%.*s' is not defined",ident->len,ident->str);
     node->offset=lvar->offset;
