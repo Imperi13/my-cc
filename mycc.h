@@ -69,6 +69,8 @@ struct Node {
   Node *rhs;
   int val;
   int offset;
+  // for var
+  bool is_defined;
 
   // for conditional-stmt
   Node *expr;
@@ -132,6 +134,7 @@ struct Obj {
   NodeList *code_front;
   NodeList *code_back;
   int arg_size;
+  bool is_defined;
 };
 
 struct ObjList {

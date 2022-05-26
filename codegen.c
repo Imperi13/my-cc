@@ -18,7 +18,10 @@ void gen_lval(Node *node) {
   }
 
   if(node->type->ty == FUNC){
-    printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
+    if(node->is_defined)
+      printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
+    else
+      printf("  mov rax, [%.*s@GOTPCREL + rip]\n",node->len,node->name);
     printf("  push rax\n");
     return;
   }
@@ -272,6 +275,7 @@ void codegen_all(FILE *output) {
   fprintf(output,".intel_syntax noprefix\n");
   
   for(ObjList *now = globals;now;now = now->next){
-    gen_function(now->obj);
+    if(now->obj->is_defined)
+      gen_function(now->obj);
   }
 }

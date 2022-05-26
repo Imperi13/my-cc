@@ -1,6 +1,6 @@
 #include "mycc.h"
 
-void func_definition(Token **rest,Token *tok);
+void global_definition(Token **rest,Token *tok);
 Node *stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
 Node *assign(Token **rest,Token *tok);
@@ -209,11 +209,11 @@ int offset_alignment(int start,int data_size,int alignment){
 
 void program(Token *tok) {
   while(!at_eof(tok)){
-    func_definition(&tok,tok);
+    global_definition(&tok,tok);
   }
 }
 
-void func_definition(Token **rest,Token *tok) {
+void global_definition(Token **rest,Token *tok) {
   Type *return_type = parse_type(&tok,tok);
   if(!return_type)
     error("not type");
@@ -300,7 +300,13 @@ void func_definition(Token **rest,Token *tok) {
     expect(&tok,tok,")");
   }
 
-  expect(&tok,tok,"{");
+  if(!consume(&tok,tok,"{")){
+    expect(&tok,tok,";");
+    *rest = tok;
+    return;
+  }
+
+  func_def->is_defined = true;
 
   while(!consume(&tok,tok,"}")){
     NodeList *push_stmt = calloc(1,sizeof(NodeList));
@@ -666,6 +672,7 @@ Node *primary(Token **rest,Token *tok) {
       node->type = var->type;
       node->name = var->name;
       node->len = var->len;
+      node->is_defined = var->is_defined;
 
       *rest = tok;
       return node;
