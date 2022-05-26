@@ -45,8 +45,8 @@ typedef enum {
   ND_SMALLER,
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
-  ND_LVAR,
-  ND_LVAR_DEFINE,
+  ND_VAR,
+  ND_VAR_DEFINE,
   ND_ADDR,
   ND_DEREF,
   ND_RETURN,
@@ -67,17 +67,21 @@ struct Node {
   Type *type;
   Node *lhs;
   Node *rhs;
+  int val;
+  int offset;
+
+  // for conditional-stmt
   Node *expr;
   Node *init_expr;
   Node *update_expr;
+
+  // for function
   NodeList *stmt_front;
   NodeList *stmt_back;
-  char *func_name;
-  int func_name_len;
+  char *name;
+  int len;
   NodeList *expr_front;
   NodeList *expr_back;
-  int val;
-  int offset;
 };
 
 struct NodeList {

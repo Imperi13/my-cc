@@ -1,5 +1,7 @@
 #include "mycc.h"
 
+void gen(Node *node);
+
 char call_register64[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 char call_register32[][4] = {"edi","esi","edx","ecx","r8d","r9d"};
 
@@ -7,11 +9,17 @@ int label_count = 0;
 
 
 void gen_lval(Node *node) {
-  if (node->kind != ND_LVAR && node->kind != ND_DEREF)
+  if (node->kind != ND_VAR && node->kind != ND_DEREF)
     error("not lval");
 
   if(node->kind == ND_DEREF){
     gen(node->lhs);
+    return;
+  }
+
+  if(node->type->ty == FUNC){
+    printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
+    printf("  push rax\n");
     return;
   }
 
@@ -27,12 +35,12 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n",node->val);
       return;
-    case ND_LVAR_DEFINE:
+    case ND_VAR_DEFINE:
       printf("  push rax\n");
       return;
-    case ND_LVAR:
+    case ND_VAR:
       gen_lval(node);
-      if(node->type->ty == ARRAY)
+      if(node->type->ty == ARRAY || node->type->ty == FUNC)
         return;
       printf("  pop rax\n");
       if(type_size(node->type) == 8)
@@ -147,7 +155,10 @@ void gen(Node *node) {
       for(int i=arg_count-1;i>=0;i--){
         printf("  pop %s\n",call_register64[i]);
       }
-      printf("  call %.*s\n",node->func_name_len,node->func_name);
+      gen_lval(node->lhs);
+      printf("  pop r10\n");
+      // printf("  call %.*s\n",node->len,node->name);
+      printf("  call r10\n");
       printf("  pop r8\n");
       printf("  pop rsp\n");
       printf("  push rax\n");
