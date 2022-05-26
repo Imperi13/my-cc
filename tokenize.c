@@ -1,5 +1,17 @@
 #include "mycc.h"
 
+bool equal(Token *token,char *op){
+  if(token->kind != TK_RESERVED ||
+      strlen(op) != token->len || 
+      memcmp(token->str,op,token->len))
+    return false;
+  return true;
+}
+
+bool equal_kind(Token *token,TokenKind kind){
+  return token->kind == kind;
+}
+
 bool consume(Token **rest,Token *token,char* op){
   if (token->kind != TK_RESERVED || 
       strlen(op) != token->len ||

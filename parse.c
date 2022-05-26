@@ -542,9 +542,7 @@ Node *unary(Token **rest,Token *tok) {
   }
   if(consume(&tok,tok,"&")){
     Node *node = unary(&tok,tok);
-    Type *type = calloc(1,sizeof(Type));
-    type->ty = PTR;
-    type->ptr_to = node->type;
+    Type *type = newtype_ptr(node->type);
     node = new_node(ND_ADDR,node,NULL,type);
 
     *rest = tok;

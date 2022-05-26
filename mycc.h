@@ -151,6 +151,8 @@ extern ObjList *globals;
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 
+bool equal(Token *token,char *op);
+bool equal_kind(Token *token,TokenKind kind);
 bool consume(Token **rest,Token *token,char* op);
 Token *consume_kind(Token **rest,Token *token,TokenKind kind);
 void expect(Token **rest,Token *token,char* op);
@@ -164,6 +166,7 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
+Type *newtype_ptr(Type *base);
 bool is_same_type(Type *a,Type *b);
 bool is_convertible(Type *a,Type *b);
 int type_size(Type *a);
