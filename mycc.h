@@ -163,8 +163,10 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
+bool is_same_type(Type *a,Type *b);
 bool is_convertible(Type *a,Type *b);
 int type_size(Type *a);
+int type_alignment(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 
 void program(Token *tok);
