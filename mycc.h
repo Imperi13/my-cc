@@ -143,6 +143,7 @@ struct ObjList {
 };
 
 extern const char variable_letters[];
+extern Type *type_int;
 
 extern char *user_input;
 extern ObjList *globals;

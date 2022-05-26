@@ -61,11 +61,9 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type) {
 
 Node *new_node_num(int val) {
   Node *node = calloc(1,sizeof(Node));
-  Type *type = calloc(1,sizeof(Type));
-  type->ty = INT;
 
   node->kind = ND_NUM;
-  node->type = type;
+  node->type = type_int;
   node->val = val;
   return node;
 }
@@ -119,8 +117,7 @@ Type *parse_type(Token **rest,Token *tok) {
     *rest = tok;
     return NULL;
   }
-  Type *type = calloc(1,sizeof(Type));
-  type->ty = INT;
+  Type *type = type_int;
   while(consume(&tok,tok,"*")){
     Type *now = calloc(1,sizeof(Type));
     now->ty = PTR;
@@ -575,10 +572,7 @@ Node *postfix(Token **rest,Token *tok) {
       node->lhs = lhs;
 
       // 関数の返り値は全部intということにしている
-      Type *return_type = calloc(1,sizeof(Type));
-      return_type->ty = INT;
-
-      node->type = return_type;
+      node->type = type_int;
       
       while(!consume(&tok,tok,")")){
         NodeList *push_expr = calloc(1,sizeof(NodeList));

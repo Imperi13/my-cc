@@ -1,5 +1,7 @@
 #include "mycc.h"
 
+Type *type_int = &(Type){.ty = INT};
+
 Type *newtype_ptr(Type *base){
   Type *type = calloc(1,sizeof(Type));
   type->ty = PTR;
