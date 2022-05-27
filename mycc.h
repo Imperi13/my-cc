@@ -8,6 +8,7 @@
 
 typedef enum{
   INT,
+  CHAR,
   PTR,
   ARRAY,
   FUNC,
@@ -104,6 +105,7 @@ typedef enum {
   TK_FOR,
   TK_IDENT,
   TK_INT,
+  TK_CHAR,
   TK_NUM,
   TK_EOF,
 } TokenKind;

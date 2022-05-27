@@ -383,17 +383,16 @@ Node *stmt(Token **rest,Token *tok) {
     return node;
   }
 
-  Obj *lvar;
-
   if(consume_kind(&tok,tok,TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr(&tok,tok);
-  }else if(lvar = parse_lvar_definition(&tok,tok),lvar){
+  }else if(parse_lvar_definition(&dummy_token,tok)){
     node = calloc(1,sizeof(Node));
     node->kind = ND_VAR_DEFINE;
 
     ObjList *push_lvar = calloc(1,sizeof(ObjList));
+    Obj *lvar = parse_decl(&tok,tok);
     push_lvar->obj = lvar;
     push_lvar->next = now_function->locals;
     if(now_function->locals)

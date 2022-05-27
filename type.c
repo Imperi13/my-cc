@@ -5,6 +5,7 @@ Obj *type_suffix(Token **rest,Token *tok,Obj *type);
 Obj *declarator(Token **rest,Token *tok,Obj *type);
 
 Type *type_int = &(Type){.ty = INT};
+Type *type_char = &(Type){.ty = CHAR};
 
 Type *newtype_ptr(Type *base){
   Type *type = calloc(1,sizeof(Type));
@@ -74,6 +75,8 @@ Obj *type_suffix(Token **rest,Token *tok,Obj *obj){
 
     expect(&tok,tok,"]");
 
+    obj->type = array_type;
+
     *rest = tok;
     return obj;
   }
@@ -135,6 +138,8 @@ bool is_convertible(Type *a,Type *b){
 }
 
 int type_size(Type *a){
+  if(a->ty == CHAR)
+    return 1;
   if(a->ty == INT)
     return 4;
   if(a->ty == ARRAY)
@@ -143,6 +148,8 @@ int type_size(Type *a){
 }
 
 int type_alignment(Type *a){
+  if(a->ty == CHAR)
+    return 1;
   if(a->ty == INT)
     return 4;
   if(a->ty == ARRAY)
