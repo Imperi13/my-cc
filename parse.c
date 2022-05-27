@@ -1,5 +1,19 @@
 #include "mycc.h"
 
+void global_definition(Token **rest,Token *tok);
+void var_definition(Token **rest,Token *tok);
+void function_definition(Token **rest,Token *tok);
+Node *stmt(Token **rest,Token *tok);
+Node *expr(Token **rest,Token *tok);
+Node *assign(Token **rest,Token *tok);
+Node *equality(Token **rest,Token *tok);
+Node *relational(Token **rest,Token *tok);
+Node *add(Token **rest,Token *tok);
+Node *mul(Token **rest,Token *tok);
+Node *unary(Token **rest,Token *tok);
+Node *postfix(Token **rest,Token *tok);
+Node *primary(Token **rest,Token *tok);
+
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap,fmt);
@@ -21,20 +35,20 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-Function *functions;
-Function *now_function;
+ObjList *globals;
+Obj *now_function;
 
-LVar *find_lvar(Token *tok){
-  for(LVarList *var = now_function->locals; var; var = var->next)
-    if (var->lvar->len == tok->len && !memcmp(tok->str,var->lvar->name,var->lvar->len))
-      return var->lvar;
+Obj *find_lvar(Token *tok){
+  for(ObjList *var = now_function->locals; var; var = var->next)
+    if (var->obj->len == tok->len && !memcmp(tok->str,var->obj->name,var->obj->len))
+      return var->obj;
   return NULL;
 }
 
-Function *find_function(Token *tok) {
-  for(Function *func = functions;func;func = func->next)
-    if(func->func_name_len == tok->len && !memcmp(tok->str,func->func_name,func->func_name_len))
-      return func;
+Obj *find_global(Token *tok) {
+  for(ObjList *func = globals;func;func = func->next)
+    if(func->obj->len == tok->len && !memcmp(tok->str,func->obj->name,func->obj->len))
+      return func->obj;
   return NULL;
 }
 
@@ -49,11 +63,9 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type) {
 
 Node *new_node_num(int val) {
   Node *node = calloc(1,sizeof(Node));
-  Type *type = calloc(1,sizeof(Type));
-  type->ty = INT;
 
   node->kind = ND_NUM;
-  node->type = type;
+  node->type = type_int;
   node->val = val;
   return node;
 }
@@ -94,7 +106,7 @@ Node *new_deref_node(Node *lhs) {
 Node *new_assign_node(Node *lhs,Node *rhs) {
   if(!is_convertible(lhs->type,rhs->type))
     error("invalid argument type to assign =");
-  if(lhs->kind != ND_LVAR && lhs->kind != ND_DEREF)
+  if(lhs->kind != ND_VAR && lhs->kind != ND_DEREF)
     error("lhs is not lvalue");
   if(lhs->type->ty == ARRAY)
     error("cannot assign to ARRAY");
@@ -107,8 +119,7 @@ Type *parse_type(Token **rest,Token *tok) {
     *rest = tok;
     return NULL;
   }
-  Type *type = calloc(1,sizeof(Type));
-  type->ty = INT;
+  Type *type = type_int;
   while(consume(&tok,tok,"*")){
     Type *now = calloc(1,sizeof(Type));
     now->ty = PTR;
@@ -119,7 +130,7 @@ Type *parse_type(Token **rest,Token *tok) {
   return type;
 }
 
-LVar *parse_lvar_definition(Token **rest,Token *tok) {
+Obj *parse_lvar_definition(Token **rest,Token *tok) {
   Type *base_type = parse_type(&tok,tok);
   if(!base_type){
     *rest = tok;
@@ -139,11 +150,11 @@ LVar *parse_lvar_definition(Token **rest,Token *tok) {
     base_type = var_type;
   }
   
-  LVar *lvar = find_lvar(ident);
+  Obj *lvar = find_lvar(ident);
   if(lvar)
     error("duplicate local variables");
 
-  lvar = calloc(1,sizeof(LVar));
+  lvar = calloc(1,sizeof(Obj));
   lvar->name = ident->str;
   lvar->len = ident->len;
   lvar->type = base_type;
@@ -152,74 +163,73 @@ LVar *parse_lvar_definition(Token **rest,Token *tok) {
   return lvar;
 }
 
-bool is_same_type(Type *a,Type *b){
-  if(a->ty == INT && b->ty == INT)
-    return true;
-  if(a->ty != b->ty)
-    return false;
-  return is_same_type(a->ptr_to,b->ptr_to);
-}
-
-bool is_convertible(Type *a,Type *b){
-  if(a->ty == INT && b->ty == INT)
-    return true;
-  if(a->ty == INT || b->ty == INT)
-    return false;
-  return is_same_type(a->ptr_to,b->ptr_to);
-}
-
-int type_size(Type *a){
-  if(a->ty == INT)
-    return 4;
-  if(a->ty == ARRAY)
-    return a->array_size * type_size(a->ptr_to);
-  return 8;
-}
-
-int type_alignment(Type *a){
-  if(a->ty == INT)
-    return 4;
-  if(a->ty == ARRAY)
-    return type_alignment(a->ptr_to);
-  return 8;
-}
-
 int offset_alignment(int start,int data_size,int alignment){
   return ((start+data_size + alignment - 1)/alignment)*alignment;
 }
 
 void program(Token *tok) {
   while(!at_eof(tok)){
-    Function *push_function = func_definition(&tok,tok);
-    if(!functions) {
-      functions = push_function;
-      continue;
-    }
-    push_function -> next = functions;
-    functions = push_function;
+    global_definition(&tok,tok);
   }
 }
 
-Function *func_definition(Token **rest,Token *tok) {
+void global_definition(Token **rest,Token *tok){
+  Obj *tmp = parse_decl(&dummy_token,tok);
+  if(tmp->type->ty == FUNC)
+    function_definition(&tok,tok);
+  else
+    var_definition(&tok,tok);
+
+  *rest = tok;
+}
+
+void var_definition(Token **rest,Token *tok) {
+  ObjList *push_var = calloc(1,sizeof(ObjList));
+  push_var->obj = parse_decl(&tok,tok);
+  if(!globals) {
+    globals = push_var;
+  }else{
+    push_var->next = globals;
+    globals = push_var;
+  }
+
+  expect(&tok,tok,";");
+  *rest = tok;
+}
+
+void function_definition(Token **rest,Token *tok) {
   Type *return_type = parse_type(&tok,tok);
   if(!return_type)
     error("not type");
 
-  Function *func_def = calloc(1,sizeof(Function));
+  ObjList *push_function = calloc(1,sizeof(ObjList));
+  Obj *func_def = calloc(1,sizeof(Obj));
+  push_function->obj = func_def;
+  if(!globals) {
+    globals = push_function;
+  }else{
+    push_function -> next = globals;
+    globals = push_function;
+  }
+
   now_function = func_def;
 
   Token *ident = consume_kind(&tok,tok,TK_IDENT);
   if(!ident)
     error("invalid func definition");
 
-  Function *double_define = find_function(ident);
+  Obj *double_define = find_global(ident);
   if(double_define)
     error("already defined");
 
-  func_def->return_type = return_type;
-  func_def->func_name = ident->str;
-  func_def->func_name_len = ident->len;
-  func_def->arg_count = 0;
+  Type *type = calloc(1,sizeof(Type));
+  type->ty = FUNC;
+  type->return_type = return_type;
+
+  func_def->type = type;
+  func_def->name = ident->str;
+  func_def->len = ident->len;
+  func_def->arg_size = 0;
 
   expect(&tok,tok,"(");
   if(!consume(&tok,tok,")")){
@@ -228,27 +238,38 @@ Function *func_definition(Token **rest,Token *tok) {
       if(!arg_type)
         error("not type");
 
+      TypeList *push_argtype = calloc(1,sizeof(TypeList));
+      push_argtype->type = arg_type;
+
+      if(!type->argtype_front){
+        type->argtype_front = push_argtype;
+        type->argtype_back = push_argtype;
+      }else{
+        type->argtype_back->next = push_argtype;
+        type->argtype_back = push_argtype;
+      }
+
       ident = consume_kind(&tok,tok,TK_IDENT);
-      LVar *lvar = find_lvar(ident);
+      Obj *lvar = find_lvar(ident);
       if(lvar)
         error("duplicate arguments");
 
-      LVarList *push_lvar = calloc(1,sizeof(LVar));
-      lvar = calloc(1,sizeof(LVar));
-      push_lvar->lvar = lvar;
+      ObjList *push_lvar = calloc(1,sizeof(ObjList));
+      lvar = calloc(1,sizeof(Obj));
+      push_lvar->obj = lvar;
       push_lvar->next = now_function->locals;
       lvar->name = ident->str;
       lvar->len = ident->len;
       lvar->type = arg_type;
       if(now_function->locals)
-        lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(arg_type),type_alignment(arg_type));
+        lvar->offset = offset_alignment(now_function->locals->obj->offset,type_size(arg_type),type_alignment(arg_type));
       else
         lvar->offset = offset_alignment(0,type_size(arg_type),type_alignment(arg_type));
       now_function->locals = push_lvar;
 
-      func_def->arg_count++;
-      LVarList *push_arg = calloc(1,sizeof(LVarList));
-      push_arg->lvar = lvar;
+      func_def->arg_size++;
+      ObjList *push_arg = calloc(1,sizeof(ObjList));
+      push_arg->obj = lvar;
       if(!func_def->arg_front){
         func_def->arg_front = push_arg;
         func_def->arg_back = push_arg;
@@ -257,13 +278,19 @@ Function *func_definition(Token **rest,Token *tok) {
         func_def->arg_back = push_arg;
       }
 
-      if(func_def->arg_count > 6)
+      if(func_def->arg_size > 6)
         error("more than 6 args is not implemented");
     }while(consume(&tok,tok,","));
     expect(&tok,tok,")");
   }
 
-  expect(&tok,tok,"{");
+  if(!consume(&tok,tok,"{")){
+    expect(&tok,tok,";");
+    *rest = tok;
+    return;
+  }
+
+  func_def->is_defined = true;
 
   while(!consume(&tok,tok,"}")){
     NodeList *push_stmt = calloc(1,sizeof(NodeList));
@@ -278,7 +305,6 @@ Function *func_definition(Token **rest,Token *tok) {
   }
 
   *rest = tok;
-  return func_def;
 }
 
 Node *stmt(Token **rest,Token *tok) {
@@ -357,7 +383,7 @@ Node *stmt(Token **rest,Token *tok) {
     return node;
   }
 
-  LVar *lvar;
+  Obj *lvar;
 
   if(consume_kind(&tok,tok,TK_RETURN)) {
     node = calloc(1,sizeof(Node));
@@ -365,13 +391,13 @@ Node *stmt(Token **rest,Token *tok) {
     node->lhs = expr(&tok,tok);
   }else if(lvar = parse_lvar_definition(&tok,tok),lvar){
     node = calloc(1,sizeof(Node));
-    node->kind = ND_LVAR_DEFINE;
+    node->kind = ND_VAR_DEFINE;
 
-    LVarList *push_lvar = calloc(1,sizeof(LVarList));
-    push_lvar->lvar = lvar;
+    ObjList *push_lvar = calloc(1,sizeof(ObjList));
+    push_lvar->obj = lvar;
     push_lvar->next = now_function->locals;
     if(now_function->locals)
-      lvar->offset = offset_alignment(now_function->locals->lvar->offset,type_size(lvar->type),type_alignment(lvar->type));
+      lvar->offset = offset_alignment(now_function->locals->obj->offset,type_size(lvar->type),type_alignment(lvar->type));
     else 
       lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
     now_function->locals = push_lvar;
@@ -542,9 +568,7 @@ Node *unary(Token **rest,Token *tok) {
   }
   if(consume(&tok,tok,"&")){
     Node *node = unary(&tok,tok);
-    Type *type = calloc(1,sizeof(Type));
-    type->ty = PTR;
-    type->ptr_to = node->type;
+    Type *type = newtype_ptr(node->type);
     node = new_node(ND_ADDR,node,NULL,type);
 
     *rest = tok;
@@ -566,6 +590,29 @@ Node *postfix(Token **rest,Token *tok) {
       Node *add_node = new_add_node(lhs,rhs);
       lhs = new_deref_node(add_node);
       expect(&tok,tok,"]");
+    }else if(consume(&tok,tok,"(")){
+      Node *node = calloc(1,sizeof(Node));
+      node->kind = ND_FUNCTION_CALL;
+      node->lhs = lhs;
+
+      // 関数の返り値は全部intということにしている
+      node->type = type_int;
+      
+      while(!consume(&tok,tok,")")){
+        NodeList *push_expr = calloc(1,sizeof(NodeList));
+        push_expr->node = expr(&tok,tok);
+
+        if(!node->expr_back){
+          node->expr_front = push_expr;
+          node->expr_back = push_expr;
+        }else{
+          node->expr_back->next = push_expr;
+          node->expr_back = push_expr;
+        }
+
+        consume(&tok,tok,",");
+      }
+      lhs = node;
     }else if(consume(&tok,tok,"++")){
       Node *add_node = new_add_node(lhs,new_node_num(1));
       lhs = new_assign_node(lhs,add_node);
@@ -588,47 +635,30 @@ Node *primary(Token **rest,Token *tok) {
   Token *ident = consume_kind(&tok,tok,TK_IDENT);
   if(ident){
     Node *node = calloc(1,sizeof(Node));
+    node->kind = ND_VAR;
 
-    if(consume(&tok,tok,"(")){
-      node->kind = ND_FUNCTION_CALL;
+    Obj *var = find_lvar(ident);
+    if(var){
+      node->offset = var->offset;
+      node->type = var->type;
 
-      // 関数の返り値は全部intということにしている
-      Type *return_type = calloc(1,sizeof(Type));
-      return_type->ty = INT;
-
-      node->type = return_type;
-      node->func_name = ident->str;
-      node->func_name_len = ident->len;
-      
-      while(!consume(&tok,tok,")")){
-        NodeList *push_expr = calloc(1,sizeof(NodeList));
-        push_expr->node = expr(&tok,tok);
-
-        if(!node->expr_back){
-          node->expr_front = push_expr;
-          node->expr_back = push_expr;
-        }else{
-          node->expr_back->next = push_expr;
-          node->expr_back = push_expr;
-        }
-
-        consume(&tok,tok,",");
-      }
-  
       *rest = tok;
       return node;
     }
 
-    node->kind = ND_LVAR;
+    var = find_global(ident);
+    if(var){
+      node->type = var->type;
+      node->name = var->name;
+      node->len = var->len;
+      node->is_defined = var->is_defined;
+      node->is_global = true;
 
-    LVar *lvar = find_lvar(ident);
-    if(!lvar)
-      error("ident '%.*s' is not defined",ident->len,ident->str);
-    node->offset=lvar->offset;
-    node->type = lvar->type;
+      *rest = tok;
+      return node;
+    }
 
-    *rest = tok;
-    return node;
+    error("ident '%.*s' is not defined",ident->len,ident->str);
   }
 
   Node *node = new_node_num(expect_number(&tok,tok));

@@ -6,6 +6,33 @@
 #include <string.h>
 #include <errno.h>
 
+typedef enum{
+  INT,
+  PTR,
+  ARRAY,
+  FUNC,
+} TypeKind;
+
+typedef struct Type Type;
+typedef struct TypeList TypeList;
+
+struct Type {
+  TypeKind ty;
+  Type *ptr_to;
+  size_t array_size;
+
+  // for FUNC
+  Type *return_type;
+  TypeList *argtype_front;
+  TypeList *argtype_back;
+  size_t arg_size;
+};
+
+struct TypeList {
+  TypeList *next;
+  Type *type;
+};
+
 typedef enum {
   ND_ADD,
   ND_SUB,
@@ -19,8 +46,8 @@ typedef enum {
   ND_SMALLER,
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
-  ND_LVAR,
-  ND_LVAR_DEFINE,
+  ND_VAR,
+  ND_VAR_DEFINE,
   ND_ADDR,
   ND_DEREF,
   ND_RETURN,
@@ -33,14 +60,6 @@ typedef enum {
   ND_NUM,
 } NodeKind;
 
-typedef struct Type Type;
-
-struct Type {
-  enum {INT,PTR,ARRAY} ty;
-  Type *ptr_to;
-  size_t array_size;
-};
-
 typedef struct Node Node;
 typedef struct NodeList NodeList;
 
@@ -49,17 +68,25 @@ struct Node {
   Type *type;
   Node *lhs;
   Node *rhs;
+  int val;
+  int offset;
+  // for var
+  bool is_global;
+
+  // for conditional-stmt
   Node *expr;
   Node *init_expr;
   Node *update_expr;
+
+  // for function
   NodeList *stmt_front;
   NodeList *stmt_back;
-  char *func_name;
-  int func_name_len;
+  char *name;
+  int len;
   NodeList *expr_front;
   NodeList *expr_back;
-  int val;
-  int offset;
+
+  bool is_defined;
 };
 
 struct NodeList {
@@ -91,44 +118,45 @@ struct Token{
   int len;
 };
 
-typedef struct LVar LVar;
-typedef struct LVarList LVarList;
 
-struct LVar {
+typedef struct Obj Obj;
+typedef struct ObjList ObjList;
+
+struct Obj {
   Type *type;
   char *name;
   int len;
+
+  // for lvar
   int offset;
-};
 
-struct LVarList {
-  LVarList *next;
-  LVar *lvar;
-};
-
-typedef struct Function Function;
-
-struct Function {
-  Function *next;
-  Type *return_type;
-  LVarList *arg_front;
-  LVarList *arg_back;
+  // for function
+  ObjList *arg_front;
+  ObjList *arg_back;
+  ObjList *locals;
   NodeList *code_front;
   NodeList *code_back;
-  LVarList *locals;
-  char *func_name;
-  int func_name_len;
-  int arg_count;
+  int arg_size;
+  bool is_defined;
+};
+
+struct ObjList {
+  ObjList *next;
+  Obj *obj;
 };
 
 extern const char variable_letters[];
+extern Token *dummy_token;
+extern Type *type_int;
 
 extern char *user_input;
-extern Function *functions;
+extern ObjList *globals;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 
+bool equal(Token *token,char *op);
+bool equal_kind(Token *token,TokenKind kind);
 bool consume(Token **rest,Token *token,char* op);
 Token *consume_kind(Token **rest,Token *token,TokenKind kind);
 void expect(Token **rest,Token *token,char* op);
@@ -138,35 +166,20 @@ bool at_eof(Token *token);
 
 bool is_alnum(char c);
 
-Token *new_token(TokenKind kind,Token *cur, char *str,int len);
 Token *tokenize(char *p);
-
-LVar *find_lvar(Token *tok);
 
 void debug_token(Token *token);
 
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs,Type *type);
-Node *new_node_num(int val);
-
+Obj *parse_decl(Token **rest,Token *tok);
+Type *newtype_ptr(Type *base);
+bool is_same_type(Type *a,Type *b);
 bool is_convertible(Type *a,Type *b);
 int type_size(Type *a);
+int type_alignment(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 
 void program(Token *tok);
-Function *func_definition(Token **rest,Token *tok);
-Node *stmt(Token **rest,Token *tok);
-Node *expr(Token **rest,Token *tok);
-Node *assign(Token **rest,Token *tok);
-Node *equality(Token **rest,Token *tok);
-Node *relational(Token **rest,Token *tok);
-Node *add(Token **rest,Token *tok);
-Node *mul(Token **rest,Token *tok);
-Node *unary(Token **rest,Token *tok);
-Node *postfix(Token **rest,Token *tok);
-Node *primary(Token **rest,Token *tok);
 
-void gen(Node *node);
-void gen_function(Function *func);
 void codegen_all(FILE *output);
 
 

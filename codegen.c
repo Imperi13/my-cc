@@ -1,5 +1,7 @@
 #include "mycc.h"
 
+void gen(Node *node);
+
 char call_register64[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 char call_register32[][4] = {"edi","esi","edx","ecx","r8d","r9d"};
 
@@ -7,11 +9,26 @@ int label_count = 0;
 
 
 void gen_lval(Node *node) {
-  if (node->kind != ND_LVAR && node->kind != ND_DEREF)
+  if (node->kind != ND_VAR && node->kind != ND_DEREF)
     error("not lval");
 
   if(node->kind == ND_DEREF){
     gen(node->lhs);
+    return;
+  }
+
+  if(node->type->ty == FUNC){
+    if(node->is_defined)
+      printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
+    else
+      printf("  mov rax, [%.*s@GOTPCREL + rip]\n",node->len,node->name);
+    printf("  push rax\n");
+    return;
+  }
+
+  if(node->is_global){
+    printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
+    printf("  push rax\n");
     return;
   }
 
@@ -27,12 +44,12 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n",node->val);
       return;
-    case ND_LVAR_DEFINE:
+    case ND_VAR_DEFINE:
       printf("  push rax\n");
       return;
-    case ND_LVAR:
+    case ND_VAR:
       gen_lval(node);
-      if(node->type->ty == ARRAY)
+      if(node->type->ty == ARRAY || node->type->ty == FUNC)
         return;
       printf("  pop rax\n");
       if(type_size(node->type) == 8)
@@ -147,7 +164,10 @@ void gen(Node *node) {
       for(int i=arg_count-1;i>=0;i--){
         printf("  pop %s\n",call_register64[i]);
       }
-      printf("  call %.*s\n",node->func_name_len,node->func_name);
+      gen_lval(node->lhs);
+      printf("  pop r10\n");
+      // printf("  call %.*s\n",node->len,node->name);
+      printf("  call r10\n");
       printf("  pop r8\n");
       printf("  pop rsp\n");
       printf("  push rax\n");
@@ -224,25 +244,26 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-void gen_function(Function *func) {
+void gen_function(Obj *func) {
   int stack_offset = 0;
   if(func->locals)
-    stack_offset = func->locals->lvar->offset;
+    stack_offset = func->locals->obj->offset;
 
-  printf(".globl %.*s\n",func->func_name_len,func->func_name);
-  printf("%.*s:\n",func->func_name_len,func->func_name);
+  printf("  .text\n");
+  printf(".globl %.*s\n",func->len,func->name);
+  printf("%.*s:\n",func->len,func->name);
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
   printf("  sub rsp, %d\n",offset_alignment(0,stack_offset,8));
 
-  LVarList *now_arg = func->arg_front;
-  for(int i = 0;i < func->arg_count;i++){
+  ObjList *now_arg = func->arg_front;
+  for(int i = 0;i < func->arg_size;i++){
     printf(" mov rax, rbp\n");
-    printf("  sub rax, %d\n",now_arg->lvar->offset);
-    if(type_size(now_arg->lvar->type) == 8)
+    printf("  sub rax, %d\n",now_arg->obj->offset);
+    if(type_size(now_arg->obj->type) == 8)
       printf("  mov [rax], %s\n",call_register64[i]);
-    else if(type_size(now_arg->lvar->type) == 4)
+    else if(type_size(now_arg->obj->type) == 4)
       printf("  mov [rax], %s\n",call_register32[i]);
     now_arg = now_arg->next;
   }
@@ -257,10 +278,24 @@ void gen_function(Function *func) {
   printf("  ret\n");
 }
 
+void gen_var_definition(Obj *var) {
+  printf("  .globl %.*s\n",var->len,var->name);
+  printf("  .bss\n");
+  printf("  .align %d\n",type_alignment(var->type));
+  printf("%.*s:\n",var->len,var->name);
+  printf("  .zero %d\n",type_size(var->type));
+}
+
 void codegen_all(FILE *output) {
   fprintf(output,".intel_syntax noprefix\n");
-  
-  for(Function *now = functions;now;now = now->next){
-    gen_function(now);
+ 
+  for(ObjList *now = globals;now;now = now->next){
+    if(now->obj->type->ty != FUNC)
+      gen_var_definition(now->obj);
+  }
+
+  for(ObjList *now = globals;now;now = now->next){
+    if(now->obj->type->ty == FUNC && now->obj->is_defined)
+      gen_function(now->obj);
   }
 }
