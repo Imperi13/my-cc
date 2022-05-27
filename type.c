@@ -87,7 +87,12 @@ Obj *declarator(Token **rest,Token *tok,Obj *obj){
     obj->type = newtype_ptr(obj->type);
   }
 
-  if(consume_kind(&tok,tok,TK_IDENT)){
+
+  if(equal_kind(tok,TK_IDENT)){
+    Token *ident = consume_kind(&tok,tok,TK_IDENT);
+
+    obj->name = ident->str;
+    obj->len = ident->len;
     obj = type_suffix(&tok,tok,obj);
 
     *rest = tok;

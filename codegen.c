@@ -26,6 +26,12 @@ void gen_lval(Node *node) {
     return;
   }
 
+  if(node->is_global){
+    printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
+    printf("  push rax\n");
+    return;
+  }
+
   printf("  mov rax, rbp\n");
   printf("  sub rax, %d\n",node->offset);
   printf("  push rax\n");
@@ -243,6 +249,7 @@ void gen_function(Obj *func) {
   if(func->locals)
     stack_offset = func->locals->obj->offset;
 
+  printf("  .text\n");
   printf(".globl %.*s\n",func->len,func->name);
   printf("%.*s:\n",func->len,func->name);
 
@@ -271,11 +278,24 @@ void gen_function(Obj *func) {
   printf("  ret\n");
 }
 
+void gen_var_definition(Obj *var) {
+  printf("  .globl %.*s\n",var->len,var->name);
+  printf("  .bss\n");
+  printf("  .align %d\n",type_alignment(var->type));
+  printf("%.*s:\n",var->len,var->name);
+  printf("  .zero %d\n",type_size(var->type));
+}
+
 void codegen_all(FILE *output) {
   fprintf(output,".intel_syntax noprefix\n");
-  
+ 
   for(ObjList *now = globals;now;now = now->next){
-    if(now->obj->is_defined)
+    if(now->obj->type->ty != FUNC)
+      gen_var_definition(now->obj);
+  }
+
+  for(ObjList *now = globals;now;now = now->next){
+    if(now->obj->type->ty == FUNC && now->obj->is_defined)
       gen_function(now->obj);
   }
 }

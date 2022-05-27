@@ -184,7 +184,17 @@ void global_definition(Token **rest,Token *tok){
 }
 
 void var_definition(Token **rest,Token *tok) {
+  ObjList *push_var = calloc(1,sizeof(ObjList));
+  push_var->obj = parse_decl(&tok,tok);
+  if(!globals) {
+    globals = push_var;
+  }else{
+    push_var->next = globals;
+    globals = push_var;
+  }
 
+  expect(&tok,tok,";");
+  *rest = tok;
 }
 
 void function_definition(Token **rest,Token *tok) {
@@ -642,6 +652,7 @@ Node *primary(Token **rest,Token *tok) {
       node->name = var->name;
       node->len = var->len;
       node->is_defined = var->is_defined;
+      node->is_global = true;
 
       *rest = tok;
       return node;

@@ -85,4 +85,7 @@ assert 15 "test/add_assign2.in"
 
 assert 45 "test/post_increment1.in"
 
+assert 0 "test/global_var1.in"
+assert 10 "test/global_var2.in"
+
 echo OK

@@ -71,7 +71,7 @@ struct Node {
   int val;
   int offset;
   // for var
-  bool is_defined;
+  bool is_global;
 
   // for conditional-stmt
   Node *expr;
@@ -85,6 +85,8 @@ struct Node {
   int len;
   NodeList *expr_front;
   NodeList *expr_back;
+
+  bool is_defined;
 };
 
 struct NodeList {
