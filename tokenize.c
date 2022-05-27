@@ -70,6 +70,8 @@ Token *new_token(TokenKind kind,Token *cur,char *str,int len) {
 
 const char variable_letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
+Token *dummy_token = &(Token){};
+
 bool is_alnum(char c) {
   for(const char *p = variable_letters;*p!='\0';p++)
     if(*p == c)

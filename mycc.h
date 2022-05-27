@@ -25,6 +25,7 @@ struct Type {
   Type *return_type;
   TypeList *argtype_front;
   TypeList *argtype_back;
+  size_t arg_size;
 };
 
 struct TypeList {
@@ -143,6 +144,7 @@ struct ObjList {
 };
 
 extern const char variable_letters[];
+extern Token *dummy_token;
 extern Type *type_int;
 
 extern char *user_input;
@@ -166,6 +168,7 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
+Type *parse_decl(Token **rest,Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_same_type(Type *a,Type *b);
 bool is_convertible(Type *a,Type *b);
