@@ -1,6 +1,7 @@
 #include "mycc.h"
 
 void global_definition(Token **rest,Token *tok);
+void var_definition(Token **rest,Token *tok);
 void function_definition(Token **rest,Token *tok);
 Node *stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
@@ -173,11 +174,17 @@ void program(Token *tok) {
 }
 
 void global_definition(Token **rest,Token *tok){
-  Type *tmp = parse_decl(&dummy_token,tok);
-  if(tmp->ty == FUNC)
+  Obj *tmp = parse_decl(&dummy_token,tok);
+  if(tmp->type->ty == FUNC)
     function_definition(&tok,tok);
-  
+  else
+    var_definition(&tok,tok);
+
   *rest = tok;
+}
+
+void var_definition(Token **rest,Token *tok) {
+
 }
 
 void function_definition(Token **rest,Token *tok) {

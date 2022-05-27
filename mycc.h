@@ -168,7 +168,7 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
-Type *parse_decl(Token **rest,Token *tok);
+Obj *parse_decl(Token **rest,Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_same_type(Type *a,Type *b);
 bool is_convertible(Type *a,Type *b);

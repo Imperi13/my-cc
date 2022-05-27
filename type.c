@@ -1,8 +1,8 @@
 #include "mycc.h"
 
 Type *declaration_specifier(Token **rest,Token *tok);
-Type *type_suffix(Token **rest,Token *tok,Type *type);
-Type *declarator(Token **rest,Token *tok,Type *type);
+Obj *type_suffix(Token **rest,Token *tok,Obj *type);
+Obj *declarator(Token **rest,Token *tok,Obj *type);
 
 Type *type_int = &(Type){.ty = INT};
 
@@ -13,16 +13,16 @@ Type *newtype_ptr(Type *base){
   return type;
 }
 
-Type *parse_decl(Token **rest,Token *tok){
-  Type *type;
+Obj *parse_decl(Token **rest,Token *tok){
+  Obj *obj = calloc(1,sizeof(Obj));
   Type *tmp;
   while(tmp = declaration_specifier(&tok,tok),tmp)
-    type = tmp;
+    obj->type = tmp;
 
-  type = declarator(&tok,tok,type);
+  obj = declarator(&tok,tok,obj);
 
   *rest = tok;
-  return type;
+  return obj;
 }
 
 Type *declaration_specifier(Token **rest,Token *tok){
@@ -34,77 +34,79 @@ Type *declaration_specifier(Token **rest,Token *tok){
   return NULL;
 }
 
-Type *type_suffix(Token **rest,Token *tok,Type *type){
+Obj *type_suffix(Token **rest,Token *tok,Obj *obj){
   if(consume(&tok,tok,"(")){
     Type *func_type = calloc(1,sizeof(Type));
     func_type->ty = FUNC;
-    func_type->return_type = type;
+    func_type->return_type = obj->type;
 
     if(!consume(&tok,tok,")")){
       do{
-        Type *argtype = parse_decl(&tok,tok);
+        Obj *argtype = parse_decl(&tok,tok);
 
         TypeList *push_argtype = calloc(1,sizeof(TypeList));
-        push_argtype->type = argtype;
+        push_argtype->type = argtype->type;
 
-        if(!type->argtype_back){
-          type->argtype_front = push_argtype;
-          type->argtype_back = push_argtype;
+        if(!obj->type->argtype_back){
+          obj->type->argtype_front = push_argtype;
+          obj->type->argtype_back = push_argtype;
         }else{
-          type->argtype_back->next = push_argtype;
-          type->argtype_back = push_argtype;
+          obj->type->argtype_back->next = push_argtype;
+          obj->type->argtype_back = push_argtype;
         }
 
-        type->arg_size++;
+        obj->type->arg_size++;
       }while(consume(&tok,tok,","));
       expect(&tok,tok,")");
     }
 
+    obj->type = func_type;
+
     *rest = tok;
-    return func_type;
+    return obj;
   }
 
   if(consume(&tok,tok,"[")){
     Type *array_type = calloc(1,sizeof(Type));
     array_type->ty = ARRAY;
     array_type->array_size = expect_number(&tok,tok);
-    array_type->ptr_to = type;
+    array_type->ptr_to = obj->type;
 
     expect(&tok,tok,"]");
 
     *rest = tok;
-    return array_type;
+    return obj;
   }
 
   *rest = tok;
-  return type;
+  return obj;
 }
 
-Type *declarator(Token **rest,Token *tok,Type *type){
+Obj *declarator(Token **rest,Token *tok,Obj *obj){
   while(consume(&tok,tok,"*")){
-    type = newtype_ptr(type);
+    obj->type = newtype_ptr(obj->type);
   }
 
   if(consume_kind(&tok,tok,TK_IDENT)){
-    type = type_suffix(&tok,tok,type);
+    obj = type_suffix(&tok,tok,obj);
 
     *rest = tok;
-    return type;
+    return obj;
   }
 
   if(consume(&tok,tok,"(")){
     Token *nest_start = tok;
-    Type *tmp = &(Type){};
+    Obj *tmp = &(Obj){};
     declarator(&tok,tok,tmp);
     expect(&tok,tok,")");
 
-    type = type_suffix(&tok,tok,type);
+    obj = type_suffix(&tok,tok,obj);
     Token *type_end = tok;
 
-    type = declarator(&tok,nest_start,type);
+    obj = declarator(&tok,nest_start,obj);
 
     *rest = type_end;
-    return type;
+    return obj;
   }
 
   *rest = tok;
