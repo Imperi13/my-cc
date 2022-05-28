@@ -6,7 +6,38 @@ char call_register64[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 char call_register32[][4] = {"edi","esi","edx","ecx","r8d","r9d"};
 char call_register8[][4] = {"dil","sil","dl","cl","r8b","r9b"};
 
+char *rax_register(Type *a){
+  int size = type_size(a);
+  if(size == 8)
+    return "rax";
+  else if(size == 4)
+    return "eax";
+  else if(size == 2)
+    return "ax";
+  else if(size == 1)
+    return "al";
+
+  error("invalid type size");
+  return NULL;
+}
+
+char *rdi_register(Type *a){
+  int size = type_size(a);
+  if(size == 8)
+    return "rdi";
+  else if(size == 4)
+    return "edi";
+  else if(size == 2)
+    return "di";
+  else if(size == 1)
+    return "dil";
+
+  error("invalid type size");
+  return NULL;
+}
+
 int label_count = 0;
+
 
 
 void gen_addr(Node *node) {
@@ -56,9 +87,9 @@ void gen(Node *node) {
       if(type_size(node->type) == 8)
         printf("  mov rax, [rax]\n");
       else if(type_size(node->type) == 4)
-        printf("  mov eax, [rax]\n");
+        printf("  movsxd rax, [rax]\n");
       else if(type_size(node->type) == 1)
-        printf("  movsx eax, BYTE PTR [rax]\n");
+        printf("  movsx rax, BYTE PTR [rax]\n");
       printf("  push rax\n");
       return ;
     case ND_ASSIGN:
@@ -84,9 +115,9 @@ void gen(Node *node) {
       if(type_size(node->type) == 8)
         printf("  mov rax, [rax]\n");
       else if(type_size(node->type) == 4)
-        printf("  mov eax, [rax]\n");
+        printf("  movsxd rax, [rax]\n");
       else if(type_size(node->type) == 1)
-        printf("  movsx eax, BYTE PTR [rax]\n");
+        printf("  movsx rax, BYTE PTR [rax]\n");
       printf("  push rax\n");
       return;
     case ND_RETURN:
