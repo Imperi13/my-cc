@@ -9,7 +9,7 @@ char call_register8[][4] = {"dil","sil","dl","cl","r8b","r9b"};
 int label_count = 0;
 
 
-void gen_lval(Node *node) {
+void gen_addr(Node *node) {
   if (node->kind != ND_VAR && node->kind != ND_DEREF)
     error("not lval");
 
@@ -49,7 +49,7 @@ void gen(Node *node) {
       printf("  push rax\n");
       return;
     case ND_VAR:
-      gen_lval(node);
+      gen_addr(node);
       if(node->type->ty == ARRAY || node->type->ty == FUNC)
         return;
       printf("  pop rax\n");
@@ -62,7 +62,7 @@ void gen(Node *node) {
       printf("  push rax\n");
       return ;
     case ND_ASSIGN:
-      gen_lval(node->lhs);
+      gen_addr(node->lhs);
       gen(node->rhs);
 
       printf("  pop rdi\n");
@@ -76,7 +76,7 @@ void gen(Node *node) {
       printf("  push rdi\n");
       return;
     case ND_ADDR:
-      gen_lval(node->lhs);
+      gen_addr(node->lhs);
       return;
     case ND_DEREF:
       gen(node->lhs);
@@ -171,7 +171,7 @@ void gen(Node *node) {
       for(int i=arg_count-1;i>=0;i--){
         printf("  pop %s\n",call_register64[i]);
       }
-      gen_lval(node->lhs);
+      gen_addr(node->lhs);
       printf("  pop r10\n");
       // printf("  call %.*s\n",node->len,node->name);
       printf("  call r10\n");
