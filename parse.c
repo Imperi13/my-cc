@@ -76,7 +76,7 @@ Node *new_add_node(Node *lhs,Node *rhs) {
   node->lhs = lhs;
   node->rhs = rhs;
 
-  if(lhs->type->ty == INT && rhs->type->ty == INT)
+  if(is_numeric(lhs->type) && is_numeric(rhs->type))
     node->type = lhs->type;
   else if(lhs->type->ty == INT){
     node->type = calloc(1,sizeof(Type));
@@ -138,7 +138,7 @@ Obj *parse_lvar_definition(Token **rest,Token *tok) {
   }
   Token *ident = consume_kind(&tok,tok,TK_IDENT);
   if(!ident)
-    error("error at var_def");
+    error_at(tok->str,"error at var_def");
 
   if(consume(&tok,tok,"[")){
     Type *var_type = calloc(1,sizeof(Type));
@@ -152,7 +152,7 @@ Obj *parse_lvar_definition(Token **rest,Token *tok) {
   
   Obj *lvar = find_lvar(ident);
   if(lvar)
-    error("duplicate local variables");
+    error_at(tok->str,"duplicate local variables");
 
   lvar = calloc(1,sizeof(Obj));
   lvar->name = ident->str;
@@ -174,7 +174,7 @@ void program(Token *tok) {
 }
 
 void global_definition(Token **rest,Token *tok){
-  Obj *tmp = parse_decl(&dummy_token,tok);
+  Obj *tmp = parse_global_decl(&dummy_token,tok);
   if(tmp->type->ty == FUNC)
     function_definition(&tok,tok);
   else
@@ -185,7 +185,7 @@ void global_definition(Token **rest,Token *tok){
 
 void var_definition(Token **rest,Token *tok) {
   ObjList *push_var = calloc(1,sizeof(ObjList));
-  push_var->obj = parse_decl(&tok,tok);
+  push_var->obj = parse_global_decl(&tok,tok);
   if(!globals) {
     globals = push_var;
   }else{
@@ -200,7 +200,7 @@ void var_definition(Token **rest,Token *tok) {
 void function_definition(Token **rest,Token *tok) {
   Type *return_type = parse_type(&tok,tok);
   if(!return_type)
-    error("not type");
+    error_at(tok->str,"not type");
 
   ObjList *push_function = calloc(1,sizeof(ObjList));
   Obj *func_def = calloc(1,sizeof(Obj));
@@ -216,11 +216,11 @@ void function_definition(Token **rest,Token *tok) {
 
   Token *ident = consume_kind(&tok,tok,TK_IDENT);
   if(!ident)
-    error("invalid func definition");
+    error_at(tok->str,"invalid func definition");
 
   Obj *double_define = find_global(ident);
   if(double_define)
-    error("already defined");
+    error_at(tok->str,"already defined");
 
   Type *type = calloc(1,sizeof(Type));
   type->ty = FUNC;
@@ -236,7 +236,7 @@ void function_definition(Token **rest,Token *tok) {
     do{
       Type *arg_type = parse_type(&tok,tok);
       if(!arg_type)
-        error("not type");
+        error_at(tok->str,"not type");
 
       TypeList *push_argtype = calloc(1,sizeof(TypeList));
       push_argtype->type = arg_type;
@@ -252,7 +252,7 @@ void function_definition(Token **rest,Token *tok) {
       ident = consume_kind(&tok,tok,TK_IDENT);
       Obj *lvar = find_lvar(ident);
       if(lvar)
-        error("duplicate arguments");
+        error_at(tok->str,"duplicate arguments");
 
       ObjList *push_lvar = calloc(1,sizeof(ObjList));
       lvar = calloc(1,sizeof(Obj));
@@ -279,7 +279,7 @@ void function_definition(Token **rest,Token *tok) {
       }
 
       if(func_def->arg_size > 6)
-        error("more than 6 args is not implemented");
+        error_at(tok->str,"more than 6 args is not implemented");
     }while(consume(&tok,tok,","));
     expect(&tok,tok,")");
   }
@@ -383,17 +383,16 @@ Node *stmt(Token **rest,Token *tok) {
     return node;
   }
 
-  Obj *lvar;
-
   if(consume_kind(&tok,tok,TK_RETURN)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr(&tok,tok);
-  }else if(lvar = parse_lvar_definition(&tok,tok),lvar){
+  }else if(parse_local_decl(&dummy_token,tok)){
     node = calloc(1,sizeof(Node));
     node->kind = ND_VAR_DEFINE;
 
     ObjList *push_lvar = calloc(1,sizeof(ObjList));
+    Obj *lvar = parse_local_decl(&tok,tok);
     push_lvar->obj = lvar;
     push_lvar->next = now_function->locals;
     if(now_function->locals)
@@ -438,12 +437,12 @@ Node *equality(Token **rest,Token *tok) {
     if(consume(&tok,tok,"==")){
       Node *rhs = relational(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
-        error("invalid argument type to equality ==");
+        error_at(tok->str,"invalid argument type to equality ==");
       lhs = new_node(ND_EQUAL,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"!=")){
       Node *rhs = relational(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
-        error("invalid argument type to equality !=");
+        error_at(tok->str,"invalid argument type to equality !=");
       lhs = new_node(ND_NOT_EQUAL,lhs,rhs,lhs->type);
     }else{
       *rest = tok;
@@ -458,22 +457,22 @@ Node *relational(Token **rest,Token *tok) {
     if(consume(&tok,tok,"<")){
       Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
-        error("invalid argument type to relational <");
+        error_at(tok->str,"invalid argument type to relational <");
       lhs = new_node(ND_SMALLER,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"<=")){
       Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
-        error("invalid argument type to relational <=");
+        error_at(tok->str,"invalid argument type to relational <=");
       lhs = new_node(ND_SMALLER_EQUAL,lhs,rhs,lhs->type);
     }else if (consume(&tok,tok,">")){
       Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
-        error("invalid argument type to relational >");
+        error_at(tok->str,"invalid argument type to relational >");
       lhs = new_node(ND_GREATER,lhs,rhs,lhs->type);
     }else if (consume(&tok,tok,">=")){
       Node *rhs = add(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
-        error("invalid argument type to relational >=");
+        error_at(tok->str,"invalid argument type to relational >=");
       lhs = new_node(ND_GREATER_EQUAL,lhs,rhs,lhs->type);
     }else{
       *rest = tok;
@@ -500,7 +499,7 @@ Node *add(Token **rest,Token *tok) {
         convert_type->ptr_to = lhs->type->ptr_to;
         lhs = new_node(ND_SUB,lhs,rhs,convert_type);
       }else
-        error("invalid argument type to sub -");
+        error_at(tok->str,"invalid argument type to sub -");
     }else{
       *rest = tok;
       return lhs;
@@ -515,17 +514,17 @@ Node *mul(Token **rest,Token *tok) {
     if(consume(&tok,tok,"*")){
       Node *rhs = unary(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error("invalid argument type to mul * ");
+        error_at(tok->str,"invalid argument type to mul * ");
       lhs = new_node(ND_MUL,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"/")){
       Node *rhs = unary(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error("invalid argument type to div /");
+        error_at(tok->str,"invalid argument type to div /");
       lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"%")){
       Node *rhs = unary(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error("invalid argument type to mod %");
+        error_at(tok->str,"invalid argument type to mod %");
       lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
     }else{
       *rest = tok;
@@ -551,7 +550,7 @@ Node *unary(Token **rest,Token *tok) {
   if(consume(&tok,tok,"-")){
     Node *node = unary(&tok,tok);
     if(node->type->ty != INT)
-      error("invalid argument type ptr to unary");
+      error_at(tok->str,"invalid argument type ptr to unary");
     node =  new_node(ND_SUB,new_node_num(0), node,node->type);
     
     *rest = tok;
@@ -560,7 +559,7 @@ Node *unary(Token **rest,Token *tok) {
   if(consume(&tok,tok,"*")){
     Node *node = unary(&tok,tok);
     if(node->type->ty != PTR && node->type->ty != ARRAY)
-      error("not dereference to type int");
+      error_at(tok->str,"not dereference to type int");
     node = new_node(ND_DEREF,node,NULL,node->type->ptr_to);
 
     *rest = tok;
@@ -658,7 +657,7 @@ Node *primary(Token **rest,Token *tok) {
       return node;
     }
 
-    error("ident '%.*s' is not defined",ident->len,ident->str);
+    error_at(tok->str,"ident '%.*s' is not defined",ident->len,ident->str);
   }
 
   Node *node = new_node_num(expect_number(&tok,tok));

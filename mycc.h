@@ -8,6 +8,7 @@
 
 typedef enum{
   INT,
+  CHAR,
   PTR,
   ARRAY,
   FUNC,
@@ -104,6 +105,7 @@ typedef enum {
   TK_FOR,
   TK_IDENT,
   TK_INT,
+  TK_CHAR,
   TK_NUM,
   TK_EOF,
 } TokenKind;
@@ -170,8 +172,10 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
-Obj *parse_decl(Token **rest,Token *tok);
+Obj *parse_global_decl(Token **rest,Token *tok);
+Obj *parse_local_decl(Token **rest,Token *tok);
 Type *newtype_ptr(Type *base);
+bool is_numeric(Type *a);
 bool is_same_type(Type *a,Type *b);
 bool is_convertible(Type *a,Type *b);
 int type_size(Type *a);
