@@ -1,6 +1,7 @@
 #include "mycc.h"
 
-Type *declaration_specifier(Token **rest,Token *tok);
+Type *global_decl_specifier(Token **rest,Token *tok);
+Type *local_decl_specifier(Token **rest,Token *tok);
 Obj *type_suffix(Token **rest,Token *tok,Obj *type);
 Obj *declarator(Token **rest,Token *tok,Obj *type);
 
@@ -14,11 +15,12 @@ Type *newtype_ptr(Type *base){
   return type;
 }
 
-Obj *parse_decl(Token **rest,Token *tok){
+Obj *parse_global_decl(Token **rest,Token *tok){
   Obj *obj = calloc(1,sizeof(Obj));
-  Type *tmp;
-  while(tmp = declaration_specifier(&tok,tok),tmp)
-    obj->type = tmp;
+  if(!global_decl_specifier(&dummy_token,tok)){
+    return NULL;
+  }
+  obj->type = global_decl_specifier(&tok,tok);
 
   obj = declarator(&tok,tok,obj);
 
@@ -26,11 +28,48 @@ Obj *parse_decl(Token **rest,Token *tok){
   return obj;
 }
 
-Type *declaration_specifier(Token **rest,Token *tok){
+Obj *parse_local_decl(Token **rest,Token *tok){
+  Obj *obj = calloc(1,sizeof(Obj));
+  if(!local_decl_specifier(&dummy_token,tok)){
+    return NULL;
+  }
+  obj->type = local_decl_specifier(&tok,tok);
+
+  obj = declarator(&tok,tok,obj);
+
+  *rest = tok;
+  return obj;
+}
+
+Type *global_decl_specifier(Token **rest,Token *tok){
+  if(!equal_kind(tok,TK_INT) && !equal_kind(tok,TK_CHAR))
+    return type_int;
+
   if(consume_kind(&tok,tok,TK_INT)){
     *rest = tok;
     return type_int;
   }
+
+  if(consume_kind(&tok,tok,TK_CHAR)){
+    *rest = tok;
+    return type_char;
+  }
+
+  *rest = tok;
+  return NULL;
+}
+
+Type *local_decl_specifier(Token **rest,Token *tok){
+  if(consume_kind(&tok,tok,TK_INT)){
+    *rest = tok;
+    return type_int;
+  }
+
+  if(consume_kind(&tok,tok,TK_CHAR)){
+    *rest = tok;
+    return type_char;
+  }
+
   *rest = tok;
   return NULL;
 }
@@ -43,7 +82,7 @@ Obj *type_suffix(Token **rest,Token *tok,Obj *obj){
 
     if(!consume(&tok,tok,")")){
       do{
-        Obj *argtype = parse_decl(&tok,tok);
+        Obj *argtype = parse_global_decl(&tok,tok);
 
         TypeList *push_argtype = calloc(1,sizeof(TypeList));
         push_argtype->type = argtype->type;
@@ -129,8 +168,14 @@ bool is_same_type(Type *a,Type *b){
   return is_same_type(a->ptr_to,b->ptr_to);
 }
 
+bool is_numeric(Type *a){
+  if(a->ty == INT || a->ty == CHAR)
+    return true;
+  return false;
+}
+
 bool is_convertible(Type *a,Type *b){
-  if(a->ty == INT && b->ty == INT)
+  if(is_numeric(a) && is_numeric(b))
     return true;
   if(a->ty == INT || b->ty == INT)
     return false;

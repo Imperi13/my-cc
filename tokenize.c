@@ -36,20 +36,20 @@ void expect(Token **rest,Token *token,char* op) {
   if (token->kind != TK_RESERVED || 
       strlen(op) != token->len ||
       memcmp(token->str,op,token->len))
-    error("not '%c' op",op);
+    error_at(token->str,"not '%c' op",op);
   *rest = token->next;
 }
 
 Token *expect_kind(Token **rest,Token *token,TokenKind kind) {
   if(token->kind != kind)
-    error("not expect TokenKind");
+    error_at(token->str,"not expect TokenKind");
   *rest = token->next;
   return token;
 }
 
 int expect_number(Token **rest,Token *token){
   if (token->kind != TK_NUM)
-    error("not number");
+    error_at(token->str,"not number");
   int val = token->val;
   *rest = token->next;
   return val;

@@ -4,6 +4,7 @@ void gen(Node *node);
 
 char call_register64[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 char call_register32[][4] = {"edi","esi","edx","ecx","r8d","r9d"};
+char call_register8[][4] = {"dil","sil","dl","cl","r8b","r9b"};
 
 int label_count = 0;
 
@@ -56,6 +57,8 @@ void gen(Node *node) {
         printf("  mov rax, [rax]\n");
       else if(type_size(node->type) == 4)
         printf("  mov eax, [rax]\n");
+      else if(type_size(node->type) == 1)
+        printf("  movsx eax, BYTE PTR [rax]\n");
       printf("  push rax\n");
       return ;
     case ND_ASSIGN:
@@ -64,10 +67,12 @@ void gen(Node *node) {
 
       printf("  pop rdi\n");
       printf("  pop rax\n");
-      if(type_size(node->rhs->type) == 8)
+      if(type_size(node->lhs->type) == 8)
         printf("  mov [rax], rdi\n");
-      else if(type_size(node->rhs->type) == 4)
+      else if(type_size(node->lhs->type) == 4)
         printf("  mov [rax], edi\n");
+      else if(type_size(node->lhs->type) == 1)
+        printf("  mov [rax], dil\n");
       printf("  push rdi\n");
       return;
     case ND_ADDR:
@@ -80,6 +85,8 @@ void gen(Node *node) {
         printf("  mov rax, [rax]\n");
       else if(type_size(node->type) == 4)
         printf("  mov eax, [rax]\n");
+      else if(type_size(node->type) == 1)
+        printf("  movsx eax, BYTE PTR [rax]\n");
       printf("  push rax\n");
       return;
     case ND_RETURN:
@@ -265,6 +272,8 @@ void gen_function(Obj *func) {
       printf("  mov [rax], %s\n",call_register64[i]);
     else if(type_size(now_arg->obj->type) == 4)
       printf("  mov [rax], %s\n",call_register32[i]);
+    else if(type_size(now_arg->obj->type) == 1)
+      printf("  mov [rax], %s\n",call_register8[i]);
     now_arg = now_arg->next;
   }
 
