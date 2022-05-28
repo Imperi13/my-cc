@@ -660,6 +660,18 @@ Node *primary(Token **rest,Token *tok) {
     error_at(tok->str,"ident '%.*s' is not defined",ident->len,ident->str);
   }
 
+  if(equal_kind(tok,TK_STR)){
+    StrLiteral *str_literal = consume_kind(&tok,tok,TK_STR)->str_literal;
+
+    Node *node = calloc(1,sizeof(Node));
+    node->kind = ND_STR;
+    node->str_literal = str_literal;
+    node->type = newtype_ptr(type_char);
+
+    *rest = tok;
+    return node;
+  }
+
   Node *node = new_node_num(expect_number(&tok,tok));
 
   *rest = tok;

@@ -6,6 +6,45 @@
 #include <string.h>
 #include <errno.h>
 
+typedef enum {
+  TK_RESERVED,
+  TK_RETURN,
+  TK_SIZEOF,
+  TK_IF,
+  TK_ELSE,
+  TK_WHILE,
+  TK_FOR,
+  TK_IDENT,
+  TK_INT,
+  TK_CHAR,
+  TK_NUM,
+  TK_STR,
+  TK_EOF,
+} TokenKind;
+
+typedef struct Token Token;
+typedef struct StrLiteral StrLiteral;
+
+struct Token{
+  TokenKind kind;
+  Token *next;
+  int val;
+  char *str;
+  int len;
+
+  // for str-literal
+  StrLiteral *str_literal;
+};
+
+struct StrLiteral {
+  char *str;
+  int len;
+  int id;
+
+  // for linked-list
+  StrLiteral *next;
+};
+
 typedef enum{
   INT,
   CHAR,
@@ -49,6 +88,7 @@ typedef enum {
   ND_ASSIGN,
   ND_VAR,
   ND_VAR_DEFINE,
+  ND_STR,
   ND_ADDR,
   ND_DEREF,
   ND_RETURN,
@@ -74,6 +114,9 @@ struct Node {
   // for var
   bool is_global;
 
+  // for str-literal
+  StrLiteral *str_literal;
+
   // for conditional-stmt
   Node *expr;
   Node *init_expr;
@@ -94,32 +137,6 @@ struct NodeList {
   NodeList *next;
   Node *node;
 };
-
-typedef enum {
-  TK_RESERVED,
-  TK_RETURN,
-  TK_SIZEOF,
-  TK_IF,
-  TK_ELSE,
-  TK_WHILE,
-  TK_FOR,
-  TK_IDENT,
-  TK_INT,
-  TK_CHAR,
-  TK_NUM,
-  TK_EOF,
-} TokenKind;
-
-typedef struct Token Token;
-
-struct Token{
-  TokenKind kind;
-  Token *next;
-  int val;
-  char *str;
-  int len;
-};
-
 
 typedef struct Obj Obj;
 typedef struct ObjList ObjList;
@@ -150,8 +167,10 @@ struct ObjList {
 extern const char variable_letters[];
 extern Token *dummy_token;
 extern Type *type_int;
+extern Type *type_char;
 
 extern char *user_input;
+extern StrLiteral *str_literals;
 extern ObjList *globals;
 
 void error(char *fmt, ...);

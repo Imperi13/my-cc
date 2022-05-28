@@ -160,18 +160,22 @@ Obj *declarator(Token **rest,Token *tok,Obj *obj){
   return NULL;
 }
 
-bool is_same_type(Type *a,Type *b){
-  if(a->ty == INT && b->ty == INT)
-    return true;
-  if(a->ty != b->ty)
-    return false;
-  return is_same_type(a->ptr_to,b->ptr_to);
-}
-
 bool is_numeric(Type *a){
   if(a->ty == INT || a->ty == CHAR)
     return true;
   return false;
+}
+
+bool is_primitive(Type *a){
+  if(a->ty == INT || a->ty == CHAR)
+    return true;
+  return false;
+}
+
+bool is_same_type(Type *a,Type *b){
+  if(is_primitive(a) && is_primitive(b))
+    return a->ty == b->ty;
+  return is_same_type(a->ptr_to,b->ptr_to);
 }
 
 bool is_convertible(Type *a,Type *b){
