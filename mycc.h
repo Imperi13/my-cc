@@ -169,6 +169,7 @@ extern Token *dummy_token;
 extern Type *type_int;
 extern Type *type_char;
 
+extern char *filename;
 extern char *user_input;
 extern StrLiteral *str_literals;
 extern ObjList *globals;

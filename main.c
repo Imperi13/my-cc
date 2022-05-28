@@ -21,6 +21,7 @@ char *read_file(char *path) {
   return buf;
 }
 
+char *filename;
 char *user_input;
 
 int main(int argc,char **argv){
@@ -29,6 +30,7 @@ int main(int argc,char **argv){
     return 1;
   }
 
+  filename = argv[1];
   user_input = read_file(argv[1]);
   Token *token = tokenize(user_input);
 
