@@ -172,6 +172,7 @@ extern Type *type_char;
 extern char *user_input;
 extern StrLiteral *str_literals;
 extern ObjList *globals;
+extern Obj *now_function;
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
@@ -201,6 +202,8 @@ int type_size(Type *a);
 int type_alignment(Type *a);
 int offset_alignment(int start,int data_size,int alignment);
 
+Obj *find_obj(ObjList *list,char *str,int len);
+Obj *find_lvar(char *str,int len);
 void program(Token *tok);
 
 void codegen_all(FILE *output);
