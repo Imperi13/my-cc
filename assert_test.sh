@@ -92,4 +92,7 @@ assert 30 "test/global_var3.in"
 assert 8 "test/char1.in"
 assert 40 "test/char2.in"
 
+assert 0 "test/str_literal1.in"
+assert 48 "test/str_literal2.in"
+
 echo OK

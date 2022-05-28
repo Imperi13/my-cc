@@ -15,8 +15,11 @@ Type *newtype_ptr(Type *base){
   return type;
 }
 
+// parse_*_decl
+// parse symbol&type& (argument symbol&type)
 Obj *parse_global_decl(Token **rest,Token *tok){
   Obj *obj = calloc(1,sizeof(Obj));
+  now_function = obj;
   if(!global_decl_specifier(&dummy_token,tok)){
     return NULL;
   }
@@ -80,12 +83,17 @@ Obj *type_suffix(Token **rest,Token *tok,Obj *obj){
     func_type->ty = FUNC;
     func_type->return_type = obj->type;
 
+    obj->arg_front = NULL;
+    obj->arg_back = NULL;
+    obj->locals = NULL;
+    obj->arg_size=0;
+
     if(!consume(&tok,tok,")")){
       do{
-        Obj *argtype = parse_global_decl(&tok,tok);
+        Obj *arg = parse_global_decl(&tok,tok);
 
         TypeList *push_argtype = calloc(1,sizeof(TypeList));
-        push_argtype->type = argtype->type;
+        push_argtype->type = arg->type;
 
         if(!obj->type->argtype_back){
           obj->type->argtype_front = push_argtype;
@@ -95,7 +103,32 @@ Obj *type_suffix(Token **rest,Token *tok,Obj *obj){
           obj->type->argtype_back = push_argtype;
         }
 
-        obj->type->arg_size++;
+        if(find_obj(obj->locals,arg->name,arg->len))
+          error_at(tok->str,"duplicate arguments");
+
+        ObjList *push_lvar = calloc(1,sizeof(ObjList));
+        push_lvar->obj = arg;
+        push_lvar->next = obj->locals;
+        if(obj->locals)
+          arg->offset = offset_alignment(obj->locals->obj->offset,type_size(arg->type),type_alignment(arg->type));
+        else
+          arg->offset = offset_alignment(0,type_size(arg->type),type_alignment(arg->type));
+        obj->locals = push_lvar;
+
+        func_type->arg_size++;
+        obj->arg_size++;
+        ObjList *push_arg = calloc(1,sizeof(ObjList));
+        push_arg->obj = arg;
+        if(!obj->arg_front){
+          obj->arg_front = push_arg;
+          obj->arg_back = push_arg;
+        }else{
+          obj->arg_back->next = push_arg;
+          obj->arg_back = push_arg;
+        }
+
+        if(obj->arg_size > 6)
+          error_at(tok->str,"more than 6 args is not implemented");
       }while(consume(&tok,tok,","));
       expect(&tok,tok,")");
     }
@@ -160,18 +193,22 @@ Obj *declarator(Token **rest,Token *tok,Obj *obj){
   return NULL;
 }
 
-bool is_same_type(Type *a,Type *b){
-  if(a->ty == INT && b->ty == INT)
-    return true;
-  if(a->ty != b->ty)
-    return false;
-  return is_same_type(a->ptr_to,b->ptr_to);
-}
-
 bool is_numeric(Type *a){
   if(a->ty == INT || a->ty == CHAR)
     return true;
   return false;
+}
+
+bool is_primitive(Type *a){
+  if(a->ty == INT || a->ty == CHAR)
+    return true;
+  return false;
+}
+
+bool is_same_type(Type *a,Type *b){
+  if(is_primitive(a) && is_primitive(b))
+    return a->ty == b->ty;
+  return is_same_type(a->ptr_to,b->ptr_to);
 }
 
 bool is_convertible(Type *a,Type *b){

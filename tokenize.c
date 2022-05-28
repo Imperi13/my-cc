@@ -79,6 +79,8 @@ bool is_alnum(char c) {
   return false;
 }
 
+StrLiteral *str_literals = NULL;
+
 Token *tokenize(char *p){
  Token head;
  head.next = NULL;
@@ -90,6 +92,35 @@ Token *tokenize(char *p){
      continue;
    }
 
+   if(*p == '"'){
+     char *tok_start = p;
+     p++;
+     char *tok_end = strchr(p, '"');
+     if(!tok_end)
+       error_at(tok_start,"not found end \"");
+
+     int len = tok_end-tok_start-1;
+     StrLiteral *push_literal = calloc(1,sizeof(StrLiteral));
+     push_literal->str = p;
+     push_literal->len = len;
+
+     if(!str_literals){
+       push_literal->id = 0;
+       str_literals = push_literal;
+     }else{
+       push_literal->id = str_literals->id + 1;
+       push_literal->next = str_literals;
+       str_literals = push_literal;
+     }
+
+     Token *tmp = new_token(TK_STR,cur,tok_start,len+2);
+     tmp->str_literal = push_literal;
+
+     p = tok_end+1;
+     cur = tmp;
+     continue;
+   }
+
    if(strncmp(p,">=",2) == 0 || strncmp(p,"<=",2) ==0 || strncmp(p,"==",2) == 0 || strncmp(p,"!=",2) == 0 || strncmp(p,"+=",2) == 0 || strncmp(p,"++",2) == 0){
      cur = new_token(TK_RESERVED,cur,p,2);
      p+=2;
@@ -97,12 +128,14 @@ Token *tokenize(char *p){
    }
 
    if(*p == '<' || *p == '>' ){
-     cur = new_token(TK_RESERVED,cur,p++,1);
+     cur = new_token(TK_RESERVED,cur,p,1);
+     p++;
      continue;
    }
 
    if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '%' || *p == '(' || *p == ')' || *p == '=' || *p == ';' || *p == '{' || *p == '}' || *p == ',' || *p == '&' || *p == '[' || *p == ']') {
-     cur = new_token(TK_RESERVED,cur,p++,1);
+     cur = new_token(TK_RESERVED,cur,p,1);
+     p++;
      continue;
    }
 

@@ -1,0 +1,9 @@
+int test(int a,int a){
+  return a;
+}
+
+int main(){
+  int x;
+  x = 10;
+  return test(x,x);
+}

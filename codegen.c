@@ -92,6 +92,10 @@ void gen(Node *node) {
         printf("  movsx rax, BYTE PTR [rax]\n");
       printf("  push rax\n");
       return ;
+    case ND_STR:
+      printf("  lea rax, [rip + .LC%d]\n",node->str_literal->id);
+      printf("  push rax\n");
+      return;
     case ND_ASSIGN:
       gen_addr(node->lhs);
       gen(node->rhs);
@@ -326,8 +330,19 @@ void gen_var_definition(Obj *var) {
   printf("  .zero %d\n",type_size(var->type));
 }
 
+void gen_str_literal(StrLiteral *str_literal){
+  printf("  .globl .LC%d\n",str_literal->id);
+  printf("  .data\n");
+  printf(".LC%d:\n",str_literal->id);
+  printf("  .string \"%.*s\"\n",str_literal->len,str_literal->str);
+}
+
 void codegen_all(FILE *output) {
   fprintf(output,".intel_syntax noprefix\n");
+
+  for(StrLiteral *now = str_literals;now;now = now->next){
+    gen_str_literal(now);
+  }
  
   for(ObjList *now = globals;now;now = now->next){
     if(now->obj->type->ty != FUNC)
