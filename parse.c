@@ -6,10 +6,18 @@ void function_definition(Token **rest,Token *tok);
 Node *stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
 Node *assign(Token **rest,Token *tok);
+Node *conditional(Token **rest,Token *tok);
+Node *logical_or(Token **rest,Token *tok);
+Node *logical_and(Token **rest,Token *tok);
+Node *bit_or(Token **rest,Token *tok);
+Node *bit_xor(Token **rest,Token *tok);
+Node *bit_and(Token **rest,Token *tok);
 Node *equality(Token **rest,Token *tok);
 Node *relational(Token **rest,Token *tok);
+Node *shift(Token **rest,Token *tok);
 Node *add(Token **rest,Token *tok);
 Node *mul(Token **rest,Token *tok);
+Node *cast(Token **rest,Token *tok);
 Node *unary(Token **rest,Token *tok);
 Node *postfix(Token **rest,Token *tok);
 Node *primary(Token **rest,Token *tok);
@@ -102,16 +110,27 @@ Node *new_add_node(Node *lhs,Node *rhs) {
 
   if(is_numeric(lhs->type) && is_numeric(rhs->type))
     node->type = lhs->type;
-  else if(lhs->type->ty == INT){
-    node->type = calloc(1,sizeof(Type));
-    node->type->ty = PTR;
-    node->type->ptr_to = rhs->type->ptr_to;
-  }else if(rhs->type->ty == INT){
-    node->type = calloc(1,sizeof(Type));
-    node->type->ty = PTR;
-    node->type->ptr_to = lhs->type->ptr_to;
-  }else
+  else if(is_numeric(lhs->type))
+    node->type = newtype_ptr(rhs->type->ptr_to);
+  else if(is_numeric(rhs->type))
+    node->type = newtype_ptr(lhs->type->ptr_to);
+  else
     error("invalid argument type to add +");
+
+  return node;
+}
+
+Node *new_sub_node(Node *lhs,Node *rhs) {
+  Node *node = calloc(1,sizeof(Node));
+  node->kind = ND_SUB;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  if(is_numeric(lhs->type) && is_numeric(rhs->type))
+    node->type = lhs->type;
+  else if(is_numeric(rhs->type))
+    node->type = newtype_ptr(lhs->type->ptr_to);
+  else
+    error("invalid argument type to sub -");
 
   return node;
 }
@@ -122,7 +141,7 @@ Node *new_deref_node(Node *lhs) {
   node->lhs = lhs;
 
   if(lhs->type->ty != PTR && lhs->type->ty != ARRAY)
-    error("not dereference to type int");
+    error("not dereference type");
   node->type = lhs->type->ptr_to;
   return node;
 }
@@ -320,7 +339,7 @@ Node *expr(Token **rest,Token *tok) {
 }
 
 Node *assign(Token **rest,Token *tok) {
-  Node *lhs = equality(&tok,tok);
+  Node *lhs = conditional(&tok,tok);
   if (consume(&tok,tok,"=")){
     Node *rhs = assign(&tok,tok);
     lhs = new_assign_node(lhs,rhs);
@@ -332,6 +351,42 @@ Node *assign(Token **rest,Token *tok) {
 
   *rest = tok;
   return lhs;
+}
+
+Node *conditional(Token **rest,Token *tok) {
+  Node *node = logical_or(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *logical_or(Token **rest,Token *tok) {
+  Node *node = logical_and(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *logical_and(Token **rest,Token *tok) {
+  Node *node = bit_or(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *bit_or(Token **rest,Token *tok) {
+  Node *node = bit_xor(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *bit_xor(Token **rest,Token *tok) {
+  Node *node = bit_and(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *bit_and(Token **rest,Token *tok) {
+  Node *node = equality(&tok,tok);
+  *rest = tok;
+  return node;
 }
 
 Node *equality(Token **rest,Token *tok) {
@@ -355,25 +410,25 @@ Node *equality(Token **rest,Token *tok) {
 }
 
 Node *relational(Token **rest,Token *tok) {
-  Node *lhs = add(&tok,tok);
+  Node *lhs = shift(&tok,tok);
   for(;;) {
     if(consume(&tok,tok,"<")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational <");
       lhs = new_node(ND_SMALLER,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"<=")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational <=");
       lhs = new_node(ND_SMALLER_EQUAL,lhs,rhs,lhs->type);
     }else if (consume(&tok,tok,">")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational >");
       lhs = new_node(ND_GREATER,lhs,rhs,lhs->type);
     }else if (consume(&tok,tok,">=")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational >=");
       lhs = new_node(ND_GREATER_EQUAL,lhs,rhs,lhs->type);
@@ -382,6 +437,12 @@ Node *relational(Token **rest,Token *tok) {
       return lhs;
     }
   }
+}
+
+Node *shift(Token **rest,Token *tok) {
+  Node *node = add(&tok,tok);
+  *rest = tok;
+  return node;
 }
 
 Node *add(Token **rest,Token *tok) {
@@ -393,16 +454,7 @@ Node *add(Token **rest,Token *tok) {
       lhs = new_add_node(lhs,rhs);
     }else if(consume(&tok,tok,"-")){
       Node *rhs = mul(&tok,tok);
-
-      if(lhs->type->ty == INT && rhs->type->ty == INT)
-        lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
-      else if(rhs->type->ty == INT){
-        Type *convert_type = calloc(1,sizeof(Type));
-        convert_type->ty = PTR;
-        convert_type->ptr_to = lhs->type->ptr_to;
-        lhs = new_node(ND_SUB,lhs,rhs,convert_type);
-      }else
-        error_at(tok->str,"invalid argument type to sub -");
+      lhs = new_sub_node(lhs,rhs);
     }else{
       *rest = tok;
       return lhs;
@@ -411,21 +463,21 @@ Node *add(Token **rest,Token *tok) {
 }
 
 Node *mul(Token **rest,Token *tok) {
-  Node *lhs = unary(&tok,tok);
+  Node *lhs = cast(&tok,tok);
 
   for(;;) {
     if(consume(&tok,tok,"*")){
-      Node *rhs = unary(&tok,tok);
+      Node *rhs = cast(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error_at(tok->str,"invalid argument type to mul * ");
       lhs = new_node(ND_MUL,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"/")){
-      Node *rhs = unary(&tok,tok);
+      Node *rhs = cast(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error_at(tok->str,"invalid argument type to div /");
       lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"%")){
-      Node *rhs = unary(&tok,tok);
+      Node *rhs = cast(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error_at(tok->str,"invalid argument type to mod %");
       lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
@@ -434,6 +486,12 @@ Node *mul(Token **rest,Token *tok) {
       return lhs;
     }
   }
+}
+
+Node *cast(Token **rest,Token *tok){
+  Node *node = unary(&tok,tok);
+  *rest = tok;
+  return node;
 }
 
 Node *unary(Token **rest,Token *tok) {
@@ -445,13 +503,31 @@ Node *unary(Token **rest,Token *tok) {
     return node;
   }
 
+  if(consume(&tok,tok,"++")){
+    Node *lhs = unary(&tok,tok);
+    Node *add_node = new_add_node(lhs,new_node_num(1));
+    Node *node = new_assign_node(lhs,add_node);
+
+    *rest = tok;
+    return node;
+  }
+
+  if(consume(&tok,tok,"--")){
+    Node *lhs = unary(&tok,tok);
+    Node *sub_node = new_sub_node(lhs,new_node_num(1));
+    Node *node = new_assign_node(lhs,sub_node);
+
+    *rest = tok;
+    return node;
+  }
+
   if(consume(&tok,tok,"+")){
-    Node *node = unary(&tok,tok);
+    Node *node = cast(&tok,tok);
     *rest = tok;
     return node;
   }
   if(consume(&tok,tok,"-")){
-    Node *node = unary(&tok,tok);
+    Node *node = cast(&tok,tok);
     if(node->type->ty != INT)
       error_at(tok->str,"invalid argument type ptr to unary");
     node =  new_node(ND_SUB,new_node_num(0), node,node->type);
@@ -460,16 +536,14 @@ Node *unary(Token **rest,Token *tok) {
     return node;
   }
   if(consume(&tok,tok,"*")){
-    Node *node = unary(&tok,tok);
-    if(node->type->ty != PTR && node->type->ty != ARRAY)
-      error_at(tok->str,"not dereference to type int");
-    node = new_node(ND_DEREF,node,NULL,node->type->ptr_to);
+    Node *node = cast(&tok,tok);
+    node = new_deref_node(node);
 
     *rest = tok;
     return node;
   }
   if(consume(&tok,tok,"&")){
-    Node *node = unary(&tok,tok);
+    Node *node = cast(&tok,tok);
     Type *type = newtype_ptr(node->type);
     node = new_node(ND_ADDR,node,NULL,type);
 
@@ -517,7 +591,12 @@ Node *postfix(Token **rest,Token *tok) {
       lhs = node;
     }else if(consume(&tok,tok,"++")){
       Node *add_node = new_add_node(lhs,new_node_num(1));
-      lhs = new_assign_node(lhs,add_node);
+      Node *assign_node = new_assign_node(lhs,add_node);
+      lhs = new_add_node(assign_node,new_node_num(-1));
+    }else if(consume(&tok,tok,"--")){
+      Node *sub_node = new_sub_node(lhs,new_node_num(1));
+      Node *assign_node = new_assign_node(lhs,sub_node);
+      lhs = new_sub_node(assign_node,new_node_num(-1));
     }else{
       *rest = tok;
       return lhs;

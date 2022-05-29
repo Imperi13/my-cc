@@ -84,6 +84,14 @@ assert 45 "test/add_assign1.in"
 assert 15 "test/add_assign2.in"
 
 assert 45 "test/post_increment1.in"
+assert 20 "test/post_increment2.in"
+assert 1 "test/post_increment3.in"
+assert 9 "test/post_decrement1.in"
+assert 10 "test/post_decrement2.in"
+
+assert 45 "test/pre_increment1.in"
+assert 20 "test/pre_increment2.in"
+assert 2 "test/pre_increment3.in"
 
 assert 0 "test/global_var1.in"
 assert 10 "test/global_var2.in"
