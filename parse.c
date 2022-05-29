@@ -6,8 +6,15 @@ void function_definition(Token **rest,Token *tok);
 Node *stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
 Node *assign(Token **rest,Token *tok);
+Node *conditional(Token **rest,Token *tok);
+Node *logical_or(Token **rest,Token *tok);
+Node *logical_and(Token **rest,Token *tok);
+Node *bit_or(Token **rest,Token *tok);
+Node *bit_xor(Token **rest,Token *tok);
+Node *bit_and(Token **rest,Token *tok);
 Node *equality(Token **rest,Token *tok);
 Node *relational(Token **rest,Token *tok);
+Node *shift(Token **rest,Token *tok);
 Node *add(Token **rest,Token *tok);
 Node *mul(Token **rest,Token *tok);
 Node *cast(Token **rest,Token *tok);
@@ -332,7 +339,7 @@ Node *expr(Token **rest,Token *tok) {
 }
 
 Node *assign(Token **rest,Token *tok) {
-  Node *lhs = equality(&tok,tok);
+  Node *lhs = conditional(&tok,tok);
   if (consume(&tok,tok,"=")){
     Node *rhs = assign(&tok,tok);
     lhs = new_assign_node(lhs,rhs);
@@ -344,6 +351,42 @@ Node *assign(Token **rest,Token *tok) {
 
   *rest = tok;
   return lhs;
+}
+
+Node *conditional(Token **rest,Token *tok) {
+  Node *node = logical_or(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *logical_or(Token **rest,Token *tok) {
+  Node *node = logical_and(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *logical_and(Token **rest,Token *tok) {
+  Node *node = bit_or(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *bit_or(Token **rest,Token *tok) {
+  Node *node = bit_xor(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *bit_xor(Token **rest,Token *tok) {
+  Node *node = bit_and(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *bit_and(Token **rest,Token *tok) {
+  Node *node = equality(&tok,tok);
+  *rest = tok;
+  return node;
 }
 
 Node *equality(Token **rest,Token *tok) {
@@ -367,25 +410,25 @@ Node *equality(Token **rest,Token *tok) {
 }
 
 Node *relational(Token **rest,Token *tok) {
-  Node *lhs = add(&tok,tok);
+  Node *lhs = shift(&tok,tok);
   for(;;) {
     if(consume(&tok,tok,"<")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational <");
       lhs = new_node(ND_SMALLER,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"<=")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational <=");
       lhs = new_node(ND_SMALLER_EQUAL,lhs,rhs,lhs->type);
     }else if (consume(&tok,tok,">")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational >");
       lhs = new_node(ND_GREATER,lhs,rhs,lhs->type);
     }else if (consume(&tok,tok,">=")){
-      Node *rhs = add(&tok,tok);
+      Node *rhs = shift(&tok,tok);
       if(!is_same_type(lhs->type,rhs->type))
         error_at(tok->str,"invalid argument type to relational >=");
       lhs = new_node(ND_GREATER_EQUAL,lhs,rhs,lhs->type);
@@ -394,6 +437,12 @@ Node *relational(Token **rest,Token *tok) {
       return lhs;
     }
   }
+}
+
+Node *shift(Token **rest,Token *tok) {
+  Node *node = add(&tok,tok);
+  *rest = tok;
+  return node;
 }
 
 Node *add(Token **rest,Token *tok) {
