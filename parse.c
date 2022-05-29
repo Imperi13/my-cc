@@ -10,6 +10,7 @@ Node *equality(Token **rest,Token *tok);
 Node *relational(Token **rest,Token *tok);
 Node *add(Token **rest,Token *tok);
 Node *mul(Token **rest,Token *tok);
+Node *cast(Token **rest,Token *tok);
 Node *unary(Token **rest,Token *tok);
 Node *postfix(Token **rest,Token *tok);
 Node *primary(Token **rest,Token *tok);
@@ -413,21 +414,21 @@ Node *add(Token **rest,Token *tok) {
 }
 
 Node *mul(Token **rest,Token *tok) {
-  Node *lhs = unary(&tok,tok);
+  Node *lhs = cast(&tok,tok);
 
   for(;;) {
     if(consume(&tok,tok,"*")){
-      Node *rhs = unary(&tok,tok);
+      Node *rhs = cast(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error_at(tok->str,"invalid argument type to mul * ");
       lhs = new_node(ND_MUL,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"/")){
-      Node *rhs = unary(&tok,tok);
+      Node *rhs = cast(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error_at(tok->str,"invalid argument type to div /");
       lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
     }else if(consume(&tok,tok,"%")){
-      Node *rhs = unary(&tok,tok);
+      Node *rhs = cast(&tok,tok);
       if(lhs->type->ty != INT || rhs->type->ty != INT)
         error_at(tok->str,"invalid argument type to mod %");
       lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
@@ -436,6 +437,12 @@ Node *mul(Token **rest,Token *tok) {
       return lhs;
     }
   }
+}
+
+Node *cast(Token **rest,Token *tok){
+  Node *node = unary(&tok,tok);
+  *rest = tok;
+  return node;
 }
 
 Node *unary(Token **rest,Token *tok) {
@@ -447,13 +454,31 @@ Node *unary(Token **rest,Token *tok) {
     return node;
   }
 
+  if(consume(&tok,tok,"++")){
+    Node *lhs = unary(&tok,tok);
+    Node *add_node = new_add_node(lhs,new_node_num(1));
+    Node *node = new_assign_node(lhs,add_node);
+
+    *rest = tok;
+    return node;
+  }
+
+  if(consume(&tok,tok,"--")){
+    Node *lhs = unary(&tok,tok);
+    Node *sub_node = new_sub_node(lhs,new_node_num(1));
+    Node *node = new_assign_node(lhs,sub_node);
+
+    *rest = tok;
+    return node;
+  }
+
   if(consume(&tok,tok,"+")){
-    Node *node = unary(&tok,tok);
+    Node *node = cast(&tok,tok);
     *rest = tok;
     return node;
   }
   if(consume(&tok,tok,"-")){
-    Node *node = unary(&tok,tok);
+    Node *node = cast(&tok,tok);
     if(node->type->ty != INT)
       error_at(tok->str,"invalid argument type ptr to unary");
     node =  new_node(ND_SUB,new_node_num(0), node,node->type);
@@ -462,14 +487,14 @@ Node *unary(Token **rest,Token *tok) {
     return node;
   }
   if(consume(&tok,tok,"*")){
-    Node *node = unary(&tok,tok);
+    Node *node = cast(&tok,tok);
     node = new_deref_node(node);
 
     *rest = tok;
     return node;
   }
   if(consume(&tok,tok,"&")){
-    Node *node = unary(&tok,tok);
+    Node *node = cast(&tok,tok);
     Type *type = newtype_ptr(node->type);
     node = new_node(ND_ADDR,node,NULL,type);
 
@@ -517,10 +542,12 @@ Node *postfix(Token **rest,Token *tok) {
       lhs = node;
     }else if(consume(&tok,tok,"++")){
       Node *add_node = new_add_node(lhs,new_node_num(1));
-      lhs = new_assign_node(lhs,add_node);
+      Node *assign_node = new_assign_node(lhs,add_node);
+      lhs = new_add_node(assign_node,new_node_num(-1));
     }else if(consume(&tok,tok,"--")){
       Node *sub_node = new_sub_node(lhs,new_node_num(1));
-      lhs = new_assign_node(lhs,sub_node);
+      Node *assign_node = new_assign_node(lhs,sub_node);
+      lhs = new_sub_node(assign_node,new_node_num(-1));
     }else{
       *rest = tok;
       return lhs;
