@@ -102,16 +102,27 @@ Node *new_add_node(Node *lhs,Node *rhs) {
 
   if(is_numeric(lhs->type) && is_numeric(rhs->type))
     node->type = lhs->type;
-  else if(lhs->type->ty == INT){
-    node->type = calloc(1,sizeof(Type));
-    node->type->ty = PTR;
-    node->type->ptr_to = rhs->type->ptr_to;
-  }else if(rhs->type->ty == INT){
-    node->type = calloc(1,sizeof(Type));
-    node->type->ty = PTR;
-    node->type->ptr_to = lhs->type->ptr_to;
-  }else
+  else if(is_numeric(lhs->type))
+    node->type = newtype_ptr(rhs->type->ptr_to);
+  else if(is_numeric(rhs->type))
+    node->type = newtype_ptr(lhs->type->ptr_to);
+  else
     error("invalid argument type to add +");
+
+  return node;
+}
+
+Node *new_sub_node(Node *lhs,Node *rhs) {
+  Node *node = calloc(1,sizeof(Node));
+  node->kind = ND_SUB;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  if(is_numeric(lhs->type) && is_numeric(rhs->type))
+    node->type = lhs->type;
+  else if(is_numeric(rhs->type))
+    node->type = newtype_ptr(lhs->type->ptr_to);
+  else
+    error("invalid argument type to sub -");
 
   return node;
 }
@@ -122,7 +133,7 @@ Node *new_deref_node(Node *lhs) {
   node->lhs = lhs;
 
   if(lhs->type->ty != PTR && lhs->type->ty != ARRAY)
-    error("not dereference to type int");
+    error("not dereference type");
   node->type = lhs->type->ptr_to;
   return node;
 }
@@ -393,16 +404,7 @@ Node *add(Token **rest,Token *tok) {
       lhs = new_add_node(lhs,rhs);
     }else if(consume(&tok,tok,"-")){
       Node *rhs = mul(&tok,tok);
-
-      if(lhs->type->ty == INT && rhs->type->ty == INT)
-        lhs = new_node(ND_SUB,lhs,rhs,lhs->type);
-      else if(rhs->type->ty == INT){
-        Type *convert_type = calloc(1,sizeof(Type));
-        convert_type->ty = PTR;
-        convert_type->ptr_to = lhs->type->ptr_to;
-        lhs = new_node(ND_SUB,lhs,rhs,convert_type);
-      }else
-        error_at(tok->str,"invalid argument type to sub -");
+      lhs = new_sub_node(lhs,rhs);
     }else{
       *rest = tok;
       return lhs;
@@ -461,9 +463,7 @@ Node *unary(Token **rest,Token *tok) {
   }
   if(consume(&tok,tok,"*")){
     Node *node = unary(&tok,tok);
-    if(node->type->ty != PTR && node->type->ty != ARRAY)
-      error_at(tok->str,"not dereference to type int");
-    node = new_node(ND_DEREF,node,NULL,node->type->ptr_to);
+    node = new_deref_node(node);
 
     *rest = tok;
     return node;
@@ -518,6 +518,9 @@ Node *postfix(Token **rest,Token *tok) {
     }else if(consume(&tok,tok,"++")){
       Node *add_node = new_add_node(lhs,new_node_num(1));
       lhs = new_assign_node(lhs,add_node);
+    }else if(consume(&tok,tok,"--")){
+      Node *sub_node = new_sub_node(lhs,new_node_num(1));
+      lhs = new_assign_node(lhs,sub_node);
     }else{
       *rest = tok;
       return lhs;
