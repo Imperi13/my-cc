@@ -95,4 +95,7 @@ assert 40 "test/char2.in"
 assert 0 "test/str_literal1.in"
 assert 48 "test/str_literal2.in"
 
+assert 10 "test/comment1.in"
+assert 10 "test/comment2.in"
+
 echo OK
