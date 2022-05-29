@@ -99,6 +99,7 @@ typedef enum {
   ND_BLOCK,
   ND_FUNCTION_CALL,
   ND_NUM,
+  ND_NOP,
 } NodeKind;
 
 typedef struct Node Node;
@@ -153,8 +154,7 @@ struct Obj {
   ObjList *arg_front;
   ObjList *arg_back;
   ObjList *locals;
-  NodeList *code_front;
-  NodeList *code_back;
+  Node *code;
   int arg_size;
   bool is_defined;
 };

@@ -4,6 +4,11 @@ void global_definition(Token **rest,Token *tok);
 void var_definition(Token **rest,Token *tok);
 void function_definition(Token **rest,Token *tok);
 Node *stmt(Token **rest,Token *tok);
+Node *compound_stmt(Token **rest,Token *tok);
+Node *jump_stmt(Token **rest,Token *tok);
+Node *iteration_stmt(Token **rest,Token *tok);
+Node *selection_stmt(Token **rest,Token *tok);
+Node *expr_stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
 Node *assign(Token **rest,Token *tok);
 Node *conditional(Token **rest,Token *tok);
@@ -206,68 +211,108 @@ void function_definition(Token **rest,Token *tok) {
 
   now_function = func_def;
 
-  if(!consume(&tok,tok,"{")){
+  if(!equal(tok,"{")){
     expect(&tok,tok,";");
     *rest = tok;
     return;
   }
 
   func_def->is_defined = true;
-
-  while(!consume(&tok,tok,"}")){
-    NodeList *push_stmt = calloc(1,sizeof(NodeList));
-    push_stmt->node = stmt(&tok,tok);
-    if(!func_def->code_front){
-      func_def->code_front = push_stmt;
-      func_def->code_back = push_stmt;
-    }else{
-      func_def->code_back->next = push_stmt;
-      func_def->code_back = push_stmt;
-    }
-  }
+  func_def->code = compound_stmt(&tok,tok);
 
   *rest = tok;
 }
 
 Node *stmt(Token **rest,Token *tok) {
   Node *node;
+  if(compound_stmt(&dummy_token,tok)){
+    node = compound_stmt(&tok,tok);
+    *rest = tok;
+    return node;
+  }
 
+  if(selection_stmt(&dummy_token,tok)){
+    node = selection_stmt(&tok,tok);
+    *rest = tok;
+    return node;
+  }
+
+  if(iteration_stmt(&dummy_token,tok)){
+    node = iteration_stmt(&tok,tok);
+    *rest = tok;
+    return node;
+  }
+
+  if(jump_stmt(&dummy_token,tok)){
+    node = jump_stmt(&tok,tok);
+    *rest = tok;
+    return node;
+  }
+
+  node = expr_stmt(&tok,tok);
+  *rest = tok;
+  return node;
+}
+
+Node *compound_stmt(Token **rest,Token *tok) {
+  Node *node = NULL;
   if(consume(&tok,tok,"{")){
     node = calloc(1,sizeof(Node));
     node->kind = ND_BLOCK;
+
     while(!consume(&tok,tok,"}")){
       NodeList *push_stmt=calloc(1,sizeof(NodeList));
-      push_stmt->node = stmt(&tok,tok);
+      if(parse_local_decl(&dummy_token,tok)){
+        Node *def = calloc(1,sizeof(Node));
+        def->kind = ND_VAR_DEFINE;
+
+        ObjList *push_lvar = calloc(1,sizeof(ObjList));
+        Obj *lvar = parse_local_decl(&tok,tok);
+        push_lvar->obj = lvar;
+        push_lvar->next = now_function->locals;
+
+        if(now_function->locals)
+          lvar->offset = offset_alignment(now_function->locals->obj->offset,type_size(lvar->type),type_alignment(lvar->type));
+        else 
+          lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
+        now_function->locals = push_lvar;
+       
+        push_stmt->node = def;
+      }else{
+        push_stmt->node = stmt(&tok,tok);
+      }
+
       if(!node->stmt_back){
         node->stmt_front=push_stmt;
         node->stmt_back=push_stmt;
-        continue;
+      }else{
+        node->stmt_back->next = push_stmt;
+        node->stmt_back = push_stmt;
       }
-      node->stmt_back->next = push_stmt;
-      node->stmt_back = push_stmt;
     }
 
     *rest = tok;
     return node;
   }
 
-  if(consume_kind(&tok,tok,TK_IF)) {
+  *rest = tok;
+  return node;
+}
+
+Node *jump_stmt(Token **rest,Token *tok) {
+  Node *node = NULL;
+  if(consume_kind(&tok,tok,TK_RETURN)) {
     node = calloc(1,sizeof(Node));
-    node->kind = ND_IF;
-    expect(&tok,tok,"(");
-    node -> expr = expr(&tok,tok);
-    expect(&tok,tok,")");
-    node -> lhs = stmt(&tok,tok);
-
-    if(consume_kind(&tok,tok,TK_ELSE)){
-      node -> kind = ND_IFELSE;
-      node -> rhs = stmt(&tok,tok);
-    }
-
-    *rest = tok;
-    return node;
+    node->kind = ND_RETURN;
+    node->lhs = expr(&tok,tok);
   }
 
+  *rest = tok;
+  return node;
+}
+
+Node *iteration_stmt(Token **rest,Token *tok) {
+  Node *node = NULL;
   if(consume_kind(&tok,tok,TK_WHILE)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_WHILE;
@@ -305,28 +350,43 @@ Node *stmt(Token **rest,Token *tok) {
     return node;
   }
 
-  if(consume_kind(&tok,tok,TK_RETURN)) {
-    node = calloc(1,sizeof(Node));
-    node->kind = ND_RETURN;
-    node->lhs = expr(&tok,tok);
-  }else if(parse_local_decl(&dummy_token,tok)){
-    node = calloc(1,sizeof(Node));
-    node->kind = ND_VAR_DEFINE;
+  *rest = tok;
+  return node;
+}
 
-    ObjList *push_lvar = calloc(1,sizeof(ObjList));
-    Obj *lvar = parse_local_decl(&tok,tok);
-    push_lvar->obj = lvar;
-    push_lvar->next = now_function->locals;
-    if(now_function->locals)
-      lvar->offset = offset_alignment(now_function->locals->obj->offset,type_size(lvar->type),type_alignment(lvar->type));
-    else 
-      lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
-    now_function->locals = push_lvar;
-  }else{
-    node = expr(&tok,tok);
+Node *selection_stmt(Token **rest,Token *tok) {
+  Node *node = NULL;
+  if(consume_kind(&tok,tok,TK_IF)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_IF;
+    expect(&tok,tok,"(");
+    node -> expr = expr(&tok,tok);
+    expect(&tok,tok,")");
+    node -> lhs = stmt(&tok,tok);
+
+    if(consume_kind(&tok,tok,TK_ELSE)){
+      node -> kind = ND_IFELSE;
+      node -> rhs = stmt(&tok,tok);
+    }
+
+    *rest = tok;
+    return node;
   }
-  expect(&tok,tok,";");
 
+  *rest = tok;
+  return node;
+}
+
+
+Node *expr_stmt(Token **rest,Token *tok) {
+  if(consume(&tok,tok,";")){
+    Node *node = new_node(ND_NOP,NULL,NULL,NULL);
+    *rest = tok;
+    return node;
+  }
+
+  Node *node = expr(&tok,tok);
+  expect(&tok,tok,";");
   *rest = tok;
   return node;
 }
