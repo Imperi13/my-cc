@@ -40,6 +40,11 @@ Obj *parse_local_decl(Token **rest,Token *tok){
 
   obj = declarator(&tok,tok,obj);
 
+  if(consume(&tok,tok,"=")){
+    obj->init_var = assign(&tok,tok);
+  }
+  expect(&tok,tok,";");
+
   *rest = tok;
   return obj;
 }

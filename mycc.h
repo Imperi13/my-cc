@@ -87,7 +87,6 @@ typedef enum {
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
   ND_VAR,
-  ND_VAR_DEFINE,
   ND_STR,
   ND_ADDR,
   ND_DEREF,
@@ -99,6 +98,7 @@ typedef enum {
   ND_BLOCK,
   ND_FUNCTION_CALL,
   ND_NUM,
+  ND_NOP,
 } NodeKind;
 
 typedef struct Node Node;
@@ -148,13 +148,13 @@ struct Obj {
 
   // for lvar
   int offset;
+  Node *init_var;
 
   // for function
   ObjList *arg_front;
   ObjList *arg_back;
   ObjList *locals;
-  NodeList *code_front;
-  NodeList *code_back;
+  Node *code;
   int arg_size;
   bool is_defined;
 };
@@ -206,6 +206,7 @@ int offset_alignment(int start,int data_size,int alignment);
 Obj *find_obj(ObjList *list,char *str,int len);
 Obj *find_lvar(char *str,int len);
 void program(Token *tok);
+Node *assign(Token **rest,Token *tok);
 
 void codegen_all(FILE *output);
 

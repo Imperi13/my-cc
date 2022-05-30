@@ -73,11 +73,11 @@ void gen(Node *node) {
   int now_count;
   int arg_count;
   switch(node->kind) {
+    case ND_NOP:
+      printf("  push 0\n");
+      return;
     case ND_NUM:
       printf("  push %d\n",node->val);
-      return;
-    case ND_VAR_DEFINE:
-      printf("  push rax\n");
       return;
     case ND_VAR:
       gen_addr(node);
@@ -312,10 +312,7 @@ void gen_function(Obj *func) {
     now_arg = now_arg->next;
   }
 
-  for(NodeList *stmt = func->code_front;stmt;stmt = stmt->next) {
-    gen(stmt->node);
-    printf("  pop rax\n");
-  }
+  gen(func->code);
 
   printf("  mov rsp, rbp\n");
   printf("  pop rbp\n");

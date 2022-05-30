@@ -106,4 +106,6 @@ assert 48 "test/str_literal2.in"
 assert 10 "test/comment1.in"
 assert 10 "test/comment2.in"
 
+assert 20 "test/lvar_init1.in"
+
 echo OK
