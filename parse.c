@@ -10,7 +10,6 @@ Node *iteration_stmt(Token **rest,Token *tok);
 Node *selection_stmt(Token **rest,Token *tok);
 Node *expr_stmt(Token **rest,Token *tok);
 Node *expr(Token **rest,Token *tok);
-Node *assign(Token **rest,Token *tok);
 Node *conditional(Token **rest,Token *tok);
 Node *logical_or(Token **rest,Token *tok);
 Node *logical_and(Token **rest,Token *tok);
@@ -263,8 +262,6 @@ Node *compound_stmt(Token **rest,Token *tok) {
     while(!consume(&tok,tok,"}")){
       NodeList *push_stmt=calloc(1,sizeof(NodeList));
       if(parse_local_decl(&dummy_token,tok)){
-        Node *def = calloc(1,sizeof(Node));
-        def->kind = ND_VAR_DEFINE;
 
         ObjList *push_lvar = calloc(1,sizeof(ObjList));
         Obj *lvar = parse_local_decl(&tok,tok);
@@ -276,8 +273,21 @@ Node *compound_stmt(Token **rest,Token *tok) {
         else 
           lvar->offset = offset_alignment(0,type_size(lvar->type),type_alignment(lvar->type));
         now_function->locals = push_lvar;
+
+        Node *init;
+        if(lvar->init_var){
+          Node *lhs = calloc(1,sizeof(Node));
+          lhs->kind = ND_VAR;
+          lhs->offset = lvar->offset;
+          lhs->type = lvar->type;
+
+          init = new_assign_node(lhs,lvar->init_var);
+        }else{
+          init = calloc(1,sizeof(Node));
+          init->kind = ND_NOP;
+        }
        
-        push_stmt->node = def;
+        push_stmt->node = init;
       }else{
         push_stmt->node = stmt(&tok,tok);
       }

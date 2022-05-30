@@ -39,6 +39,10 @@ Obj *parse_local_decl(Token **rest,Token *tok){
   obj->type = local_decl_specifier(&tok,tok);
 
   obj = declarator(&tok,tok,obj);
+
+  if(consume(&tok,tok,"=")){
+    obj->init_var = assign(&tok,tok);
+  }
   expect(&tok,tok,";");
 
   *rest = tok;
