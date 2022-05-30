@@ -116,4 +116,6 @@ assert 15 "test/or1.in"
 assert 1 "test/conditional1.in"
 assert 20 "test/conditional2.in"
 
+assert 20 "test/comma1.in"
+
 echo OK

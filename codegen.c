@@ -205,6 +205,11 @@ void gen(Node *node) {
           printf("  pop rax\n");
       }
       return;
+    case ND_COMMA:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      gen(node->rhs);
+      return;
     case ND_FUNCTION_CALL:
       printf("  mov r8,rsp\n");
       printf("  and rsp,0xfffffffffffffff0\n");

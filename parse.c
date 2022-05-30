@@ -402,10 +402,16 @@ Node *expr_stmt(Token **rest,Token *tok) {
 }
 
 Node *expr(Token **rest,Token *tok) {
-  Node *node = assign(&tok,tok);
-
-  *rest = tok;
-  return node;
+  Node *lhs = assign(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,",")){
+      Node *rhs = assign(&tok,tok);
+      lhs = new_node(ND_COMMA,lhs,rhs,rhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *assign(Token **rest,Token *tok) {
@@ -676,7 +682,7 @@ Node *postfix(Token **rest,Token *tok) {
       
       while(!consume(&tok,tok,")")){
         NodeList *push_expr = calloc(1,sizeof(NodeList));
-        push_expr->node = expr(&tok,tok);
+        push_expr->node = assign(&tok,tok);
 
         if(!node->expr_back){
           node->expr_front = push_expr;
