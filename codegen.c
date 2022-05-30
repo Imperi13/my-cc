@@ -244,6 +244,15 @@ void gen(Node *node) {
       printf("  cqo\n");
       printf("  idiv rdi\n");
       break;
+    case ND_BIT_AND:
+      printf("  and rax, rdi\n");
+      break;
+    case ND_BIT_XOR:
+      printf("  xor rax, rdi\n");
+      break;
+    case ND_BIT_OR:
+      printf("  or rax, rdi\n");
+      break;
     case ND_MOD:
       printf("  cqo\n");
       printf("  idiv rdi\n");

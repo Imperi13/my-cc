@@ -79,6 +79,7 @@ assert 10 "test/array1.in"
 assert 3 "test/array2.in"
 assert 34 "test/array3.in"
 assert 34 "test/array4.in"
+#assert 30 "test/array5.in"
 
 assert 45 "test/add_assign1.in"
 assert 15 "test/add_assign2.in"
@@ -107,5 +108,9 @@ assert 10 "test/comment1.in"
 assert 10 "test/comment2.in"
 
 assert 20 "test/lvar_init1.in"
+
+assert 9 "test/and1.in"
+assert 6 "test/xor1.in"
+assert 15 "test/or1.in"
 
 echo OK

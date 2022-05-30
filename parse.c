@@ -442,21 +442,42 @@ Node *logical_and(Token **rest,Token *tok) {
 }
 
 Node *bit_or(Token **rest,Token *tok) {
-  Node *node = bit_xor(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = bit_xor(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"|")){
+      Node *rhs = bit_xor(&tok,tok);
+      lhs = new_node(ND_BIT_OR,lhs,rhs,lhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *bit_xor(Token **rest,Token *tok) {
-  Node *node = bit_and(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = bit_and(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"^")){
+      Node *rhs = bit_and(&tok,tok);
+      lhs = new_node(ND_BIT_XOR,lhs,rhs,lhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *bit_and(Token **rest,Token *tok) {
-  Node *node = equality(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = equality(&tok,tok);
+  for(;;) {
+    if(consume(&tok,tok,"&")){
+      Node *rhs = equality(&tok,tok);
+      lhs = new_node(ND_BIT_AND,lhs,rhs,lhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *equality(Token **rest,Token *tok) {
