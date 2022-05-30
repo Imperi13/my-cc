@@ -81,6 +81,7 @@ typedef enum {
   ND_BIT_AND,
   ND_BIT_XOR,
   ND_BIT_OR,
+  ND_CONDITIONAL,
   ND_MOD,
   ND_EQUAL,
   ND_NOT_EQUAL,

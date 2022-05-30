@@ -113,4 +113,7 @@ assert 9 "test/and1.in"
 assert 6 "test/xor1.in"
 assert 15 "test/or1.in"
 
+assert 1 "test/conditional1.in"
+assert 20 "test/conditional2.in"
+
 echo OK

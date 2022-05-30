@@ -424,9 +424,18 @@ Node *assign(Token **rest,Token *tok) {
 }
 
 Node *conditional(Token **rest,Token *tok) {
-  Node *node = logical_or(&tok,tok);
+  Node *cond = logical_or(&tok,tok);
+  if(consume(&tok,tok,"?")){
+    Node *lhs = expr(&tok,tok);
+    expect(&tok,tok,":");
+    Node *rhs = conditional(&tok,tok);
+    Node *node = new_node(ND_CONDITIONAL,lhs,rhs,lhs->type);
+    node->expr = cond;
+    *rest = tok;
+    return node;
+  }
   *rest = tok;
-  return node;
+  return cond;
 }
 
 Node *logical_or(Token **rest,Token *tok) {

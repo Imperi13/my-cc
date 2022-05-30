@@ -131,6 +131,21 @@ void gen(Node *node) {
       printf("  pop rbp\n");
       printf("  ret\n");
       return;
+    case ND_CONDITIONAL:
+      now_count = label_count;
+      label_count++;
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  jne .Ltrue%d\n",now_count);
+      printf("  jmp .Lfalse%d\n",now_count);
+      printf(".Ltrue%d:\n",now_count);
+      gen(node->lhs);
+      printf("  jmp .Lend%d\n",now_count);
+      printf(".Lfalse%d:\n",now_count);
+      gen(node->rhs);
+      printf(".Lend%d:\n",now_count);
+      return;
     case ND_IF:
       now_count = label_count;
       label_count++;
