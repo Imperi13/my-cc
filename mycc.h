@@ -100,6 +100,7 @@ typedef enum {
   ND_SMALLER,
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
+  ND_ADD_ASSIGN,
   ND_VAR,
   ND_STR,
   ND_ADDR,

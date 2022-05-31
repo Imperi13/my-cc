@@ -123,6 +123,31 @@ void gen(Node *node) {
       printf("  mov [rax], dil\n");
     printf("  mov rax, rdi\n");
     return;
+  case ND_ADD_ASSIGN:
+    gen_addr(node->lhs);
+    printf("  push rax\n");
+    gen(node->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rax\n");
+    if (type_size(node->lhs->type) == 8)
+      printf("  mov rsi, [rax]\n");
+    else if (type_size(node->lhs->type) == 4)
+      printf("  movsxd rsi, [rax]\n");
+    else if (type_size(node->lhs->type) == 1)
+      printf("  movsx rsi, BYTE PTR [rax]\n");
+    if (node->lhs->type->ty == PTR || node->lhs->type->ty == ARRAY)
+      printf("  imul rdi, %d\n", type_size(node->lhs->type->ptr_to));
+    else if (node->rhs->type->ty == PTR || node->rhs->type->ty == ARRAY)
+      printf("  imul rsi, %d\n", type_size(node->rhs->type->ptr_to));
+    printf("  add rdi,rsi\n"); 
+    if (type_size(node->lhs->type) == 8)
+      printf("  mov [rax], rdi\n");
+    else if (type_size(node->lhs->type) == 4)
+      printf("  mov [rax], edi\n");
+    else if (type_size(node->lhs->type) == 1)
+      printf("  mov [rax], dil\n");
+    printf("  mov rax,rdi\n");
+    return;
   case ND_ADDR:
     gen_addr(node->lhs);
     return;

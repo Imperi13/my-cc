@@ -531,8 +531,7 @@ Node *assign(Token **rest, Token *tok) {
     lhs = new_assign_node(lhs, rhs);
   } else if (consume(&tok, tok, "+=")) {
     Node *rhs = assign(&tok, tok);
-    Node *add_node = new_add_node(lhs, rhs);
-    lhs = new_assign_node(lhs, add_node);
+    lhs = new_node(ND_ADD_ASSIGN,lhs,rhs,lhs->type);
   } else if (consume(&tok, tok, "-=")) {
     Node *rhs = assign(&tok, tok);
     Node *sub_node = new_sub_node(lhs, rhs);
@@ -854,8 +853,14 @@ Node *postfix(Token **rest, Token *tok) {
       node->kind = ND_FUNCTION_CALL;
       node->lhs = lhs;
 
+      if(lhs->type->ty == FUNC)
+        node->type = lhs->type->return_type;
+      else if(lhs->type->ty == PTR && lhs->type->ptr_to->ty == FUNC)
+        node->type = lhs->type->ptr_to->return_type;
+      else
+        error_at(tok->str,"invalid type to funcall");
       // 関数の返り値は全部intということにしている
-      node->type = type_int;
+      // node->type = type_int;
 
       while (!consume(&tok, tok, ")")) {
         NodeList *push_expr = calloc(1, sizeof(NodeList));
