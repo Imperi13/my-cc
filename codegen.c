@@ -79,6 +79,14 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n",node->val);
       return;
+    case ND_LOGICAL_NEG:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  sete al\n");
+      printf("  movsx rax,al");
+      printf("  push rax\n");
+      return;
     case ND_VAR:
       gen_addr(node);
       if(node->type->ty == ARRAY || node->type->ty == FUNC)

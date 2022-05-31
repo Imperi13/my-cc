@@ -667,6 +667,12 @@ Node *unary(Token **rest,Token *tok) {
     *rest = tok;
     return node;
   }
+  if(consume(&tok,tok,"!")){
+    Node *node = cast(&tok,tok);
+    node = new_node(ND_LOGICAL_NEG,node,NULL,type_int);
+    *rest = tok;
+    return node;
+  }
   
   Node *node = postfix(&tok,tok);
 
