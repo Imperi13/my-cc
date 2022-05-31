@@ -445,9 +445,16 @@ Node *conditional(Token **rest,Token *tok) {
 }
 
 Node *logical_or(Token **rest,Token *tok) {
-  Node *node = logical_and(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = logical_and(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"||")){
+      Node *rhs = logical_and(&tok,tok);
+      lhs = new_node(ND_LOGICAL_OR,lhs,rhs,type_int);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *logical_and(Token **rest,Token *tok) {
