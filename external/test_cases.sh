@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# hsjoihsさんのテストをmy-cc向けに修正
+# https://github.com/hsjoihs/c-compiler/blob/master/test_cases.sh
+#
+
 run_test_with_supplement0() {
   echo -e $2 > ./external/tmp.in
   ./mycc ./external/tmp.in > tmp.s
