@@ -61,19 +61,16 @@ void gen_addr(Node *node) {
       printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
     else
       printf("  mov rax, [%.*s@GOTPCREL + rip]\n",node->len,node->name);
-    printf("  push rax\n");
     return;
   }
 
   if(node->is_global){
     printf("  lea rax, [rip + %.*s]\n",node->len,node->name);
-    printf("  push rax\n");
     return;
   }
 
   printf("  mov rax, rbp\n");
   printf("  sub rax, %d\n",node->offset);
-  printf("  push rax\n");
 }
 
 void gen(Node *node) {
@@ -82,45 +79,40 @@ void gen(Node *node) {
   LoopScope *loop;
   switch(node->kind) {
     case ND_NOP:
-      printf("  push 0\n");
+      printf("  mov rax, 0\n");
       return;
     case ND_NUM:
-      printf("  push %d\n",node->val);
+      printf("  mov rax, %d\n",node->val);
       return;
     case ND_LOGICAL_NOT:
       gen(node->lhs);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  sete al\n");
       printf("  movsx rax,al\n");
-      printf("  push rax\n");
       return;
     case ND_BIT_NOT:
       gen(node->lhs);
-      printf("  pop rax\n");
       printf("  not rax\n");
-      printf("  push rax\n");
       return;
     case ND_VAR:
       gen_addr(node);
       if(node->type->ty == ARRAY || node->type->ty == FUNC)
         return;
-      printf("  pop rax\n");
       if(type_size(node->type) == 8)
         printf("  mov rax, [rax]\n");
       else if(type_size(node->type) == 4)
         printf("  movsxd rax, [rax]\n");
       else if(type_size(node->type) == 1)
         printf("  movsx rax, BYTE PTR [rax]\n");
-      printf("  push rax\n");
       return ;
     case ND_STR:
       printf("  lea rax, [rip + .LC%d]\n",node->str_literal->id);
-      printf("  push rax\n");
       return;
     case ND_ASSIGN:
       gen_addr(node->lhs);
+      printf("  push rax\n");
       gen(node->rhs);
+      printf("  push rax\n");
 
       printf("  pop rdi\n");
       printf("  pop rax\n");
@@ -130,25 +122,22 @@ void gen(Node *node) {
         printf("  mov [rax], edi\n");
       else if(type_size(node->lhs->type) == 1)
         printf("  mov [rax], dil\n");
-      printf("  push rdi\n");
+      printf("  mov rax, rdi\n");
       return;
     case ND_ADDR:
       gen_addr(node->lhs);
       return;
     case ND_DEREF:
       gen(node->lhs);
-      printf("  pop rax\n");
       if(type_size(node->type) == 8)
         printf("  mov rax, [rax]\n");
       else if(type_size(node->type) == 4)
         printf("  movsxd rax, [rax]\n");
       else if(type_size(node->type) == 1)
         printf("  movsx rax, BYTE PTR [rax]\n");
-      printf("  push rax\n");
       return;
     case ND_RETURN:
       gen(node->lhs);
-      printf("  pop rax\n");
       printf("  mov rsp,rbp\n");
       printf("  pop rbp\n");
       printf("  ret\n");
@@ -156,48 +145,42 @@ void gen(Node *node) {
     case ND_BREAK:
       if(!loop_scope)
         error("not in loop");
-      printf("  push 0\n");
       printf("  jmp .Lend%d\n",loop_scope->label_num);
       return;
     case ND_LOGICAL_AND:
       now_count = label_count;
       label_count++;
       gen(node->lhs);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  je .Lfalse%d\n",now_count);
       gen(node->rhs);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  je .Lfalse%d\n",now_count);
-      printf("  push 1\n");
+      printf("  mov rax, 1\n");
       printf("  jmp .Lend%d\n",now_count);
       printf(".Lfalse%d:\n",now_count);
-      printf("  push 0\n");
+      printf("  mov rax, 0\n");
       printf(".Lend%d:\n",now_count);
       return;
     case ND_LOGICAL_OR:
       now_count = label_count;
       label_count++;
       gen(node->lhs);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  jne .Ltrue%d\n",now_count);
       gen(node->rhs);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  jne .Ltrue%d\n",now_count);
-      printf("  push 0\n");
+      printf("  mov rax, 0\n");
       printf("  jmp .Lend%d\n",now_count);
       printf(".Ltrue%d:\n",now_count);
-      printf("  push 1\n");
+      printf("  mov rax, 1\n");
       printf(".Lend%d:\n",now_count);
       return;
     case ND_CONDITIONAL:
       now_count = label_count;
       label_count++;
       gen(node->expr);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  jne .Ltrue%d\n",now_count);
       printf("  jmp .Lfalse%d\n",now_count);
@@ -212,18 +195,15 @@ void gen(Node *node) {
       now_count = label_count;
       label_count++;
       gen(node->expr);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  je .Lend%d\n",now_count);
       gen(node->lhs);
       printf(".Lend%d:\n",now_count);
-      printf("  push 0\n");
       return;
     case ND_IFELSE:
       now_count = label_count;
       label_count++;
       gen(node->expr);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  je .Lelse%d\n",now_count);
       gen(node->lhs);
@@ -244,7 +224,6 @@ void gen(Node *node) {
       printf(".Lbegin%d:\n",now_count);
       gen(node->lhs);
       gen(node->expr);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  jne .Lbegin%d\n",now_count);
       printf(".Lend%d:\n",now_count);
@@ -261,7 +240,6 @@ void gen(Node *node) {
 
       printf(".Lbegin%d:\n",now_count);
       gen(node->expr);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  je .Lend%d\n",now_count);
       gen(node->lhs);
@@ -282,7 +260,6 @@ void gen(Node *node) {
         gen(node->init_expr);
       printf(".Lbegin%d:\n",now_count);
       gen(node->expr);
-      printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  je .Lend%d\n",now_count);
       gen(node->lhs);
@@ -296,13 +273,10 @@ void gen(Node *node) {
       while(node->stmt_front){
         gen(node->stmt_front->node);
         node->stmt_front = node->stmt_front->next;
-        if(node->stmt_front)
-          printf("  pop rax\n");
       }
       return;
     case ND_COMMA:
       gen(node->lhs);
-      printf("  pop rax\n");
       gen(node->rhs);
       return;
     case ND_FUNCTION_CALL:
@@ -315,6 +289,7 @@ void gen(Node *node) {
         if(arg_count >= 6)
           error("more than 6 arguments is not implemented");
         gen(node->expr_front->node);
+        printf("  push rax\n");
         node->expr_front = node->expr_front->next;
         arg_count++;
       }
@@ -322,19 +297,20 @@ void gen(Node *node) {
         printf("  pop %s\n",call_register64[i]);
       }
       gen_addr(node->lhs);
-      printf("  pop r10\n");
+      printf("  mov r10,rax\n");
       // printf("  call %.*s\n",node->len,node->name);
       printf("  call r10\n");
       printf("  pop r8\n");
       printf("  pop rsp\n");
-      printf("  push rax\n");
       return;
     default:
       break;
   }
 
   gen(node->lhs);
+  printf("  push rax\n");
   gen(node->rhs);
+  printf("  push rax\n");
 
   printf("  pop rdi\n");
   printf("  pop rax\n");
@@ -414,8 +390,6 @@ void gen(Node *node) {
     default:
       error("invalid op");
   }
-
-  printf("  push rax\n");
 }
 
 void gen_function(Obj *func) {
