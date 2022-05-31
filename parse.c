@@ -451,9 +451,16 @@ Node *logical_or(Token **rest,Token *tok) {
 }
 
 Node *logical_and(Token **rest,Token *tok) {
-  Node *node = bit_or(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = bit_or(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"&&")){
+      Node *rhs = bit_or(&tok,tok);
+      lhs = new_node(ND_LOGICAL_AND,lhs,rhs,type_int);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *bit_or(Token **rest,Token *tok) {

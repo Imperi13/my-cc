@@ -145,6 +145,23 @@ void gen(Node *node) {
       printf("  pop rbp\n");
       printf("  ret\n");
       return;
+    case ND_LOGICAL_AND:
+      now_count = label_count;
+      label_count++;
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lfalse%d\n",now_count);
+      gen(node->rhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lfalse%d\n",now_count);
+      printf("  push 1\n");
+      printf("  jmp .Lend%d\n",now_count);
+      printf(".Lfalse%d:\n",now_count);
+      printf("  push 0\n");
+      printf(".Lend%d:\n",now_count);
+      return;
     case ND_CONDITIONAL:
       now_count = label_count;
       label_count++;
