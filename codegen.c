@@ -6,6 +6,13 @@ char call_register64[][4] = {"rdi","rsi","rdx","rcx","r8","r9"};
 char call_register32[][4] = {"edi","esi","edx","ecx","r8d","r9d"};
 char call_register8[][4] = {"dil","sil","dl","cl","r8b","r9b"};
 
+typedef struct LoopScope LoopScope;
+
+struct LoopScope {
+  LoopScope *next;
+  int label_num;
+};
+
 char *rax_register(Type *a){
   int size = type_size(a);
   if(size == 8)
@@ -37,7 +44,7 @@ char *rdi_register(Type *a){
 }
 
 int label_count = 0;
-
+LoopScope *loop_scope = NULL;
 
 
 void gen_addr(Node *node) {
@@ -72,6 +79,7 @@ void gen_addr(Node *node) {
 void gen(Node *node) {
   int now_count;
   int arg_count;
+  LoopScope *loop;
   switch(node->kind) {
     case ND_NOP:
       printf("  push 0\n");
@@ -145,6 +153,12 @@ void gen(Node *node) {
       printf("  pop rbp\n");
       printf("  ret\n");
       return;
+    case ND_BREAK:
+      if(!loop_scope)
+        error("not in loop");
+      printf("  push 0\n");
+      printf("  jmp .Lend%d\n",loop_scope->label_num);
+      return;
     case ND_LOGICAL_AND:
       now_count = label_count;
       label_count++;
@@ -203,6 +217,7 @@ void gen(Node *node) {
       printf("  je .Lend%d\n",now_count);
       gen(node->lhs);
       printf(".Lend%d:\n",now_count);
+      printf("  push 0\n");
       return;
     case ND_IFELSE:
       now_count = label_count;
@@ -220,16 +235,30 @@ void gen(Node *node) {
     case ND_DO_WHILE:
       now_count = label_count;
       label_count++;
+
+      loop = calloc(1,sizeof(LoopScope));
+      loop->label_num = now_count;
+      loop->next = loop_scope;
+      loop_scope = loop;
+
       printf(".Lbegin%d:\n",now_count);
       gen(node->lhs);
       gen(node->expr);
       printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  jne .Lbegin%d\n",now_count);
+      printf(".Lend%d:\n",now_count);
+      loop_scope = loop_scope->next;
       return;
     case ND_WHILE:
       now_count = label_count;
       label_count++;
+
+      loop = calloc(1,sizeof(LoopScope));
+      loop->label_num = now_count;
+      loop->next = loop_scope;
+      loop_scope = loop;
+
       printf(".Lbegin%d:\n",now_count);
       gen(node->expr);
       printf("  pop rax\n");
@@ -238,10 +267,17 @@ void gen(Node *node) {
       gen(node->lhs);
       printf("  jmp .Lbegin%d\n",now_count);
       printf(".Lend%d:\n",now_count);
+      loop_scope = loop_scope->next;
       return;
     case ND_FOR:
       now_count = label_count;
       label_count++;
+
+      loop = calloc(1,sizeof(LoopScope));
+      loop->label_num = now_count;
+      loop->next = loop_scope;
+      loop_scope = loop;
+
       if(node->init_expr)
         gen(node->init_expr);
       printf(".Lbegin%d:\n",now_count);
@@ -254,6 +290,7 @@ void gen(Node *node) {
         gen(node->update_expr);
       printf("  jmp .Lbegin%d\n",now_count);
       printf(".Lend%d:\n",now_count);
+      loop_scope = loop_scope->next;
       return;
     case ND_BLOCK:
       while(node->stmt_front){
@@ -383,6 +420,8 @@ void gen(Node *node) {
 
 void gen_function(Obj *func) {
   int stack_offset = 0;
+  loop_scope = NULL;
+
   if(func->locals)
     stack_offset = func->locals->obj->offset;
 
@@ -430,6 +469,7 @@ void gen_str_literal(StrLiteral *str_literal){
 }
 
 void codegen_all(FILE *output) {
+  label_count = 0;
   fprintf(output,".intel_syntax noprefix\n");
 
   for(StrLiteral *now = str_literals;now;now = now->next){
