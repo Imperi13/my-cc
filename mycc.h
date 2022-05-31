@@ -1,10 +1,10 @@
+#include <ctype.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include <stdbool.h>
-#include <stdarg.h>
 #include <string.h>
-#include <errno.h>
 
 typedef enum {
   TK_RESERVED,
@@ -28,7 +28,7 @@ typedef enum {
 typedef struct Token Token;
 typedef struct StrLiteral StrLiteral;
 
-struct Token{
+struct Token {
   TokenKind kind;
   Token *next;
   int val;
@@ -48,7 +48,7 @@ struct StrLiteral {
   StrLiteral *next;
 };
 
-typedef enum{
+typedef enum {
   INT,
   CHAR,
   PTR,
@@ -195,13 +195,13 @@ extern Obj *now_function;
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 
-bool equal(Token *token,char *op);
-bool equal_kind(Token *token,TokenKind kind);
-bool consume(Token **rest,Token *token,char* op);
-Token *consume_kind(Token **rest,Token *token,TokenKind kind);
-void expect(Token **rest,Token *token,char* op);
-Token *expect_kind(Token **rest,Token *token,TokenKind kind);
-int expect_number(Token **rest,Token *token);
+bool equal(Token *token, char *op);
+bool equal_kind(Token *token, TokenKind kind);
+bool consume(Token **rest, Token *token, char *op);
+Token *consume_kind(Token **rest, Token *token, TokenKind kind);
+void expect(Token **rest, Token *token, char *op);
+Token *expect_kind(Token **rest, Token *token, TokenKind kind);
+int expect_number(Token **rest, Token *token);
 bool at_eof(Token *token);
 
 bool is_alnum(char c);
@@ -210,22 +210,19 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
-Obj *parse_global_decl(Token **rest,Token *tok);
-Obj *parse_local_decl(Token **rest,Token *tok);
+Obj *parse_global_decl(Token **rest, Token *tok);
+Obj *parse_local_decl(Token **rest, Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
-bool is_same_type(Type *a,Type *b);
-bool is_convertible(Type *a,Type *b);
+bool is_same_type(Type *a, Type *b);
+bool is_convertible(Type *a, Type *b);
 int type_size(Type *a);
 int type_alignment(Type *a);
-int offset_alignment(int start,int data_size,int alignment);
+int offset_alignment(int start, int data_size, int alignment);
 
-Obj *find_obj(ObjList *list,char *str,int len);
-Obj *find_lvar(char *str,int len);
+Obj *find_obj(ObjList *list, char *str, int len);
+Obj *find_lvar(char *str, int len);
 void program(Token *tok);
-Node *assign(Token **rest,Token *tok);
+Node *assign(Token **rest, Token *tok);
 
 void codegen_all(FILE *output);
-
-
-
