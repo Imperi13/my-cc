@@ -376,6 +376,14 @@ Node *jump_stmt(Token **rest,Token *tok) {
     return node;
   }
 
+  if(consume_kind(&tok,tok,TK_CONTINUE)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_CONTINUE;
+
+    *rest = tok;
+    return node;
+  }
+
   *rest = tok;
   return node;
 }

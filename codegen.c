@@ -147,6 +147,11 @@ void gen(Node *node) {
         error("not in loop");
       printf("  jmp .Lend%d\n",loop_scope->label_num);
       return;
+    case ND_CONTINUE:
+      if(!loop_scope)
+        error("not in loop");
+      printf("  jmp .Lloopend%d\n",loop_scope->label_num);
+      return;
     case ND_LOGICAL_AND:
       now_count = label_count;
       label_count++;
@@ -223,6 +228,7 @@ void gen(Node *node) {
 
       printf(".Lbegin%d:\n",now_count);
       gen(node->lhs);
+      printf(".Lloopend%d:\n",now_count);
       gen(node->expr);
       printf("  cmp rax,0\n");
       printf("  jne .Lbegin%d\n",now_count);
@@ -243,6 +249,7 @@ void gen(Node *node) {
       printf("  cmp rax,0\n");
       printf("  je .Lend%d\n",now_count);
       gen(node->lhs);
+      printf(".Lloopend%d:\n",now_count);
       printf("  jmp .Lbegin%d\n",now_count);
       printf(".Lend%d:\n",now_count);
       loop_scope = loop_scope->next;
@@ -263,6 +270,7 @@ void gen(Node *node) {
       printf("  cmp rax,0\n");
       printf("  je .Lend%d\n",now_count);
       gen(node->lhs);
+      printf(".Lloopend%d:\n",now_count);
       if(node->update_expr)
         gen(node->update_expr);
       printf("  jmp .Lbegin%d\n",now_count);
