@@ -139,7 +139,7 @@ void gen(Node *node) {
       printf("  imul rdi, %d\n", type_size(node->lhs->type->ptr_to));
     else if (node->rhs->type->ty == PTR || node->rhs->type->ty == ARRAY)
       printf("  imul rsi, %d\n", type_size(node->rhs->type->ptr_to));
-    printf("  add rdi,rsi\n"); 
+    printf("  add rdi,rsi\n");
     if (type_size(node->lhs->type) == 8)
       printf("  mov [rax], rdi\n");
     else if (type_size(node->lhs->type) == 4)
@@ -356,9 +356,15 @@ void gen(Node *node) {
     printf("  add rax,rdi\n");
     break;
   case ND_SUB:
-    if (node->lhs->type->ty == PTR || node->lhs->type->ty == ARRAY)
+    if ((node->lhs->type->ty == PTR || node->lhs->type->ty == ARRAY) &&
+        is_numeric(node->rhs->type))
       printf(" imul rdi, %d\n", type_size(node->lhs->type->ptr_to));
     printf("  sub rax,rdi\n");
+    if (node->lhs->type->ty == PTR && node->rhs->type->ty == PTR) {
+      printf("  mov rdi, %d\n", type_size(node->lhs->type->ptr_to));
+      printf("  cqo\n");
+      printf("  idiv rdi\n");
+    }
     break;
   case ND_MUL:
     printf("  imul rax,rdi\n");

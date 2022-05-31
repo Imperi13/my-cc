@@ -136,6 +136,8 @@ Node *new_sub_node(Node *lhs, Node *rhs) {
     node->type = lhs->type;
   else if (is_numeric(rhs->type))
     node->type = newtype_ptr(lhs->type->ptr_to);
+  else if (lhs->type->ty == PTR && rhs->type->ty == PTR)
+    node->type = type_int;
   else
     error("invalid argument type to sub -");
 
@@ -531,7 +533,7 @@ Node *assign(Token **rest, Token *tok) {
     lhs = new_assign_node(lhs, rhs);
   } else if (consume(&tok, tok, "+=")) {
     Node *rhs = assign(&tok, tok);
-    lhs = new_node(ND_ADD_ASSIGN,lhs,rhs,lhs->type);
+    lhs = new_node(ND_ADD_ASSIGN, lhs, rhs, lhs->type);
   } else if (consume(&tok, tok, "-=")) {
     Node *rhs = assign(&tok, tok);
     Node *sub_node = new_sub_node(lhs, rhs);
@@ -853,12 +855,12 @@ Node *postfix(Token **rest, Token *tok) {
       node->kind = ND_FUNCTION_CALL;
       node->lhs = lhs;
 
-      if(lhs->type->ty == FUNC)
+      if (lhs->type->ty == FUNC)
         node->type = lhs->type->return_type;
-      else if(lhs->type->ty == PTR && lhs->type->ptr_to->ty == FUNC)
+      else if (lhs->type->ty == PTR && lhs->type->ptr_to->ty == FUNC)
         node->type = lhs->type->ptr_to->return_type;
       else
-        error_at(tok->str,"invalid type to funcall");
+        error_at(tok->str, "invalid type to funcall");
       // 関数の返り値は全部intということにしている
       // node->type = type_int;
 
