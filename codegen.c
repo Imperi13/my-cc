@@ -84,7 +84,7 @@ void gen(Node *node) {
       printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  sete al\n");
-      printf("  movsx rax,al");
+      printf("  movsx rax,al\n");
       printf("  push rax\n");
       return;
     case ND_VAR:
