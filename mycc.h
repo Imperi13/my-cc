@@ -157,6 +157,7 @@ struct NodeList {
 
 typedef struct Obj Obj;
 typedef struct ObjList ObjList;
+typedef struct VarScope VarScope;
 
 struct Obj {
   Type *type;
@@ -168,17 +169,25 @@ struct Obj {
   Node *init_var;
 
   // for function
+  bool is_defined;
+  Node *code;
+
+  VarScope *local_scope;
+  int stack_size;
+
+  int arg_size;
   ObjList *arg_front;
   ObjList *arg_back;
-  ObjList *locals;
-  Node *code;
-  int arg_size;
-  bool is_defined;
 };
 
 struct ObjList {
   ObjList *next;
   Obj *obj;
+};
+
+struct VarScope {
+  VarScope *next;
+  ObjList *locals;
 };
 
 extern const char variable_letters[];

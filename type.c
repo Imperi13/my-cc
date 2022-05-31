@@ -19,7 +19,6 @@ Type *newtype_ptr(Type *base) {
 // parse symbol&type& (argument symbol&type)
 Obj *parse_global_decl(Token **rest, Token *tok) {
   Obj *obj = calloc(1, sizeof(Obj));
-  now_function = obj;
   if (!global_decl_specifier(&dummy_token, tok)) {
     return NULL;
   }
@@ -90,8 +89,9 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
 
     obj->arg_front = NULL;
     obj->arg_back = NULL;
-    obj->locals = NULL;
     obj->arg_size = 0;
+    obj->local_scope = calloc(1, sizeof(VarScope));
+    obj->stack_size = 0;
 
     if (!consume(&tok, tok, ")")) {
       do {
@@ -108,20 +108,17 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
           obj->type->argtype_back = push_argtype;
         }
 
-        if (find_obj(obj->locals, arg->name, arg->len))
+        if (find_obj(obj->local_scope->locals, arg->name, arg->len))
           error_at(tok->str, "duplicate arguments");
+
+        arg->offset = offset_alignment(obj->stack_size, type_size(arg->type),
+                                       type_alignment(arg->type));
+        obj->stack_size = arg->offset;
 
         ObjList *push_lvar = calloc(1, sizeof(ObjList));
         push_lvar->obj = arg;
-        push_lvar->next = obj->locals;
-        if (obj->locals)
-          arg->offset =
-              offset_alignment(obj->locals->obj->offset, type_size(arg->type),
-                               type_alignment(arg->type));
-        else
-          arg->offset = offset_alignment(0, type_size(arg->type),
-                                         type_alignment(arg->type));
-        obj->locals = push_lvar;
+        push_lvar->next = obj->local_scope->locals;
+        obj->local_scope->locals = push_lvar;
 
         func_type->arg_size++;
         obj->arg_size++;

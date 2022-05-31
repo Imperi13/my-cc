@@ -75,9 +75,11 @@ Obj *find_obj(ObjList *list, char *str, int len) {
 }
 
 Obj *find_lvar(char *str, int len) {
-  for (ObjList *var = now_function->locals; var; var = var->next)
-    if (var->obj->len == len && !memcmp(str, var->obj->name, var->obj->len))
-      return var->obj;
+  for (VarScope *var_scope = now_function->local_scope; var_scope;
+       var_scope = var_scope->next)
+    for (ObjList *var = var_scope->locals; var; var = var->next)
+      if (var->obj->len == len && !memcmp(str, var->obj->name, var->obj->len))
+        return var->obj;
   return NULL;
 }
 
@@ -249,6 +251,7 @@ void var_definition(Token **rest, Token *tok) {
 void function_definition(Token **rest, Token *tok) {
   ObjList *push_function = calloc(1, sizeof(ObjList));
   Obj *func_def = parse_global_decl(&tok, tok);
+  now_function = func_def;
   push_function->obj = func_def;
   if (!globals) {
     globals = push_function;
@@ -273,20 +276,41 @@ void function_definition(Token **rest, Token *tok) {
 
 Node *stmt(Token **rest, Token *tok) {
   Node *node;
-  if (compound_stmt(&dummy_token, tok)) {
+  if (equal(tok, "{")) {
+    VarScope *var_scope = calloc(1, sizeof(VarScope));
+    var_scope->next = now_function->local_scope;
+    now_function->local_scope = var_scope;
+
     node = compound_stmt(&tok, tok);
+
+    now_function->local_scope = now_function->local_scope->next;
+
     *rest = tok;
     return node;
   }
 
   if (selection_stmt(&dummy_token, tok)) {
+    VarScope *var_scope = calloc(1, sizeof(VarScope));
+    var_scope->next = now_function->local_scope;
+    now_function->local_scope = var_scope;
+
     node = selection_stmt(&tok, tok);
+
+    now_function->local_scope = now_function->local_scope->next;
+
     *rest = tok;
     return node;
   }
 
   if (iteration_stmt(&dummy_token, tok)) {
+    VarScope *var_scope = calloc(1, sizeof(VarScope));
+    var_scope->next = now_function->local_scope;
+    now_function->local_scope = var_scope;
+
     node = iteration_stmt(&tok, tok);
+
+    now_function->local_scope = now_function->local_scope->next;
+
     *rest = tok;
     return node;
   }
@@ -312,19 +336,20 @@ Node *compound_stmt(Token **rest, Token *tok) {
       NodeList *push_stmt = calloc(1, sizeof(NodeList));
       if (parse_local_decl(&dummy_token, tok)) {
 
-        ObjList *push_lvar = calloc(1, sizeof(ObjList));
         Obj *lvar = parse_local_decl(&tok, tok);
-        push_lvar->obj = lvar;
-        push_lvar->next = now_function->locals;
+        if (find_obj(now_function->local_scope->locals, lvar->name, lvar->len))
+          error_at(tok->str, "double definition lvar '%.*s'", lvar->len,
+                   lvar->name);
 
-        if (now_function->locals)
-          lvar->offset = offset_alignment(now_function->locals->obj->offset,
-                                          type_size(lvar->type),
-                                          type_alignment(lvar->type));
-        else
-          lvar->offset = offset_alignment(0, type_size(lvar->type),
-                                          type_alignment(lvar->type));
-        now_function->locals = push_lvar;
+        lvar->offset =
+            offset_alignment(now_function->stack_size, type_size(lvar->type),
+                             type_alignment(lvar->type));
+        now_function->stack_size = lvar->offset;
+
+        ObjList *push_lvar = calloc(1, sizeof(ObjList));
+        push_lvar->obj = lvar;
+        push_lvar->next = now_function->local_scope->locals;
+        now_function->local_scope->locals = push_lvar;
 
         Node *init;
         if (lvar->init_var) {

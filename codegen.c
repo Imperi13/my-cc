@@ -403,16 +403,13 @@ void gen_function(Obj *func) {
   int stack_offset = 0;
   loop_scope = NULL;
 
-  if (func->locals)
-    stack_offset = func->locals->obj->offset;
-
   printf("  .text\n");
   printf(".globl %.*s\n", func->len, func->name);
   printf("%.*s:\n", func->len, func->name);
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, %d\n", offset_alignment(0, stack_offset, 8));
+  printf("  sub rsp, %d\n", offset_alignment(0, func->stack_size, 8));
 
   ObjList *now_arg = func->arg_front;
   for (int i = 0; i < func->arg_size; i++) {
