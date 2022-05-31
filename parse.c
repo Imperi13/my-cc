@@ -383,6 +383,21 @@ Node *iteration_stmt(Token **rest,Token *tok) {
     return node;
   }
 
+  if(consume_kind(&tok,tok,TK_DO)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_DO_WHILE;
+
+    node->lhs = stmt(&tok,tok);
+    expect_kind(&tok,tok,TK_WHILE);
+    expect(&tok,tok,"(");
+    node->expr = expr(&tok,tok);
+    expect(&tok,tok,")");
+    expect(&tok,tok,";");
+
+    *rest = tok;
+    return node;
+  }
+
   if(consume_kind(&tok,tok,TK_FOR)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_FOR;

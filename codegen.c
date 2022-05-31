@@ -217,6 +217,16 @@ void gen(Node *node) {
       gen(node->rhs);
       printf(".Lend%d:\n",now_count);
       return;
+    case ND_DO_WHILE:
+      now_count = label_count;
+      label_count++;
+      printf(".Lbegin%d:\n",now_count);
+      gen(node->lhs);
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  jne .Lbegin%d\n",now_count);
+      return;
     case ND_WHILE:
       now_count = label_count;
       label_count++;
