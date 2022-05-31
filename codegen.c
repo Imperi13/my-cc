@@ -79,6 +79,20 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n",node->val);
       return;
+    case ND_LOGICAL_NOT:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  sete al\n");
+      printf("  movsx rax,al\n");
+      printf("  push rax\n");
+      return;
+    case ND_BIT_NOT:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  not rax\n");
+      printf("  push rax\n");
+      return;
     case ND_VAR:
       gen_addr(node);
       if(node->type->ty == ARRAY || node->type->ty == FUNC)
@@ -131,6 +145,55 @@ void gen(Node *node) {
       printf("  pop rbp\n");
       printf("  ret\n");
       return;
+    case ND_LOGICAL_AND:
+      now_count = label_count;
+      label_count++;
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lfalse%d\n",now_count);
+      gen(node->rhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  je .Lfalse%d\n",now_count);
+      printf("  push 1\n");
+      printf("  jmp .Lend%d\n",now_count);
+      printf(".Lfalse%d:\n",now_count);
+      printf("  push 0\n");
+      printf(".Lend%d:\n",now_count);
+      return;
+    case ND_LOGICAL_OR:
+      now_count = label_count;
+      label_count++;
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  jne .Ltrue%d\n",now_count);
+      gen(node->rhs);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  jne .Ltrue%d\n",now_count);
+      printf("  push 0\n");
+      printf("  jmp .Lend%d\n",now_count);
+      printf(".Ltrue%d:\n",now_count);
+      printf("  push 1\n");
+      printf(".Lend%d:\n",now_count);
+      return;
+    case ND_CONDITIONAL:
+      now_count = label_count;
+      label_count++;
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  jne .Ltrue%d\n",now_count);
+      printf("  jmp .Lfalse%d\n",now_count);
+      printf(".Ltrue%d:\n",now_count);
+      gen(node->lhs);
+      printf("  jmp .Lend%d\n",now_count);
+      printf(".Lfalse%d:\n",now_count);
+      gen(node->rhs);
+      printf(".Lend%d:\n",now_count);
+      return;
     case ND_IF:
       now_count = label_count;
       label_count++;
@@ -153,6 +216,16 @@ void gen(Node *node) {
       printf(".Lelse%d:\n",now_count);
       gen(node->rhs);
       printf(".Lend%d:\n",now_count);
+      return;
+    case ND_DO_WHILE:
+      now_count = label_count;
+      label_count++;
+      printf(".Lbegin%d:\n",now_count);
+      gen(node->lhs);
+      gen(node->expr);
+      printf("  pop rax\n");
+      printf("  cmp rax,0\n");
+      printf("  jne .Lbegin%d\n",now_count);
       return;
     case ND_WHILE:
       now_count = label_count;
@@ -189,6 +262,11 @@ void gen(Node *node) {
         if(node->stmt_front)
           printf("  pop rax\n");
       }
+      return;
+    case ND_COMMA:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      gen(node->rhs);
       return;
     case ND_FUNCTION_CALL:
       printf("  mov r8,rsp\n");
@@ -243,6 +321,23 @@ void gen(Node *node) {
     case ND_DIV:
       printf("  cqo\n");
       printf("  idiv rdi\n");
+      break;
+    case ND_LSHIFT:
+      printf("  mov rcx, rdi\n");
+      printf("  sal rax, cl\n");
+      break;
+    case ND_RSHIFT:
+      printf("  mov rcx, rdi\n");
+      printf("  sar rax, cl\n");
+      break;
+    case ND_BIT_AND:
+      printf("  and rax, rdi\n");
+      break;
+    case ND_BIT_XOR:
+      printf("  xor rax, rdi\n");
+      break;
+    case ND_BIT_OR:
+      printf("  or rax, rdi\n");
       break;
     case ND_MOD:
       printf("  cqo\n");

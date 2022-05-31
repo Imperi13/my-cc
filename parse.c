@@ -139,6 +139,54 @@ Node *new_sub_node(Node *lhs,Node *rhs) {
   return node;
 }
 
+Node *new_mul_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to mul * ");
+  return new_node(ND_MUL,lhs,rhs,lhs->type);
+}
+
+Node *new_div_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to div / ");
+  return new_node(ND_DIV,lhs,rhs,lhs->type);
+}
+
+Node *new_mod_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to mod % ");
+  return new_node(ND_MOD,lhs,rhs,lhs->type);
+}
+
+Node *new_and_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to and & ");
+  return new_node(ND_BIT_AND,lhs,rhs,lhs->type);
+}
+
+Node *new_or_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to or | ");
+  return new_node(ND_BIT_OR,lhs,rhs,lhs->type);
+}
+
+Node *new_xor_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to xor ^ ");
+  return new_node(ND_BIT_XOR,lhs,rhs,lhs->type);
+}
+
+Node *new_lshift_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to lshift << ");
+  return new_node(ND_LSHIFT,lhs,rhs,lhs->type);
+}
+
+Node *new_rshift_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to rshift >> ");
+  return new_node(ND_RSHIFT,lhs,rhs,lhs->type);
+}
+
 Node *new_deref_node(Node *lhs) {
   Node *node = calloc(1,sizeof(Node));
   node->kind = ND_DEREF;
@@ -335,6 +383,21 @@ Node *iteration_stmt(Token **rest,Token *tok) {
     return node;
   }
 
+  if(consume_kind(&tok,tok,TK_DO)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_DO_WHILE;
+
+    node->lhs = stmt(&tok,tok);
+    expect_kind(&tok,tok,TK_WHILE);
+    expect(&tok,tok,"(");
+    node->expr = expr(&tok,tok);
+    expect(&tok,tok,")");
+    expect(&tok,tok,";");
+
+    *rest = tok;
+    return node;
+  }
+
   if(consume_kind(&tok,tok,TK_FOR)) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_FOR;
@@ -402,10 +465,16 @@ Node *expr_stmt(Token **rest,Token *tok) {
 }
 
 Node *expr(Token **rest,Token *tok) {
-  Node *node = assign(&tok,tok);
-
-  *rest = tok;
-  return node;
+  Node *lhs = assign(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,",")){
+      Node *rhs = assign(&tok,tok);
+      lhs = new_node(ND_COMMA,lhs,rhs,rhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *assign(Token **rest,Token *tok) {
@@ -417,6 +486,42 @@ Node *assign(Token **rest,Token *tok) {
     Node *rhs = assign(&tok,tok);
     Node *add_node = new_add_node(lhs,rhs);
     lhs = new_assign_node(lhs,add_node);
+  }else if(consume(&tok,tok,"-=")){
+    Node *rhs = assign(&tok,tok);
+    Node *sub_node = new_sub_node(lhs,rhs);
+    lhs = new_assign_node(lhs,sub_node);
+  }else if(consume(&tok,tok,"*=")){
+    Node *rhs = assign(&tok,tok);
+    Node *mul_node = new_mul_node(lhs,rhs);
+    lhs = new_assign_node(lhs,mul_node);
+  }else if(consume(&tok,tok,"/=")){
+    Node *rhs = assign(&tok,tok);
+    Node *div_node = new_div_node(lhs,rhs);
+    lhs = new_assign_node(lhs,div_node);
+  }else if(consume(&tok,tok,"%=")){
+    Node *rhs = assign(&tok,tok);
+    Node *mod_node = new_mod_node(lhs,rhs);
+    lhs = new_assign_node(lhs,mod_node);
+  }else if(consume(&tok,tok,"&=")){
+    Node *rhs = assign(&tok,tok);
+    Node *and_node = new_and_node(lhs,rhs);
+    lhs = new_assign_node(lhs,and_node);
+  }else if(consume(&tok,tok,"|=")){
+    Node *rhs = assign(&tok,tok);
+    Node *or_node = new_or_node(lhs,rhs);
+    lhs = new_assign_node(lhs,or_node);
+  }else if(consume(&tok,tok,"^=")){
+    Node *rhs = assign(&tok,tok);
+    Node *xor_node = new_xor_node(lhs,rhs);
+    lhs = new_assign_node(lhs,xor_node);
+  }else if(consume(&tok,tok,"<<=")){
+    Node *rhs = assign(&tok,tok);
+    Node *lshift_node = new_lshift_node(lhs,rhs);
+    lhs = new_assign_node(lhs,lshift_node);
+  }else if(consume(&tok,tok,">>=")){
+    Node *rhs = assign(&tok,tok);
+    Node *rshift_node = new_rshift_node(lhs,rhs);
+    lhs = new_assign_node(lhs,rshift_node);
   }
 
   *rest = tok;
@@ -424,39 +529,83 @@ Node *assign(Token **rest,Token *tok) {
 }
 
 Node *conditional(Token **rest,Token *tok) {
-  Node *node = logical_or(&tok,tok);
+  Node *cond = logical_or(&tok,tok);
+  if(consume(&tok,tok,"?")){
+    Node *lhs = expr(&tok,tok);
+    expect(&tok,tok,":");
+    Node *rhs = conditional(&tok,tok);
+    Node *node = new_node(ND_CONDITIONAL,lhs,rhs,lhs->type);
+    node->expr = cond;
+    *rest = tok;
+    return node;
+  }
   *rest = tok;
-  return node;
+  return cond;
 }
 
 Node *logical_or(Token **rest,Token *tok) {
-  Node *node = logical_and(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = logical_and(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"||")){
+      Node *rhs = logical_and(&tok,tok);
+      lhs = new_node(ND_LOGICAL_OR,lhs,rhs,type_int);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *logical_and(Token **rest,Token *tok) {
-  Node *node = bit_or(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = bit_or(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"&&")){
+      Node *rhs = bit_or(&tok,tok);
+      lhs = new_node(ND_LOGICAL_AND,lhs,rhs,type_int);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *bit_or(Token **rest,Token *tok) {
-  Node *node = bit_xor(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = bit_xor(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"|")){
+      Node *rhs = bit_xor(&tok,tok);
+      lhs = new_node(ND_BIT_OR,lhs,rhs,lhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *bit_xor(Token **rest,Token *tok) {
-  Node *node = bit_and(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = bit_and(&tok,tok);
+  for(;;){
+    if(consume(&tok,tok,"^")){
+      Node *rhs = bit_and(&tok,tok);
+      lhs = new_node(ND_BIT_XOR,lhs,rhs,lhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *bit_and(Token **rest,Token *tok) {
-  Node *node = equality(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = equality(&tok,tok);
+  for(;;) {
+    if(consume(&tok,tok,"&")){
+      Node *rhs = equality(&tok,tok);
+      lhs = new_node(ND_BIT_AND,lhs,rhs,lhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *equality(Token **rest,Token *tok) {
@@ -510,9 +659,20 @@ Node *relational(Token **rest,Token *tok) {
 }
 
 Node *shift(Token **rest,Token *tok) {
-  Node *node = add(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = add(&tok,tok);
+
+  for(;;) {
+    if(consume(&tok,tok,"<<")){
+      Node *rhs = add(&tok,tok);
+      lhs = new_lshift_node(lhs,rhs);
+    }else if(consume(&tok,tok,">>")){
+      Node *rhs = add(&tok,tok);
+      lhs = new_rshift_node(lhs,rhs);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *add(Token **rest,Token *tok) {
@@ -538,19 +698,13 @@ Node *mul(Token **rest,Token *tok) {
   for(;;) {
     if(consume(&tok,tok,"*")){
       Node *rhs = cast(&tok,tok);
-      if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error_at(tok->str,"invalid argument type to mul * ");
-      lhs = new_node(ND_MUL,lhs,rhs,lhs->type);
+      lhs = new_mul_node(lhs,rhs);
     }else if(consume(&tok,tok,"/")){
       Node *rhs = cast(&tok,tok);
-      if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error_at(tok->str,"invalid argument type to div /");
-      lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
+      lhs = new_div_node(lhs,rhs);
     }else if(consume(&tok,tok,"%")){
       Node *rhs = cast(&tok,tok);
-      if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error_at(tok->str,"invalid argument type to mod %");
-      lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
+      lhs = new_mod_node(lhs,rhs);
     }else{
       *rest = tok;
       return lhs;
@@ -620,6 +774,18 @@ Node *unary(Token **rest,Token *tok) {
     *rest = tok;
     return node;
   }
+  if(consume(&tok,tok,"!")){
+    Node *node = cast(&tok,tok);
+    node = new_node(ND_LOGICAL_NOT,node,NULL,type_int);
+    *rest = tok;
+    return node;
+  }
+  if(consume(&tok,tok,"~")){
+    Node *node = cast(&tok,tok);
+    node = new_node(ND_BIT_NOT,node,NULL,node->type);
+    *rest = tok;
+    return node;
+  }
   
   Node *node = postfix(&tok,tok);
 
@@ -646,7 +812,7 @@ Node *postfix(Token **rest,Token *tok) {
       
       while(!consume(&tok,tok,")")){
         NodeList *push_expr = calloc(1,sizeof(NodeList));
-        push_expr->node = expr(&tok,tok);
+        push_expr->node = assign(&tok,tok);
 
         if(!node->expr_back){
           node->expr_front = push_expr;

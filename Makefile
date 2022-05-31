@@ -11,7 +11,10 @@ $(OBJS): mycc.h
 test: mycc
 	./assert_test.sh
 
-clean:
-	rm -f mycc *.o *~ tmp*
+external-test: mycc
+	./external/test_cases.sh
 
-.PHONY: test clean
+clean:
+	rm -f mycc *.o *~ tmp* supplement*
+
+.PHONY: test external-test clean
