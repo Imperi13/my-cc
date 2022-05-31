@@ -139,6 +139,54 @@ Node *new_sub_node(Node *lhs,Node *rhs) {
   return node;
 }
 
+Node *new_mul_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to mul * ");
+  return new_node(ND_MUL,lhs,rhs,lhs->type);
+}
+
+Node *new_div_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to div / ");
+  return new_node(ND_DIV,lhs,rhs,lhs->type);
+}
+
+Node *new_mod_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to mod % ");
+  return new_node(ND_MOD,lhs,rhs,lhs->type);
+}
+
+Node *new_and_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to and & ");
+  return new_node(ND_BIT_AND,lhs,rhs,lhs->type);
+}
+
+Node *new_or_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to or | ");
+  return new_node(ND_BIT_OR,lhs,rhs,lhs->type);
+}
+
+Node *new_xor_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to xor ^ ");
+  return new_node(ND_BIT_XOR,lhs,rhs,lhs->type);
+}
+
+Node *new_lshift_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to lshift << ");
+  return new_node(ND_LSHIFT,lhs,rhs,lhs->type);
+}
+
+Node *new_rshift_node(Node *lhs,Node *rhs) {
+  if( !is_numeric(lhs->type) || !is_numeric(rhs->type))
+    error("invalid argument type to rshift >> ");
+  return new_node(ND_RSHIFT,lhs,rhs,lhs->type);
+}
+
 Node *new_deref_node(Node *lhs) {
   Node *node = calloc(1,sizeof(Node));
   node->kind = ND_DEREF;
@@ -423,6 +471,42 @@ Node *assign(Token **rest,Token *tok) {
     Node *rhs = assign(&tok,tok);
     Node *add_node = new_add_node(lhs,rhs);
     lhs = new_assign_node(lhs,add_node);
+  }else if(consume(&tok,tok,"-=")){
+    Node *rhs = assign(&tok,tok);
+    Node *sub_node = new_sub_node(lhs,rhs);
+    lhs = new_assign_node(lhs,sub_node);
+  }else if(consume(&tok,tok,"*=")){
+    Node *rhs = assign(&tok,tok);
+    Node *mul_node = new_mul_node(lhs,rhs);
+    lhs = new_assign_node(lhs,mul_node);
+  }else if(consume(&tok,tok,"/=")){
+    Node *rhs = assign(&tok,tok);
+    Node *div_node = new_div_node(lhs,rhs);
+    lhs = new_assign_node(lhs,div_node);
+  }else if(consume(&tok,tok,"%=")){
+    Node *rhs = assign(&tok,tok);
+    Node *mod_node = new_mod_node(lhs,rhs);
+    lhs = new_assign_node(lhs,mod_node);
+  }else if(consume(&tok,tok,"&=")){
+    Node *rhs = assign(&tok,tok);
+    Node *and_node = new_and_node(lhs,rhs);
+    lhs = new_assign_node(lhs,and_node);
+  }else if(consume(&tok,tok,"|=")){
+    Node *rhs = assign(&tok,tok);
+    Node *or_node = new_or_node(lhs,rhs);
+    lhs = new_assign_node(lhs,or_node);
+  }else if(consume(&tok,tok,"^=")){
+    Node *rhs = assign(&tok,tok);
+    Node *xor_node = new_xor_node(lhs,rhs);
+    lhs = new_assign_node(lhs,xor_node);
+  }else if(consume(&tok,tok,"<<=")){
+    Node *rhs = assign(&tok,tok);
+    Node *lshift_node = new_lshift_node(lhs,rhs);
+    lhs = new_assign_node(lhs,lshift_node);
+  }else if(consume(&tok,tok,">>=")){
+    Node *rhs = assign(&tok,tok);
+    Node *rshift_node = new_rshift_node(lhs,rhs);
+    lhs = new_assign_node(lhs,rshift_node);
   }
 
   *rest = tok;
@@ -565,10 +649,10 @@ Node *shift(Token **rest,Token *tok) {
   for(;;) {
     if(consume(&tok,tok,"<<")){
       Node *rhs = add(&tok,tok);
-      lhs = new_node(ND_LSHIFT,lhs,rhs,lhs->type);
+      lhs = new_lshift_node(lhs,rhs);
     }else if(consume(&tok,tok,">>")){
       Node *rhs = add(&tok,tok);
-      lhs = new_node(ND_RSHIFT,lhs,rhs,lhs->type);
+      lhs = new_rshift_node(lhs,rhs);
     }else{
       *rest = tok;
       return lhs;
@@ -599,19 +683,13 @@ Node *mul(Token **rest,Token *tok) {
   for(;;) {
     if(consume(&tok,tok,"*")){
       Node *rhs = cast(&tok,tok);
-      if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error_at(tok->str,"invalid argument type to mul * ");
-      lhs = new_node(ND_MUL,lhs,rhs,lhs->type);
+      lhs = new_mul_node(lhs,rhs);
     }else if(consume(&tok,tok,"/")){
       Node *rhs = cast(&tok,tok);
-      if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error_at(tok->str,"invalid argument type to div /");
-      lhs = new_node(ND_DIV,lhs,rhs,lhs->type);
+      lhs = new_div_node(lhs,rhs);
     }else if(consume(&tok,tok,"%")){
       Node *rhs = cast(&tok,tok);
-      if(lhs->type->ty != INT || rhs->type->ty != INT)
-        error_at(tok->str,"invalid argument type to mod %");
-      lhs = new_node(ND_MOD,lhs,rhs,lhs->type);
+      lhs = new_mod_node(lhs,rhs);
     }else{
       *rest = tok;
       return lhs;
