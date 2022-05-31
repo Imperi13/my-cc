@@ -100,12 +100,12 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
         TypeList *push_argtype = calloc(1, sizeof(TypeList));
         push_argtype->type = arg->type;
 
-        if (!obj->type->argtype_back) {
-          obj->type->argtype_front = push_argtype;
-          obj->type->argtype_back = push_argtype;
+        if (!func_type->argtype_back) {
+          func_type->argtype_front = push_argtype;
+          func_type->argtype_back = push_argtype;
         } else {
-          obj->type->argtype_back->next = push_argtype;
-          obj->type->argtype_back = push_argtype;
+          func_type->argtype_back->next = push_argtype;
+          func_type->argtype_back = push_argtype;
         }
 
         if (find_obj(obj->local_scope->locals, arg->name, arg->len))
