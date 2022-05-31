@@ -363,6 +363,17 @@ Node *jump_stmt(Token **rest,Token *tok) {
     node = calloc(1,sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr(&tok,tok);
+
+    *rest = tok;
+    return node;
+  }
+
+  if(consume_kind(&tok,tok,TK_BREAK)) {
+    node = calloc(1,sizeof(Node));
+    node->kind = ND_BREAK;
+
+    *rest = tok;
+    return node;
   }
 
   *rest = tok;
