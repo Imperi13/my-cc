@@ -78,6 +78,8 @@ typedef enum {
   ND_SUB,
   ND_MUL,
   ND_DIV,
+  ND_LSHIFT,
+  ND_RSHIFT,
   ND_BIT_AND,
   ND_BIT_XOR,
   ND_BIT_OR,

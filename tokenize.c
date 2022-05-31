@@ -79,6 +79,64 @@ bool is_alnum(char c) {
   return false;
 }
 
+int digit_base(char t,unsigned long base){
+  if(base == 16){
+    if('0' <= t && t <= '9')
+      return t - '0';
+    if('a' <= t && t <= 'f')
+      return 10 + t - 'a';
+    if('A' <= t && t <= 'F')
+      return 10 + t - 'A';
+    return -1;
+  }
+  if(base == 10){
+    if('0' <= t && t <= '9')
+      return t - '0';
+    return -1;
+  }
+  if(base == 8){
+    if('0' <= t && t <= '7')
+      return t - '0';
+    return -1;
+  }
+  if(base == 2){
+    if('0' <= t && t <= '1')
+      return t - '0';
+    return -1;
+  }
+
+  error("invalid num_base");
+  return -1;
+}
+
+unsigned long num_literal(char *p,char **rest){
+  unsigned long base;
+  char *start;
+
+  if(*p != '0'){
+    base = 10;
+    start = p;
+  }else if(p[1] == 'x' || p[1] == 'X'){
+    base = 16;
+    start = p+2;
+  }else if(p[1] == 'b' || p[1] == 'B'){
+    base = 2;
+    start = p+2;
+  }else{
+    base = 8;
+    start = p+1;
+  }
+
+  unsigned long num = 0;
+  while(digit_base(*start,base) >= 0){
+    num *= base;
+    num += digit_base(*start,base);
+    start++;
+  }
+  *rest = start;
+  return num;
+}
+
 StrLiteral *str_literals = NULL;
 
 Token *tokenize(char *p){
@@ -136,7 +194,7 @@ Token *tokenize(char *p){
      continue;
    }
 
-   if(strncmp(p,">=",2) == 0 || strncmp(p,"<=",2) ==0 || strncmp(p,"==",2) == 0 || strncmp(p,"!=",2) == 0 || strncmp(p,"+=",2) == 0 || strncmp(p,"++",2) == 0 || strncmp(p,"--",2) == 0){
+   if(strncmp(p,">=",2) == 0 || strncmp(p,"<=",2) ==0 || strncmp(p,"==",2) == 0 || strncmp(p,"!=",2) == 0 || strncmp(p,"+=",2) == 0 || strncmp(p,"++",2) == 0 || strncmp(p,"--",2) == 0 || strncmp(p,"<<",2) == 0 || strncmp(p,">>",2) == 0){
      cur = new_token(TK_RESERVED,cur,p,2);
      p+=2;
      continue;
@@ -157,7 +215,7 @@ Token *tokenize(char *p){
    if (isdigit(*p)) {
      char *prev = p;
      cur = new_token(TK_NUM,cur,p,1);
-     cur->val = strtol(p,&p,10);
+     cur->val = num_literal(p,&p);
      cur->len = p-prev;
      continue;
    }
@@ -217,7 +275,7 @@ Token *tokenize(char *p){
      continue;
    }
 
-   error("cannot tokenize");
+   error_at(p,"cannot tokenize");
  }
 
  new_token(TK_EOF,cur,p,0);

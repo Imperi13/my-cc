@@ -264,6 +264,14 @@ void gen(Node *node) {
       printf("  cqo\n");
       printf("  idiv rdi\n");
       break;
+    case ND_LSHIFT:
+      printf("  mov rcx, rdi\n");
+      printf("  sal rax, cl\n");
+      break;
+    case ND_RSHIFT:
+      printf("  mov rcx, rdi\n");
+      printf("  sar rax, cl\n");
+      break;
     case ND_BIT_AND:
       printf("  and rax, rdi\n");
       break;

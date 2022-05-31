@@ -546,9 +546,20 @@ Node *relational(Token **rest,Token *tok) {
 }
 
 Node *shift(Token **rest,Token *tok) {
-  Node *node = add(&tok,tok);
-  *rest = tok;
-  return node;
+  Node *lhs = add(&tok,tok);
+
+  for(;;) {
+    if(consume(&tok,tok,"<<")){
+      Node *rhs = add(&tok,tok);
+      lhs = new_node(ND_LSHIFT,lhs,rhs,lhs->type);
+    }else if(consume(&tok,tok,">>")){
+      Node *rhs = add(&tok,tok);
+      lhs = new_node(ND_RSHIFT,lhs,rhs,lhs->type);
+    }else{
+      *rest = tok;
+      return lhs;
+    }
+  }
 }
 
 Node *add(Token **rest,Token *tok) {
