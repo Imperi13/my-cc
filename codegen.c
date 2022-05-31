@@ -79,12 +79,18 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n",node->val);
       return;
-    case ND_LOGICAL_NEG:
+    case ND_LOGICAL_NOT:
       gen(node->lhs);
       printf("  pop rax\n");
       printf("  cmp rax,0\n");
       printf("  sete al\n");
       printf("  movsx rax,al\n");
+      printf("  push rax\n");
+      return;
+    case ND_BIT_NOT:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  not rax\n");
       printf("  push rax\n");
       return;
     case ND_VAR:

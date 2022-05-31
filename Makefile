@@ -15,6 +15,6 @@ external-test: mycc
 	./external/test_cases.sh
 
 clean:
-	rm -f mycc *.o *~ tmp*
+	rm -f mycc *.o *~ tmp* supplement*
 
 .PHONY: test external-test clean

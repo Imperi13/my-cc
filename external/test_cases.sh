@@ -1,10 +1,11 @@
 #!/bin/bash
 
 run_test_with_supplement0() {
-	echo -e $2 | ./out/compiler.out > s/full_compile$1.s
-	gcc misc/supplement0.c -S -o s/supplement0.s
-	gcc s/full_compile$1.s s/supplement0.s -o out/task$1.out -no-pie -Wno-unused-command-line-argument
-	./out/task$1.out
+  echo -e $2 > ./external/tmp.in
+  ./mycc ./external/tmp.in > tmp.s
+	gcc ./external/misc/supplement0.c -S -o supplement0.s
+	gcc tmp.s supplement0.s -o tmp
+	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: $2; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
 }
@@ -19,19 +20,21 @@ run_test() {
 }
 
 run_test_with_supplement1() {
-	echo -e $2 | ./out/compiler.out > s/full_compile$1.s
-	gcc misc/supplement1.c -S -o s/supplement1.s
-	gcc s/full_compile$1.s s/supplement1.s -o out/task$1.out -no-pie -Wno-unused-command-line-argument
-	./out/task$1.out
+  echo -e $2 > ./external/tmp.in
+  ./mycc ./external/tmp.in > tmp.s
+	gcc ./external/misc/supplement1.c -S -o supplement1.s
+	gcc tmp.s supplement1.s -o tmp
+	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (mixed)" $1: $2; exit 1; }; else echo -e "\033[32mPASS (mixed)\033[m"; fi
 
-	echo -e $2 | ./out/compiler.out > s/full_compile$1.s
-	./out/compiler.out misc/supplement1.c > s/supplement1.s
-	gcc s/full_compile$1.s s/supplement1.s -o out/task$1.out -no-pie -Wno-unused-command-line-argument
-	./out/task$1.out
+  echo -e $2 > ./external/tmp.in
+  ./mycc ./external/tmp.in > tmp.s
+  ./mycc ./external/misc/supplement1.c > supplement1.s
+	gcc tmp.s supplement1.s -o tmp
+	./tmp
 	res=$?
-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (pure)" $1: $2; exit 1; }; else echo -e "\033[32mPASS (pure)\033[m"; fi
+	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (pure)" $1: $2; }; else echo -e "\033[32mPASS (pure)\033[m"; fi
 }
 
 run_test 001 'int main(){return 123;}' 123
