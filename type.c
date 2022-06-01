@@ -96,6 +96,8 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     if (!consume(&tok, tok, ")")) {
       do {
         Obj *arg = parse_global_decl(&tok, tok);
+        if (arg->type->ty == ARRAY)
+          arg->type->ty = PTR;
 
         TypeList *push_argtype = calloc(1, sizeof(TypeList));
         push_argtype->type = arg->type;
@@ -150,7 +152,7 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     array_type->array_size = expect_number(&tok, tok);
 
     expect(&tok, tok, "]");
-    obj = type_suffix(&tok,tok,obj);
+    obj = type_suffix(&tok, tok, obj);
 
     array_type->ptr_to = obj->type;
     obj->type = array_type;
