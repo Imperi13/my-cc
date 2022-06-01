@@ -148,10 +148,11 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     Type *array_type = calloc(1, sizeof(Type));
     array_type->ty = ARRAY;
     array_type->array_size = expect_number(&tok, tok);
-    array_type->ptr_to = obj->type;
 
     expect(&tok, tok, "]");
+    obj = type_suffix(&tok,tok,obj);
 
+    array_type->ptr_to = obj->type;
     obj->type = array_type;
 
     *rest = tok;
