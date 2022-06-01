@@ -228,6 +228,12 @@ void global_definition(Token **rest, Token *tok) {
   Obj *tmp = parse_global_decl(&dummy_token, tok);
   if (!tmp)
     error_at(tok->str, "cannot parse global definition");
+  if(tmp->name == NULL){
+    parse_global_decl(&tok,tok);
+    *rest = tok;
+    return; 
+  }
+
   if (tmp->type->ty == FUNC)
     function_definition(&tok, tok);
   else

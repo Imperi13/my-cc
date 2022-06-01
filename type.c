@@ -23,6 +23,11 @@ Obj *parse_global_decl(Token **rest, Token *tok) {
     return NULL;
   }
   obj->type = global_decl_specifier(&tok, tok);
+  
+  if(consume(&tok,tok,";")){
+    *rest = tok;
+    return obj;
+  }
 
   obj = declarator(&tok, tok, obj);
 
