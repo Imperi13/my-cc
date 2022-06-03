@@ -345,22 +345,24 @@ Node *compound_stmt(Token **rest, Token *tok) {
       if (parse_local_decl(&dummy_token, tok)) {
 
         Obj *lvar = parse_local_decl(&tok, tok);
-        if (find_obj(now_function->local_scope->locals, lvar->name, lvar->len))
-          error_at(tok->str, "double definition lvar '%.*s'", lvar->len,
-                   lvar->name);
+        if(lvar->name){
+          if (find_obj(now_function->local_scope->locals, lvar->name, lvar->len))
+            error_at(tok->str, "double definition lvar '%.*s'", lvar->len,
+                     lvar->name);
 
-        lvar->offset =
-            offset_alignment(now_function->stack_size, type_size(lvar->type),
-                             type_alignment(lvar->type));
-        now_function->stack_size = lvar->offset;
+          lvar->offset =
+              offset_alignment(now_function->stack_size, type_size(lvar->type),
+                               type_alignment(lvar->type));
+          now_function->stack_size = lvar->offset;
 
-        ObjList *push_lvar = calloc(1, sizeof(ObjList));
-        push_lvar->obj = lvar;
-        push_lvar->next = now_function->local_scope->locals;
-        now_function->local_scope->locals = push_lvar;
+          ObjList *push_lvar = calloc(1, sizeof(ObjList));
+          push_lvar->obj = lvar;
+          push_lvar->next = now_function->local_scope->locals;
+          now_function->local_scope->locals = push_lvar;
+        }
 
         Node *init;
-        if (lvar->init_var) {
+        if (lvar->name && lvar->init_var) {
           Node *lhs = calloc(1, sizeof(Node));
           lhs->kind = ND_VAR;
           lhs->offset = lvar->offset;

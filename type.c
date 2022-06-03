@@ -127,6 +127,7 @@ Type *decl_specifier(Token **rest, Token *tok) {
 
       member->name = obj->name;
       member->len = obj->len;
+      member->type = obj->type;
       member->offset = offset_alignment(st_def->size, type_size(obj->type),
                                         type_alignment(obj->type));
 
@@ -343,7 +344,7 @@ int type_size(Type *a) {
   if (a->ty == ARRAY)
     return a->array_size * type_size(a->ptr_to);
   if (a->ty == STRUCT)
-    return a->st->size;
+    return offset_alignment(a->st->size,0,type_alignment(a));
   return 8;
 }
 
@@ -354,5 +355,12 @@ int type_alignment(Type *a) {
     return 4;
   if (a->ty == ARRAY)
     return type_alignment(a->ptr_to);
+  if (a->ty == STRUCT){
+    int align = 0;
+    for(Member *member = a->st->members;member;member = member->next)
+      if(type_alignment(member->type) > align)
+        align = type_alignment(member->type);
+    return align;
+  }
   return 8;
 }
