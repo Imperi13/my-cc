@@ -225,13 +225,13 @@ void program(Token *tok) {
 }
 
 void global_definition(Token **rest, Token *tok) {
-  Obj *tmp = parse_global_decl(&dummy_token, tok);
+  Obj *tmp = parse_global_decl(&dummy_token, tok, true);
   if (!tmp)
     error_at(tok->str, "cannot parse global definition");
-  if(tmp->name == NULL){
-    parse_global_decl(&tok,tok);
+  if (tmp->name == NULL) {
+    parse_global_decl(&tok, tok, false);
     *rest = tok;
-    return; 
+    return;
   }
 
   if (tmp->type->ty == FUNC)
@@ -244,7 +244,7 @@ void global_definition(Token **rest, Token *tok) {
 
 void var_definition(Token **rest, Token *tok) {
   ObjList *push_var = calloc(1, sizeof(ObjList));
-  push_var->obj = parse_global_decl(&tok, tok);
+  push_var->obj = parse_global_decl(&tok, tok, false);
   if (!globals) {
     globals = push_var;
   } else {
@@ -258,7 +258,7 @@ void var_definition(Token **rest, Token *tok) {
 
 void function_definition(Token **rest, Token *tok) {
   ObjList *push_function = calloc(1, sizeof(ObjList));
-  Obj *func_def = parse_global_decl(&tok, tok);
+  Obj *func_def = parse_global_decl(&tok, tok, false);
   now_function = func_def;
   push_function->obj = func_def;
   if (!globals) {

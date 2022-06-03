@@ -234,6 +234,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "struct", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_STRUCT, cur, p, 6);
+      p += 6;
+      continue;
+    }
+
     if (strncmp(p, "if", 2) == 0 && !is_alnum(p[2])) {
       cur = new_token(TK_IF, cur, p, 2);
       p += 2;

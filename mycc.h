@@ -10,6 +10,7 @@ typedef enum {
   TK_RESERVED,
   TK_RETURN,
   TK_SIZEOF,
+  TK_STRUCT,
   TK_IF,
   TK_ELSE,
   TK_DO,
@@ -54,10 +55,14 @@ typedef enum {
   PTR,
   ARRAY,
   FUNC,
+  STRUCT,
 } TypeKind;
 
 typedef struct Type Type;
 typedef struct TypeList TypeList;
+
+typedef struct StructDef StructDef;
+typedef struct Member Member;
 
 struct Type {
   TypeKind ty;
@@ -69,11 +74,36 @@ struct Type {
   TypeList *argtype_front;
   TypeList *argtype_back;
   size_t arg_size;
+
+  // for struct
+  StructDef *st;
 };
 
 struct TypeList {
   TypeList *next;
   Type *type;
+};
+
+struct StructDef {
+  char *name;
+  int len;
+  bool is_defined;
+
+  Member *members;
+  int size;
+
+  // for linked list
+  StructDef *next;
+};
+
+struct Member {
+  char *name;
+  int len;
+  Type *type;
+  int offset;
+
+  // for linked list
+  Member *next;
 };
 
 typedef enum {
@@ -199,6 +229,7 @@ extern Type *type_char;
 extern char *filename;
 extern char *user_input;
 extern StrLiteral *str_literals;
+extern StructDef *struct_defs;
 extern ObjList *globals;
 extern Obj *now_function;
 
@@ -220,7 +251,7 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
-Obj *parse_global_decl(Token **rest, Token *tok);
+Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead);
 Obj *parse_local_decl(Token **rest, Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
