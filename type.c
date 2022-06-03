@@ -1,7 +1,6 @@
 #include "mycc.h"
 
-Type *global_decl_specifier(Token **rest, Token *tok);
-Type *local_decl_specifier(Token **rest, Token *tok);
+Type *decl_specifier(Token **rest, Token *tok);
 Obj *type_suffix(Token **rest, Token *tok, Obj *type);
 Obj *declarator(Token **rest, Token *tok, Obj *type);
 
@@ -19,10 +18,10 @@ Type *newtype_ptr(Type *base) {
 // parse symbol&type& (argument symbol&type)
 Obj *parse_global_decl(Token **rest, Token *tok) {
   Obj *obj = calloc(1, sizeof(Obj));
-  if (!global_decl_specifier(&dummy_token, tok)) {
-    return NULL;
-  }
-  obj->type = global_decl_specifier(&tok, tok);
+  obj->type = decl_specifier(&tok, tok);
+
+  if(obj->type == NULL)
+    obj->type = type_int;
   
   if(consume(&tok,tok,";")){
     *rest = tok;
@@ -37,10 +36,10 @@ Obj *parse_global_decl(Token **rest, Token *tok) {
 
 Obj *parse_local_decl(Token **rest, Token *tok) {
   Obj *obj = calloc(1, sizeof(Obj));
-  if (!local_decl_specifier(&dummy_token, tok)) {
+  if (!decl_specifier(&dummy_token, tok)) {
     return NULL;
   }
-  obj->type = local_decl_specifier(&tok, tok);
+  obj->type = decl_specifier(&tok, tok);
 
   obj = declarator(&tok, tok, obj);
 
@@ -53,25 +52,7 @@ Obj *parse_local_decl(Token **rest, Token *tok) {
   return obj;
 }
 
-Type *global_decl_specifier(Token **rest, Token *tok) {
-  if (!equal_kind(tok, TK_INT) && !equal_kind(tok, TK_CHAR))
-    return type_int;
-
-  if (consume_kind(&tok, tok, TK_INT)) {
-    *rest = tok;
-    return type_int;
-  }
-
-  if (consume_kind(&tok, tok, TK_CHAR)) {
-    *rest = tok;
-    return type_char;
-  }
-
-  *rest = tok;
-  return NULL;
-}
-
-Type *local_decl_specifier(Token **rest, Token *tok) {
+Type *decl_specifier(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_INT)) {
     *rest = tok;
     return type_int;
