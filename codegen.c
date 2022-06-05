@@ -47,7 +47,8 @@ int label_count = 0;
 LoopScope *loop_scope = NULL;
 
 void gen_addr(Node *node) {
-  if (node->kind != ND_VAR && node->kind != ND_DEREF && node->kind != ND_DOT)
+  if (node->kind != ND_VAR && node->kind != ND_DEREF && node->kind != ND_DOT &&
+      node->kind != ND_ARROW)
     error("not lval");
 
   if (node->kind == ND_DEREF) {
@@ -57,6 +58,12 @@ void gen_addr(Node *node) {
 
   if (node->kind == ND_DOT) {
     gen_addr(node->lhs);
+    printf("  add rax, %d\n", node->member->offset);
+    return;
+  }
+
+  if (node->kind == ND_ARROW) {
+    gen(node->lhs);
     printf("  add rax, %d\n", node->member->offset);
     return;
   }
@@ -198,6 +205,16 @@ void gen(Node *node) {
     return;
   case ND_DOT:
     gen_addr(node->lhs);
+    printf("  add rax, %d\n", node->member->offset);
+    if (type_size(node->type) == 8)
+      printf("  mov rax, [rax]\n");
+    else if (type_size(node->type) == 4)
+      printf("  movsxd rax, [rax]\n");
+    else if (type_size(node->type) == 1)
+      printf("  movsx rax, BYTE PTR [rax]\n");
+    return;
+  case ND_ARROW:
+    gen(node->lhs);
     printf("  add rax, %d\n", node->member->offset);
     if (type_size(node->type) == 8)
       printf("  mov rax, [rax]\n");

@@ -123,6 +123,7 @@ typedef enum {
   ND_CONDITIONAL,
   ND_COMMA,
   ND_DOT,
+  ND_ARROW,
   ND_MOD,
   ND_EQUAL,
   ND_NOT_EQUAL,

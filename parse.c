@@ -206,7 +206,8 @@ Node *new_deref_node(Node *lhs) {
 Node *new_assign_node(Node *lhs, Node *rhs) {
   if (!is_convertible(lhs->type, rhs->type))
     error("invalid argument type to assign =");
-  if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF && lhs->kind != ND_DOT)
+  if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF && lhs->kind != ND_DOT &&
+      lhs->kind != ND_ARROW)
     error("lhs is not lvalue");
   if (lhs->type->ty == ARRAY)
     error("cannot assign to ARRAY");
@@ -909,6 +910,17 @@ Node *postfix(Token **rest, Token *tok) {
         error_at(tok->str, "cannot find member '%.*s'", ident->len, ident->str);
 
       lhs = new_node(ND_DOT, lhs, NULL, member->type);
+      lhs->member = member;
+    } else if (consume(&tok, tok, "->")) {
+      Token *ident = consume_kind(&tok, tok, TK_IDENT);
+      if (lhs->type->ty != PTR || lhs->type->ptr_to->ty != STRUCT)
+        error_at(tok->str, "invalid type to arrow ->");
+      Member *member =
+          find_member(lhs->type->ptr_to->st, ident->str, ident->len);
+      if (!member)
+        error_at(tok->str, "cannot find member '%.*s'", ident->len, ident->str);
+
+      lhs = new_node(ND_ARROW, lhs, NULL, member->type);
       lhs->member = member;
     } else if (consume(&tok, tok, "++")) {
       lhs = new_node(ND_POST_INCREMENT, lhs, NULL, lhs->type);

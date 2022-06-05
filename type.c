@@ -379,9 +379,15 @@ bool is_primitive(Type *a) {
 }
 
 bool is_same_type(Type *a, Type *b) {
-  if (is_primitive(a) && is_primitive(b))
-    return a->ty == b->ty;
-  return is_same_type(a->ptr_to, b->ptr_to);
+  if (a->ty != b->ty)
+    return false;
+  if(is_primitive(a))
+    return true;
+  if(a->ty == ARRAY)
+    return a->array_size == b->array_size && is_same_type(a->ptr_to,b->ptr_to);
+  if(a->ty == STRUCT)
+    return a->st == b->st;
+  return is_same_type(a->ptr_to,b->ptr_to);
 }
 
 bool is_convertible(Type *a, Type *b) {
