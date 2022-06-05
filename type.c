@@ -33,6 +33,13 @@ StructDef *find_struct(char *name, int len) {
   return NULL;
 }
 
+Member *find_member(StructDef *st, char *name, int len) {
+  for (Member *now = st->members; now; now = now->next)
+    if (now->len == len && !memcmp(name, now->name, now->len))
+      return now;
+  return NULL;
+}
+
 // parse_*_decl
 // parse symbol&type& (argument symbol&type)
 // lookahead = trueのとき先読みして型だけを判別する
@@ -171,10 +178,10 @@ Type *decl_specifier(Token **rest, Token *tok) {
       member->name = obj->name;
       member->len = obj->len;
       member->type = obj->type;
-      member->offset = offset_alignment(st_def->size, type_size(obj->type),
-                                        type_alignment(obj->type));
+      member->offset =
+          offset_alignment(st_def->size, 0, type_alignment(obj->type));
 
-      st_def->size = member->offset;
+      st_def->size = member->offset + type_size(member->type);
 
       member->next = st_def->members;
       st_def->members = member;

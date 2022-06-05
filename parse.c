@@ -206,7 +206,7 @@ Node *new_deref_node(Node *lhs) {
 Node *new_assign_node(Node *lhs, Node *rhs) {
   if (!is_convertible(lhs->type, rhs->type))
     error("invalid argument type to assign =");
-  if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF)
+  if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF && lhs->kind != ND_DOT)
     error("lhs is not lvalue");
   if (lhs->type->ty == ARRAY)
     error("cannot assign to ARRAY");
@@ -900,8 +900,18 @@ Node *postfix(Token **rest, Token *tok) {
         consume(&tok, tok, ",");
       }
       lhs = node;
+    } else if (consume(&tok, tok, ".")) {
+      Token *ident = consume_kind(&tok, tok, TK_IDENT);
+      if (lhs->type->ty != STRUCT)
+        error_at(tok->str, "invalid type to dot .");
+      Member *member = find_member(lhs->type->st, ident->str, ident->len);
+      if (!member)
+        error_at(tok->str, "cannot find member '%.*s'", ident->len, ident->str);
+
+      lhs = new_node(ND_DOT, lhs, NULL, member->type);
+      lhs->member = member;
     } else if (consume(&tok, tok, "++")) {
-      lhs = new_node(ND_POST_INCREMENT,lhs,NULL,lhs->type);
+      lhs = new_node(ND_POST_INCREMENT, lhs, NULL, lhs->type);
     } else if (consume(&tok, tok, "--")) {
       Node *sub_node = new_sub_node(lhs, new_node_num(1));
       Node *assign_node = new_assign_node(lhs, sub_node);

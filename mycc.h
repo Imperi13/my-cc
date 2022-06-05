@@ -122,6 +122,7 @@ typedef enum {
   ND_LOGICAL_OR,
   ND_CONDITIONAL,
   ND_COMMA,
+  ND_DOT,
   ND_MOD,
   ND_EQUAL,
   ND_NOT_EQUAL,
@@ -180,6 +181,9 @@ struct Node {
   NodeList *expr_back;
 
   bool is_defined;
+
+  // for struct-dot
+  Member *member;
 };
 
 struct NodeList {
@@ -251,6 +255,8 @@ bool is_alnum(char c);
 Token *tokenize(char *p);
 
 void debug_token(Token *token);
+
+Member *find_member(StructDef *st, char *name, int len);
 
 Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead);
 Obj *parse_local_decl(Token **rest, Token *tok);
