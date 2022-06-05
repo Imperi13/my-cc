@@ -345,8 +345,9 @@ Node *compound_stmt(Token **rest, Token *tok) {
       if (parse_local_decl(&dummy_token, tok)) {
 
         Obj *lvar = parse_local_decl(&tok, tok);
-        if(lvar->name){
-          if (find_obj(now_function->local_scope->locals, lvar->name, lvar->len))
+        if (lvar->name) {
+          if (find_obj(now_function->local_scope->locals, lvar->name,
+                       lvar->len))
             error_at(tok->str, "double definition lvar '%.*s'", lvar->len,
                      lvar->name);
 
@@ -776,6 +777,18 @@ Node *cast(Token **rest, Token *tok) {
 
 Node *unary(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_SIZEOF)) {
+    Token *save = tok;
+    if (consume(&tok, tok, "(")) {
+      Type *type = type_name(&tok, tok);
+      if (type) {
+        expect(&tok, tok, ")");
+        *rest = tok;
+        return new_node_num(type_size(type));
+      }
+    }
+
+    tok = save;
+
     Node *node = unary(&tok, tok);
     node = new_node_num(type_size(node->type));
 

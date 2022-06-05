@@ -153,7 +153,7 @@ void gen(Node *node) {
     return;
   case ND_DEREF:
     gen(node->lhs);
-    if(node->type->ty == ARRAY)
+    if (node->type->ty == ARRAY)
       return;
     if (type_size(node->type) == 8)
       printf("  mov rax, [rax]\n");

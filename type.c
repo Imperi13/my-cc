@@ -5,6 +5,8 @@ Type *decl_specifier(Token **rest, Token *tok);
 Obj *type_suffix(Token **rest, Token *tok, Obj *type);
 Obj *declarator(Token **rest, Token *tok, Obj *type);
 
+Type *abstract_declarator(Token **rest, Token *tok, Type *type);
+
 StructDef *struct_defs;
 
 Type *type_int = &(Type){.ty = INT};
@@ -76,6 +78,47 @@ Obj *parse_local_decl(Token **rest, Token *tok) {
 
   *rest = tok;
   return obj;
+}
+
+Type *type_name(Token **rest, Token *tok) {
+  Type *type = decl_specifier(&tok, tok);
+  if (!type) {
+    *rest = tok;
+    return NULL;
+  }
+
+  type = abstract_declarator(&tok, tok, type);
+  *rest = tok;
+  return type;
+}
+
+Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
+  while (consume(&tok, tok, "*"))
+    type = newtype_ptr(type);
+
+  if (consume(&tok, tok, "(")) {
+    Token *nest_start = tok;
+    Type *tmp = &(Type){};
+    abstract_declarator(&tok, tok, tmp);
+    expect(&tok, tok, ")");
+
+    Obj *obj = calloc(1, sizeof(Obj));
+    obj->type = type;
+    obj = type_suffix(&tok, tok, obj);
+    Token *type_end = tok;
+
+    type = abstract_declarator(&tok, nest_start, obj->type);
+
+    *rest = type_end;
+    return type;
+  }
+
+  Obj *obj = calloc(1, sizeof(Obj));
+  obj->type = type;
+  obj = type_suffix(&tok, tok, obj);
+
+  *rest = tok;
+  return obj->type;
 }
 
 Type *decl_specifier(Token **rest, Token *tok) {
@@ -310,6 +353,12 @@ Obj *declarator(Token **rest, Token *tok, Obj *obj) {
   return NULL;
 }
 
+bool is_complete(Type *a) {
+  if (a->ty == STRUCT && !a->st->is_defined)
+    return false;
+  return true;
+}
+
 bool is_numeric(Type *a) {
   if (a->ty == INT || a->ty == CHAR)
     return true;
@@ -337,6 +386,8 @@ bool is_convertible(Type *a, Type *b) {
 }
 
 int type_size(Type *a) {
+  if (!is_complete(a))
+    error("this type is incomplete");
   if (a->ty == CHAR)
     return 1;
   if (a->ty == INT)
@@ -344,7 +395,7 @@ int type_size(Type *a) {
   if (a->ty == ARRAY)
     return a->array_size * type_size(a->ptr_to);
   if (a->ty == STRUCT)
-    return offset_alignment(a->st->size,0,type_alignment(a));
+    return offset_alignment(a->st->size, 0, type_alignment(a));
   return 8;
 }
 
@@ -355,10 +406,10 @@ int type_alignment(Type *a) {
     return 4;
   if (a->ty == ARRAY)
     return type_alignment(a->ptr_to);
-  if (a->ty == STRUCT){
+  if (a->ty == STRUCT) {
     int align = 0;
-    for(Member *member = a->st->members;member;member = member->next)
-      if(type_alignment(member->type) > align)
+    for (Member *member = a->st->members; member; member = member->next)
+      if (type_alignment(member->type) > align)
         align = type_alignment(member->type);
     return align;
   }
