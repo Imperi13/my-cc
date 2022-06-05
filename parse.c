@@ -901,9 +901,7 @@ Node *postfix(Token **rest, Token *tok) {
       }
       lhs = node;
     } else if (consume(&tok, tok, "++")) {
-      Node *add_node = new_add_node(lhs, new_node_num(1));
-      Node *assign_node = new_assign_node(lhs, add_node);
-      lhs = new_add_node(assign_node, new_node_num(-1));
+      lhs = new_node(ND_POST_INCREMENT,lhs,NULL,lhs->type);
     } else if (consume(&tok, tok, "--")) {
       Node *sub_node = new_sub_node(lhs, new_node_num(1));
       Node *assign_node = new_assign_node(lhs, sub_node);
