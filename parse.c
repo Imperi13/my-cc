@@ -91,6 +91,18 @@ Obj *find_global(Token *tok) {
   return NULL;
 }
 
+bool is_constexpr(Node *node) {
+  if (node->kind != ND_NUM)
+    return false;
+  return true;
+}
+
+int eval_constexpr(Node *node) {
+  if (node->kind == ND_NUM)
+    return node->val;
+  return -1;
+}
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs, Type *type) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
@@ -204,6 +216,9 @@ Node *new_deref_node(Node *lhs) {
 }
 
 Node *new_assign_node(Node *lhs, Node *rhs) {
+  if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0) {
+    return new_node(ND_ASSIGN, lhs, rhs, lhs->type);
+  }
   if (!is_convertible(lhs->type, rhs->type))
     error("invalid argument type to assign =");
   if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF && lhs->kind != ND_DOT &&
@@ -211,7 +226,7 @@ Node *new_assign_node(Node *lhs, Node *rhs) {
     error("lhs is not lvalue");
   if (lhs->type->ty == ARRAY)
     error("cannot assign to ARRAY");
-  Node *node = new_node(ND_ASSIGN, lhs, rhs, rhs->type);
+  Node *node = new_node(ND_ASSIGN, lhs, rhs, lhs->type);
   return node;
 }
 

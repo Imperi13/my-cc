@@ -19,6 +19,7 @@ typedef enum {
   TK_BREAK,
   TK_CONTINUE,
   TK_IDENT,
+  TK_VOID,
   TK_INT,
   TK_CHAR,
   TK_NUM,
@@ -50,6 +51,7 @@ struct StrLiteral {
 };
 
 typedef enum {
+  VOID,
   INT,
   CHAR,
   PTR,
@@ -229,6 +231,7 @@ struct VarScope {
 
 extern const char variable_letters[];
 extern Token *dummy_token;
+extern Type *type_void;
 extern Type *type_int;
 extern Type *type_char;
 

@@ -283,6 +283,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "void", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_VOID, cur, p, 4);
+      p += 4;
+      continue;
+    }
+
     if (strncmp(p, "int", 3) == 0 && !is_alnum(p[3])) {
       cur = new_token(TK_INT, cur, p, 3);
       p += 3;

@@ -9,6 +9,7 @@ Type *abstract_declarator(Token **rest, Token *tok, Type *type);
 
 StructDef *struct_defs;
 
+Type *type_void = &(Type){.ty = VOID};
 Type *type_int = &(Type){.ty = INT};
 Type *type_char = &(Type){.ty = CHAR};
 
@@ -129,6 +130,11 @@ Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
 }
 
 Type *decl_specifier(Token **rest, Token *tok) {
+  if (consume_kind(&tok, tok, TK_VOID)) {
+    *rest = tok;
+    return type_void;
+  }
+
   if (consume_kind(&tok, tok, TK_INT)) {
     *rest = tok;
     return type_int;
@@ -196,6 +202,11 @@ Type *decl_specifier(Token **rest, Token *tok) {
 }
 
 Type *parse_decl_specifier(Token **rest, Token *tok) {
+  if (consume_kind(&tok, tok, TK_VOID)) {
+    *rest = tok;
+    return type_void;
+  }
+
   if (consume_kind(&tok, tok, TK_INT)) {
     *rest = tok;
     return type_int;
@@ -252,6 +263,14 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     obj->arg_size = 0;
     obj->local_scope = calloc(1, sizeof(VarScope));
     obj->stack_size = 0;
+
+    if (consume_kind(&tok, tok, TK_VOID)) {
+      expect(&tok, tok, ")");
+      obj->type = func_type;
+
+      *rest = tok;
+      return obj;
+    }
 
     if (!consume(&tok, tok, ")")) {
       do {
@@ -361,6 +380,8 @@ Obj *declarator(Token **rest, Token *tok, Obj *obj) {
 }
 
 bool is_complete(Type *a) {
+  if (a->ty == VOID)
+    return false;
   if (a->ty == STRUCT && !a->st->is_defined)
     return false;
   return true;
@@ -373,7 +394,7 @@ bool is_numeric(Type *a) {
 }
 
 bool is_primitive(Type *a) {
-  if (a->ty == INT || a->ty == CHAR)
+  if (a->ty == INT || a->ty == CHAR || a->ty == VOID)
     return true;
   return false;
 }
@@ -381,13 +402,13 @@ bool is_primitive(Type *a) {
 bool is_same_type(Type *a, Type *b) {
   if (a->ty != b->ty)
     return false;
-  if(is_primitive(a))
+  if (is_primitive(a))
     return true;
-  if(a->ty == ARRAY)
-    return a->array_size == b->array_size && is_same_type(a->ptr_to,b->ptr_to);
-  if(a->ty == STRUCT)
+  if (a->ty == ARRAY)
+    return a->array_size == b->array_size && is_same_type(a->ptr_to, b->ptr_to);
+  if (a->ty == STRUCT)
     return a->st == b->st;
-  return is_same_type(a->ptr_to,b->ptr_to);
+  return is_same_type(a->ptr_to, b->ptr_to);
 }
 
 bool is_convertible(Type *a, Type *b) {
@@ -413,6 +434,8 @@ int type_size(Type *a) {
 }
 
 int type_alignment(Type *a) {
+  if (a->ty == VOID)
+    error("void alignment");
   if (a->ty == CHAR)
     return 1;
   if (a->ty == INT)
