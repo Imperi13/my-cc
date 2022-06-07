@@ -6,13 +6,6 @@ char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 char call_register32[][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
 char call_register8[][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 
-typedef struct LoopScope LoopScope;
-
-struct LoopScope {
-  LoopScope *next;
-  int label_num;
-};
-
 char *rax_register(Type *a) {
   int size = type_size(a);
   if (size == 8)
@@ -44,7 +37,8 @@ char *rdi_register(Type *a) {
 }
 
 int label_count = 0;
-LoopScope *loop_scope = NULL;
+int continue_id = -1;
+int break_id = -1;
 
 void gen_addr(Node *node) {
   if (node->kind != ND_VAR && node->kind != ND_DEREF && node->kind != ND_DOT &&
@@ -88,7 +82,8 @@ void gen_addr(Node *node) {
 void gen(Node *node) {
   int now_count;
   int arg_count;
-  LoopScope *loop;
+  int saved_break_id;
+  int saved_continue_id;
   switch (node->kind) {
   case ND_NOP:
     printf("  mov rax, 0\n");
@@ -231,14 +226,14 @@ void gen(Node *node) {
     printf("  ret\n");
     return;
   case ND_BREAK:
-    if (!loop_scope)
+    if (break_id == -1)
       error("not in loop");
-    printf("  jmp .Lend%d\n", loop_scope->label_num);
+    printf("  jmp .Lend%d\n", break_id);
     return;
   case ND_CONTINUE:
-    if (!loop_scope)
+    if (continue_id == -1)
       error("not in loop");
-    printf("  jmp .Lloopend%d\n", loop_scope->label_num);
+    printf("  jmp .Lloopend%d\n", continue_id);
     return;
   case ND_LOGICAL_AND:
     now_count = label_count;
@@ -309,10 +304,10 @@ void gen(Node *node) {
     now_count = label_count;
     label_count++;
 
-    loop = calloc(1, sizeof(LoopScope));
-    loop->label_num = now_count;
-    loop->next = loop_scope;
-    loop_scope = loop;
+    saved_break_id = break_id;
+    saved_continue_id = continue_id;
+    break_id = now_count;
+    continue_id = now_count;
 
     printf(".Lbegin%d:\n", now_count);
     gen(node->lhs);
@@ -321,16 +316,17 @@ void gen(Node *node) {
     printf("  cmp rax,0\n");
     printf("  jne .Lbegin%d\n", now_count);
     printf(".Lend%d:\n", now_count);
-    loop_scope = loop_scope->next;
+    break_id = saved_break_id;
+    continue_id = saved_continue_id;
     return;
   case ND_WHILE:
     now_count = label_count;
     label_count++;
 
-    loop = calloc(1, sizeof(LoopScope));
-    loop->label_num = now_count;
-    loop->next = loop_scope;
-    loop_scope = loop;
+    saved_break_id = break_id;
+    saved_continue_id = continue_id;
+    break_id = now_count;
+    continue_id = now_count;
 
     printf(".Lbegin%d:\n", now_count);
     gen(node->expr);
@@ -340,16 +336,17 @@ void gen(Node *node) {
     printf(".Lloopend%d:\n", now_count);
     printf("  jmp .Lbegin%d\n", now_count);
     printf(".Lend%d:\n", now_count);
-    loop_scope = loop_scope->next;
+    break_id = saved_break_id;
+    continue_id = saved_continue_id;
     return;
   case ND_FOR:
     now_count = label_count;
     label_count++;
 
-    loop = calloc(1, sizeof(LoopScope));
-    loop->label_num = now_count;
-    loop->next = loop_scope;
-    loop_scope = loop;
+    saved_break_id = break_id;
+    saved_continue_id = continue_id;
+    break_id = now_count;
+    continue_id = now_count;
 
     if (node->init_expr)
       gen(node->init_expr);
@@ -363,7 +360,8 @@ void gen(Node *node) {
       gen(node->update_expr);
     printf("  jmp .Lbegin%d\n", now_count);
     printf(".Lend%d:\n", now_count);
-    loop_scope = loop_scope->next;
+    break_id = saved_break_id;
+    continue_id = saved_continue_id;
     return;
   case ND_BLOCK:
     while (node->stmt_front) {
@@ -372,7 +370,7 @@ void gen(Node *node) {
     }
     return;
   case ND_LABEL:
-    printf(".Label%.*s:\n",node->label_len,node->label_name);
+    printf(".Label%.*s:\n", node->label_len, node->label_name);
     gen(node->lhs);
     return;
   case ND_COMMA:
@@ -500,7 +498,8 @@ void gen(Node *node) {
 
 void gen_function(Obj *func) {
   int stack_offset = 0;
-  loop_scope = NULL;
+  break_id = -1;
+  continue_id = -1;
 
   printf("  .text\n");
   printf(".globl %.*s\n", func->len, func->name);
