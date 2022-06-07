@@ -47,11 +47,24 @@ int label_count = 0;
 LoopScope *loop_scope = NULL;
 
 void gen_addr(Node *node) {
-  if (node->kind != ND_VAR && node->kind != ND_DEREF)
+  if (node->kind != ND_VAR && node->kind != ND_DEREF && node->kind != ND_DOT &&
+      node->kind != ND_ARROW)
     error("not lval");
 
   if (node->kind == ND_DEREF) {
     gen(node->lhs);
+    return;
+  }
+
+  if (node->kind == ND_DOT) {
+    gen_addr(node->lhs);
+    printf("  add rax, %d\n", node->member->offset);
+    return;
+  }
+
+  if (node->kind == ND_ARROW) {
+    gen(node->lhs);
+    printf("  add rax, %d\n", node->member->offset);
     return;
   }
 
@@ -135,25 +148,53 @@ void gen(Node *node) {
       printf("  movsxd rsi, [rax]\n");
     else if (type_size(node->lhs->type) == 1)
       printf("  movsx rsi, BYTE PTR [rax]\n");
+
     if (node->lhs->type->ty == PTR || node->lhs->type->ty == ARRAY)
       printf("  imul rdi, %d\n", type_size(node->lhs->type->ptr_to));
     else if (node->rhs->type->ty == PTR || node->rhs->type->ty == ARRAY)
       printf("  imul rsi, %d\n", type_size(node->rhs->type->ptr_to));
+
     printf("  add rdi,rsi\n");
+
     if (type_size(node->lhs->type) == 8)
       printf("  mov [rax], rdi\n");
     else if (type_size(node->lhs->type) == 4)
       printf("  mov [rax], edi\n");
     else if (type_size(node->lhs->type) == 1)
       printf("  mov [rax], dil\n");
+
     printf("  mov rax,rdi\n");
+    return;
+  case ND_POST_INCREMENT:
+    gen_addr(node->lhs);
+    printf("  mov rdi,1\n");
+    if (type_size(node->lhs->type) == 8)
+      printf("  mov rsi, [rax]\n");
+    else if (type_size(node->lhs->type) == 4)
+      printf("  movsxd rsi, [rax]\n");
+    else if (type_size(node->lhs->type) == 1)
+      printf("  movsx rsi, BYTE PTR [rax]\n");
+
+    if (node->lhs->type->ty == PTR || node->lhs->type->ty == ARRAY)
+      printf("  imul rdi, %d\n", type_size(node->lhs->type->ptr_to));
+
+    printf("  add rdi,rsi\n");
+
+    if (type_size(node->lhs->type) == 8)
+      printf("  mov [rax], rdi\n");
+    else if (type_size(node->lhs->type) == 4)
+      printf("  mov [rax], edi\n");
+    else if (type_size(node->lhs->type) == 1)
+      printf("  mov [rax], dil\n");
+
+    printf("  mov rax,rsi\n");
     return;
   case ND_ADDR:
     gen_addr(node->lhs);
     return;
   case ND_DEREF:
     gen(node->lhs);
-    if(node->type->ty == ARRAY)
+    if (node->type->ty == ARRAY)
       return;
     if (type_size(node->type) == 8)
       printf("  mov rax, [rax]\n");
@@ -162,8 +203,29 @@ void gen(Node *node) {
     else if (type_size(node->type) == 1)
       printf("  movsx rax, BYTE PTR [rax]\n");
     return;
-  case ND_RETURN:
+  case ND_DOT:
+    gen_addr(node->lhs);
+    printf("  add rax, %d\n", node->member->offset);
+    if (type_size(node->type) == 8)
+      printf("  mov rax, [rax]\n");
+    else if (type_size(node->type) == 4)
+      printf("  movsxd rax, [rax]\n");
+    else if (type_size(node->type) == 1)
+      printf("  movsx rax, BYTE PTR [rax]\n");
+    return;
+  case ND_ARROW:
     gen(node->lhs);
+    printf("  add rax, %d\n", node->member->offset);
+    if (type_size(node->type) == 8)
+      printf("  mov rax, [rax]\n");
+    else if (type_size(node->type) == 4)
+      printf("  movsxd rax, [rax]\n");
+    else if (type_size(node->type) == 1)
+      printf("  movsx rax, BYTE PTR [rax]\n");
+    return;
+  case ND_RETURN:
+    if (node->lhs)
+      gen(node->lhs);
     printf("  mov rsp,rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
@@ -308,6 +370,10 @@ void gen(Node *node) {
       gen(node->stmt_front->node);
       node->stmt_front = node->stmt_front->next;
     }
+    return;
+  case ND_LABEL:
+    printf(".Label%.*s:\n",node->label_len,node->label_name);
+    gen(node->lhs);
     return;
   case ND_COMMA:
     gen(node->lhs);

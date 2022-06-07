@@ -202,13 +202,14 @@ Token *tokenize(char *p) {
         strncmp(p, "|=", 2) == 0 || strncmp(p, "^=", 2) == 0 ||
         strncmp(p, "++", 2) == 0 || strncmp(p, "--", 2) == 0 ||
         strncmp(p, "<<", 2) == 0 || strncmp(p, ">>", 2) == 0 ||
-        strncmp(p, "&&", 2) == 0 || strncmp(p, "||", 2) == 0) {
+        strncmp(p, "&&", 2) == 0 || strncmp(p, "||", 2) == 0 ||
+        strncmp(p, "->", 2) == 0) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
     }
 
-    if (strchr("+-*/|&!~^%:?,;=(){}[]<>", *p)) {
+    if (strchr("+-*/|&!~^%:?.,;=(){}[]<>", *p)) {
       cur = new_token(TK_RESERVED, cur, p, 1);
       p++;
       continue;
@@ -230,6 +231,12 @@ Token *tokenize(char *p) {
 
     if (strncmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_SIZEOF, cur, p, 6);
+      p += 6;
+      continue;
+    }
+
+    if (strncmp(p, "struct", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_STRUCT, cur, p, 6);
       p += 6;
       continue;
     }
@@ -273,6 +280,12 @@ Token *tokenize(char *p) {
     if (strncmp(p, "continue", 8) == 0 && !is_alnum(p[8])) {
       cur = new_token(TK_CONTINUE, cur, p, 8);
       p += 8;
+      continue;
+    }
+
+    if (strncmp(p, "void", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_VOID, cur, p, 4);
+      p += 4;
       continue;
     }
 

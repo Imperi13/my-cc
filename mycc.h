@@ -10,6 +10,7 @@ typedef enum {
   TK_RESERVED,
   TK_RETURN,
   TK_SIZEOF,
+  TK_STRUCT,
   TK_IF,
   TK_ELSE,
   TK_DO,
@@ -18,6 +19,7 @@ typedef enum {
   TK_BREAK,
   TK_CONTINUE,
   TK_IDENT,
+  TK_VOID,
   TK_INT,
   TK_CHAR,
   TK_NUM,
@@ -49,15 +51,20 @@ struct StrLiteral {
 };
 
 typedef enum {
+  VOID,
   INT,
   CHAR,
   PTR,
   ARRAY,
   FUNC,
+  STRUCT,
 } TypeKind;
 
 typedef struct Type Type;
 typedef struct TypeList TypeList;
+
+typedef struct StructDef StructDef;
+typedef struct Member Member;
 
 struct Type {
   TypeKind ty;
@@ -69,11 +76,36 @@ struct Type {
   TypeList *argtype_front;
   TypeList *argtype_back;
   size_t arg_size;
+
+  // for struct
+  StructDef *st;
 };
 
 struct TypeList {
   TypeList *next;
   Type *type;
+};
+
+struct StructDef {
+  char *name;
+  int len;
+  bool is_defined;
+
+  Member *members;
+  int size;
+
+  // for linked list
+  StructDef *next;
+};
+
+struct Member {
+  char *name;
+  int len;
+  Type *type;
+  int offset;
+
+  // for linked list
+  Member *next;
 };
 
 typedef enum {
@@ -92,6 +124,8 @@ typedef enum {
   ND_LOGICAL_OR,
   ND_CONDITIONAL,
   ND_COMMA,
+  ND_DOT,
+  ND_ARROW,
   ND_MOD,
   ND_EQUAL,
   ND_NOT_EQUAL,
@@ -101,6 +135,7 @@ typedef enum {
   ND_SMALLER_EQUAL,
   ND_ASSIGN,
   ND_ADD_ASSIGN,
+  ND_POST_INCREMENT,
   ND_VAR,
   ND_STR,
   ND_ADDR,
@@ -114,6 +149,7 @@ typedef enum {
   ND_BREAK,
   ND_CONTINUE,
   ND_BLOCK,
+  ND_LABEL,
   ND_FUNCTION_CALL,
   ND_NUM,
   ND_NOP,
@@ -149,6 +185,13 @@ struct Node {
   NodeList *expr_back;
 
   bool is_defined;
+
+  // for struct-dot
+  Member *member;
+
+  // for label
+  char *label_name;
+  int label_len;
 };
 
 struct NodeList {
@@ -193,12 +236,14 @@ struct VarScope {
 
 extern const char variable_letters[];
 extern Token *dummy_token;
+extern Type *type_void;
 extern Type *type_int;
 extern Type *type_char;
 
 extern char *filename;
 extern char *user_input;
 extern StrLiteral *str_literals;
+extern StructDef *struct_defs;
 extern ObjList *globals;
 extern Obj *now_function;
 
@@ -220,8 +265,11 @@ Token *tokenize(char *p);
 
 void debug_token(Token *token);
 
-Obj *parse_global_decl(Token **rest, Token *tok);
+Member *find_member(StructDef *st, char *name, int len);
+
+Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead);
 Obj *parse_local_decl(Token **rest, Token *tok);
+Type *type_name(Token **rest, Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
 bool is_same_type(Type *a, Type *b);

@@ -4,6 +4,7 @@ void global_definition(Token **rest, Token *tok);
 void var_definition(Token **rest, Token *tok);
 void function_definition(Token **rest, Token *tok);
 Node *stmt(Token **rest, Token *tok);
+Node *label_stmt(Token **rest, Token *tok);
 Node *compound_stmt(Token **rest, Token *tok);
 Node *jump_stmt(Token **rest, Token *tok);
 Node *iteration_stmt(Token **rest, Token *tok);
@@ -56,8 +57,8 @@ void error_at(char *loc, char *fmt, ...) {
   int pos = loc - line + indent;
   fprintf(stderr, "%*s", pos, "");
 
-  char msg[50];
-  snprintf(msg, 49, fmt, ap);
+  char msg[0x100];
+  snprintf(msg, 0xff, fmt, ap);
 
   fprintf(stderr, "^ %s\n", msg);
 
@@ -89,6 +90,18 @@ Obj *find_global(Token *tok) {
         !memcmp(tok->str, func->obj->name, func->obj->len))
       return func->obj;
   return NULL;
+}
+
+bool is_constexpr(Node *node) {
+  if (node->kind != ND_NUM)
+    return false;
+  return true;
+}
+
+int eval_constexpr(Node *node) {
+  if (node->kind == ND_NUM)
+    return node->val;
+  return -1;
 }
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs, Type *type) {
@@ -204,13 +217,17 @@ Node *new_deref_node(Node *lhs) {
 }
 
 Node *new_assign_node(Node *lhs, Node *rhs) {
+  if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0) {
+    return new_node(ND_ASSIGN, lhs, rhs, lhs->type);
+  }
   if (!is_convertible(lhs->type, rhs->type))
     error("invalid argument type to assign =");
-  if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF)
+  if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF && lhs->kind != ND_DOT &&
+      lhs->kind != ND_ARROW)
     error("lhs is not lvalue");
   if (lhs->type->ty == ARRAY)
     error("cannot assign to ARRAY");
-  Node *node = new_node(ND_ASSIGN, lhs, rhs, rhs->type);
+  Node *node = new_node(ND_ASSIGN, lhs, rhs, lhs->type);
   return node;
 }
 
@@ -225,13 +242,13 @@ void program(Token *tok) {
 }
 
 void global_definition(Token **rest, Token *tok) {
-  Obj *tmp = parse_global_decl(&dummy_token, tok);
+  Obj *tmp = parse_global_decl(&dummy_token, tok, true);
   if (!tmp)
     error_at(tok->str, "cannot parse global definition");
-  if(tmp->name == NULL){
-    parse_global_decl(&tok,tok);
+  if (tmp->name == NULL) {
+    parse_global_decl(&tok, tok, false);
     *rest = tok;
-    return; 
+    return;
   }
 
   if (tmp->type->ty == FUNC)
@@ -244,7 +261,7 @@ void global_definition(Token **rest, Token *tok) {
 
 void var_definition(Token **rest, Token *tok) {
   ObjList *push_var = calloc(1, sizeof(ObjList));
-  push_var->obj = parse_global_decl(&tok, tok);
+  push_var->obj = parse_global_decl(&tok, tok, false);
   if (!globals) {
     globals = push_var;
   } else {
@@ -258,7 +275,7 @@ void var_definition(Token **rest, Token *tok) {
 
 void function_definition(Token **rest, Token *tok) {
   ObjList *push_function = calloc(1, sizeof(ObjList));
-  Obj *func_def = parse_global_decl(&tok, tok);
+  Obj *func_def = parse_global_decl(&tok, tok, false);
   now_function = func_def;
   push_function->obj = func_def;
   if (!globals) {
@@ -292,6 +309,13 @@ Node *stmt(Token **rest, Token *tok) {
     node = compound_stmt(&tok, tok);
 
     now_function->local_scope = now_function->local_scope->next;
+
+    *rest = tok;
+    return node;
+  }
+
+  if (label_stmt(&dummy_token, tok)) {
+    node = label_stmt(&tok, tok);
 
     *rest = tok;
     return node;
@@ -334,6 +358,26 @@ Node *stmt(Token **rest, Token *tok) {
   return node;
 }
 
+Node *label_stmt(Token **rest, Token *tok) {
+  Node *node = NULL;
+  if (equal_kind(tok, TK_IDENT) && equal(tok->next,":")) {
+    Token *ident = consume_kind(&tok, tok, TK_IDENT);
+    expect(&tok, tok, ":");
+
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_LABEL;
+    node->label_len = ident->len;
+    node->label_name = ident->str;
+    node->lhs = stmt(&tok, tok);
+
+    *rest = tok;
+    return node;
+  }
+
+  *rest = tok;
+  return node;
+}
+
 Node *compound_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
   if (consume(&tok, tok, "{")) {
@@ -345,22 +389,25 @@ Node *compound_stmt(Token **rest, Token *tok) {
       if (parse_local_decl(&dummy_token, tok)) {
 
         Obj *lvar = parse_local_decl(&tok, tok);
-        if (find_obj(now_function->local_scope->locals, lvar->name, lvar->len))
-          error_at(tok->str, "double definition lvar '%.*s'", lvar->len,
-                   lvar->name);
+        if (lvar->name) {
+          if (find_obj(now_function->local_scope->locals, lvar->name,
+                       lvar->len))
+            error_at(tok->str, "double definition lvar '%.*s'", lvar->len,
+                     lvar->name);
 
-        lvar->offset =
-            offset_alignment(now_function->stack_size, type_size(lvar->type),
-                             type_alignment(lvar->type));
-        now_function->stack_size = lvar->offset;
+          lvar->offset =
+              offset_alignment(now_function->stack_size, type_size(lvar->type),
+                               type_alignment(lvar->type));
+          now_function->stack_size = lvar->offset;
 
-        ObjList *push_lvar = calloc(1, sizeof(ObjList));
-        push_lvar->obj = lvar;
-        push_lvar->next = now_function->local_scope->locals;
-        now_function->local_scope->locals = push_lvar;
+          ObjList *push_lvar = calloc(1, sizeof(ObjList));
+          push_lvar->obj = lvar;
+          push_lvar->next = now_function->local_scope->locals;
+          now_function->local_scope->locals = push_lvar;
+        }
 
         Node *init;
-        if (lvar->init_var) {
+        if (lvar->name && lvar->init_var) {
           Node *lhs = calloc(1, sizeof(Node));
           lhs->kind = ND_VAR;
           lhs->offset = lvar->offset;
@@ -399,7 +446,14 @@ Node *jump_stmt(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_RETURN)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_RETURN;
-    node->lhs = expr(&tok, tok);
+
+    if (consume(&tok, tok, ";")) {
+      if (now_function->type->return_type != type_void)
+        error_at(tok->str, "must return a value in non-void function");
+    } else {
+      node->lhs = expr(&tok, tok);
+      expect(&tok, tok, ";");
+    }
 
     *rest = tok;
     return node;
@@ -409,6 +463,8 @@ Node *jump_stmt(Token **rest, Token *tok) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_BREAK;
 
+    expect(&tok, tok, ";");
+
     *rest = tok;
     return node;
   }
@@ -416,6 +472,8 @@ Node *jump_stmt(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_CONTINUE)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_CONTINUE;
+
+    expect(&tok, tok, ";");
 
     *rest = tok;
     return node;
@@ -774,6 +832,18 @@ Node *cast(Token **rest, Token *tok) {
 
 Node *unary(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_SIZEOF)) {
+    Token *save = tok;
+    if (consume(&tok, tok, "(")) {
+      Type *type = type_name(&tok, tok);
+      if (type) {
+        expect(&tok, tok, ")");
+        *rest = tok;
+        return new_node_num(type_size(type));
+      }
+    }
+
+    tok = save;
+
     Node *node = unary(&tok, tok);
     node = new_node_num(type_size(node->type));
 
@@ -885,10 +955,29 @@ Node *postfix(Token **rest, Token *tok) {
         consume(&tok, tok, ",");
       }
       lhs = node;
+    } else if (consume(&tok, tok, ".")) {
+      Token *ident = consume_kind(&tok, tok, TK_IDENT);
+      if (lhs->type->ty != STRUCT)
+        error_at(tok->str, "invalid type to dot .");
+      Member *member = find_member(lhs->type->st, ident->str, ident->len);
+      if (!member)
+        error_at(tok->str, "cannot find member '%.*s'", ident->len, ident->str);
+
+      lhs = new_node(ND_DOT, lhs, NULL, member->type);
+      lhs->member = member;
+    } else if (consume(&tok, tok, "->")) {
+      Token *ident = consume_kind(&tok, tok, TK_IDENT);
+      if (lhs->type->ty != PTR || lhs->type->ptr_to->ty != STRUCT)
+        error_at(tok->str, "invalid type to arrow ->");
+      Member *member =
+          find_member(lhs->type->ptr_to->st, ident->str, ident->len);
+      if (!member)
+        error_at(tok->str, "cannot find member '%.*s'", ident->len, ident->str);
+
+      lhs = new_node(ND_ARROW, lhs, NULL, member->type);
+      lhs->member = member;
     } else if (consume(&tok, tok, "++")) {
-      Node *add_node = new_add_node(lhs, new_node_num(1));
-      Node *assign_node = new_assign_node(lhs, add_node);
-      lhs = new_add_node(assign_node, new_node_num(-1));
+      lhs = new_node(ND_POST_INCREMENT, lhs, NULL, lhs->type);
     } else if (consume(&tok, tok, "--")) {
       Node *sub_node = new_sub_node(lhs, new_node_num(1));
       Node *assign_node = new_assign_node(lhs, sub_node);
