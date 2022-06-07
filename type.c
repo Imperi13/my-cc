@@ -414,6 +414,9 @@ bool is_same_type(Type *a, Type *b) {
 bool is_convertible(Type *a, Type *b) {
   if (is_numeric(a) && is_numeric(b))
     return true;
+  if (a->ty == PTR && b->ty == PTR &&
+      (a->ptr_to->ty == VOID || b->ptr_to->ty == VOID))
+    return true;
   if (a->ty == INT || b->ty == INT)
     return false;
   return is_same_type(a->ptr_to, b->ptr_to);
