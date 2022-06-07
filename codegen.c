@@ -39,6 +39,7 @@ char *rdi_register(Type *a) {
 int label_count = 0;
 int continue_id = -1;
 int break_id = -1;
+int switch_id = -1;
 
 void gen_addr(Node *node) {
   if (node->kind != ND_VAR && node->kind != ND_DEREF && node->kind != ND_DOT &&
@@ -84,6 +85,7 @@ void gen(Node *node) {
   int arg_count;
   int saved_break_id;
   int saved_continue_id;
+  int saved_switch_id;
   switch (node->kind) {
   case ND_NOP:
     printf("  mov rax, 0\n");
@@ -300,6 +302,26 @@ void gen(Node *node) {
     gen(node->rhs);
     printf(".Lend%d:\n", now_count);
     return;
+  case ND_SWITCH:
+    now_count = label_count;
+    label_count++;
+
+    saved_break_id = break_id;
+    break_id = now_count;
+    saved_switch_id = switch_id;
+    switch_id = now_count;
+
+    gen(node->expr);
+    //分岐
+    if (node->default_node)
+      printf("  jmp .Ldefault%d\n", now_count);
+    printf("  jmp .Lend%d\n", now_count);
+    gen(node->lhs);
+    printf(".Lend%d:\n", now_count);
+
+    break_id = saved_break_id;
+    switch_id = saved_switch_id;
+    return;
   case ND_DO_WHILE:
     now_count = label_count;
     label_count++;
@@ -371,6 +393,10 @@ void gen(Node *node) {
     return;
   case ND_LABEL:
     printf(".Label%.*s:\n", node->label_len, node->label_name);
+    gen(node->lhs);
+    return;
+  case ND_DEFAULT:
+    printf(".Ldefault%d:\n", switch_id);
     gen(node->lhs);
     return;
   case ND_COMMA:

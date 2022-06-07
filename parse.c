@@ -68,6 +68,8 @@ void error_at(char *loc, char *fmt, ...) {
 ObjList *globals;
 Obj *now_function;
 
+Node *switch_node;
+
 Obj *find_obj(ObjList *list, char *str, int len) {
   for (ObjList *var = list; var; var = var->next)
     if (var->obj->len == len && !memcmp(str, var->obj->name, var->obj->len))
@@ -360,7 +362,7 @@ Node *stmt(Token **rest, Token *tok) {
 
 Node *label_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
-  if (equal_kind(tok, TK_IDENT) && equal(tok->next,":")) {
+  if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
     Token *ident = consume_kind(&tok, tok, TK_IDENT);
     expect(&tok, tok, ":");
 
@@ -369,6 +371,25 @@ Node *label_stmt(Token **rest, Token *tok) {
     node->label_len = ident->len;
     node->label_name = ident->str;
     node->lhs = stmt(&tok, tok);
+
+    *rest = tok;
+    return node;
+  }
+
+  if (consume_kind(&tok, tok, TK_DEFAULT)) {
+    expect(&tok, tok, ":");
+
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_DEFAULT;
+    node->lhs = stmt(&tok, tok);
+
+    if (!switch_node)
+      error_at(tok->str, "not in switch-stmt");
+    if (switch_node->default_node)
+      error_at(tok->str, "already exist default case");
+
+    if (rest != &dummy_token)
+      switch_node->default_node = node;
 
     *rest = tok;
     return node;
@@ -555,6 +576,24 @@ Node *selection_stmt(Token **rest, Token *tok) {
       node->kind = ND_IFELSE;
       node->rhs = stmt(&tok, tok);
     }
+
+    *rest = tok;
+    return node;
+  }
+
+  if (consume_kind(&tok, tok, TK_SWITCH)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_SWITCH;
+    expect(&tok, tok, "(");
+    node->expr = expr(&tok, tok);
+    expect(&tok, tok, ")");
+
+    Node *saved_switch_node = switch_node;
+    switch_node = node;
+
+    node->lhs = stmt(&tok, tok);
+
+    switch_node = saved_switch_node;
 
     *rest = tok;
     return node;
