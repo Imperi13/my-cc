@@ -149,6 +149,7 @@ typedef enum {
   ND_BREAK,
   ND_CONTINUE,
   ND_BLOCK,
+  ND_LABEL,
   ND_FUNCTION_CALL,
   ND_NUM,
   ND_NOP,
@@ -187,6 +188,10 @@ struct Node {
 
   // for struct-dot
   Member *member;
+
+  // for label
+  char *label_name;
+  int label_len;
 };
 
 struct NodeList {

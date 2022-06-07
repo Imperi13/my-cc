@@ -371,6 +371,10 @@ void gen(Node *node) {
       node->stmt_front = node->stmt_front->next;
     }
     return;
+  case ND_LABEL:
+    printf(".Label%.*s:\n",node->label_len,node->label_name);
+    gen(node->lhs);
+    return;
   case ND_COMMA:
     gen(node->lhs);
     gen(node->rhs);

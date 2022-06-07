@@ -4,6 +4,7 @@ void global_definition(Token **rest, Token *tok);
 void var_definition(Token **rest, Token *tok);
 void function_definition(Token **rest, Token *tok);
 Node *stmt(Token **rest, Token *tok);
+Node *label_stmt(Token **rest, Token *tok);
 Node *compound_stmt(Token **rest, Token *tok);
 Node *jump_stmt(Token **rest, Token *tok);
 Node *iteration_stmt(Token **rest, Token *tok);
@@ -313,6 +314,13 @@ Node *stmt(Token **rest, Token *tok) {
     return node;
   }
 
+  if (label_stmt(&dummy_token, tok)) {
+    node = label_stmt(&tok, tok);
+
+    *rest = tok;
+    return node;
+  }
+
   if (selection_stmt(&dummy_token, tok)) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
@@ -346,6 +354,26 @@ Node *stmt(Token **rest, Token *tok) {
   }
 
   node = expr_stmt(&tok, tok);
+  *rest = tok;
+  return node;
+}
+
+Node *label_stmt(Token **rest, Token *tok) {
+  Node *node = NULL;
+  if (equal_kind(tok, TK_IDENT) && equal(tok->next,":")) {
+    Token *ident = consume_kind(&tok, tok, TK_IDENT);
+    expect(&tok, tok, ":");
+
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_LABEL;
+    node->label_len = ident->len;
+    node->label_name = ident->str;
+    node->lhs = stmt(&tok, tok);
+
+    *rest = tok;
+    return node;
+  }
+
   *rest = tok;
   return node;
 }
