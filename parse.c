@@ -56,8 +56,8 @@ void error_at(char *loc, char *fmt, ...) {
   int pos = loc - line + indent;
   fprintf(stderr, "%*s", pos, "");
 
-  char msg[50];
-  snprintf(msg, 49, fmt, ap);
+  char msg[0x100];
+  snprintf(msg, 0xff, fmt, ap);
 
   fprintf(stderr, "^ %s\n", msg);
 
@@ -418,7 +418,14 @@ Node *jump_stmt(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_RETURN)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_RETURN;
-    node->lhs = expr(&tok, tok);
+
+    if (consume(&tok, tok, ";")) {
+      if (now_function->type->return_type != type_void)
+        error_at(tok->str, "must return a value in non-void function");
+    } else {
+      node->lhs = expr(&tok, tok);
+      expect(&tok, tok, ";");
+    }
 
     *rest = tok;
     return node;
@@ -428,6 +435,8 @@ Node *jump_stmt(Token **rest, Token *tok) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_BREAK;
 
+    expect(&tok, tok, ";");
+
     *rest = tok;
     return node;
   }
@@ -435,6 +444,8 @@ Node *jump_stmt(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_CONTINUE)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_CONTINUE;
+
+    expect(&tok, tok, ";");
 
     *rest = tok;
     return node;

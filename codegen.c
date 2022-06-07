@@ -224,7 +224,8 @@ void gen(Node *node) {
       printf("  movsx rax, BYTE PTR [rax]\n");
     return;
   case ND_RETURN:
-    gen(node->lhs);
+    if (node->lhs)
+      gen(node->lhs);
     printf("  mov rsp,rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
