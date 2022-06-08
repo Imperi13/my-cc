@@ -308,14 +308,14 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
 
-  if (label_stmt(&dummy_token, tok, lookahead)) {
+  if (label_stmt(&dummy_token, tok, false)) {
     node = label_stmt(&tok, tok, lookahead);
 
     *rest = tok;
     return node;
   }
 
-  if (selection_stmt(&dummy_token, tok, lookahead)) {
+  if (selection_stmt(&dummy_token, tok, false)) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
 
@@ -331,7 +331,7 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
 
-  if (iteration_stmt(&dummy_token, tok, lookahead)) {
+  if (iteration_stmt(&dummy_token, tok, false)) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
 
@@ -347,7 +347,7 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
 
-  if (jump_stmt(&dummy_token, tok, lookahead)) {
+  if (jump_stmt(&dummy_token, tok, false)) {
     node = jump_stmt(&tok, tok, lookahead);
     *rest = tok;
     return node;
