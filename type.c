@@ -1,11 +1,10 @@
 #include "mycc.h"
 
-Type *parse_decl_specifier(Token **rest, Token *tok);
-Type *decl_specifier(Token **rest, Token *tok);
-Obj *type_suffix(Token **rest, Token *tok, Obj *type);
-Obj *declarator(Token **rest, Token *tok, Obj *type);
+Type *decl_specifier(Token **rest, Token *tok, bool lookahead);
+Obj *type_suffix(Token **rest, Token *tok, Obj *type, bool lookahead);
+Obj *declarator(Token **rest, Token *tok, Obj *type, bool lookahead);
 
-Type *abstract_declarator(Token **rest, Token *tok, Type *type);
+Type *abstract_declarator(Token **rest, Token *tok, Type *type, bool lookahead);
 
 StructDef *struct_defs;
 
@@ -46,10 +45,7 @@ Member *find_member(StructDef *st, char *name, int len) {
 // lookahead = trueのとき先読みして型だけを判別する
 Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead) {
   Obj *obj = calloc(1, sizeof(Obj));
-  if (lookahead)
-    obj->type = parse_decl_specifier(&tok, tok);
-  else
-    obj->type = decl_specifier(&tok, tok);
+  obj->type = decl_specifier(&tok, tok, lookahead);
 
   if (obj->type == NULL)
     obj->type = type_int;
@@ -59,28 +55,28 @@ Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead) {
     return obj;
   }
 
-  obj = declarator(&tok, tok, obj);
+  obj = declarator(&tok, tok, obj, lookahead);
 
   *rest = tok;
   return obj;
 }
 
-Obj *parse_local_decl(Token **rest, Token *tok) {
+Obj *parse_local_decl(Token **rest, Token *tok, bool lookahead) {
   Obj *obj = calloc(1, sizeof(Obj));
-  if (!decl_specifier(&dummy_token, tok)) {
+  if (!decl_specifier(&dummy_token, tok, lookahead)) {
     return NULL;
   }
-  obj->type = decl_specifier(&tok, tok);
+  obj->type = decl_specifier(&tok, tok, lookahead);
 
   if (consume(&tok, tok, ";")) {
     *rest = tok;
     return obj;
   }
 
-  obj = declarator(&tok, tok, obj);
+  obj = declarator(&tok, tok, obj, lookahead);
 
   if (consume(&tok, tok, "=")) {
-    obj->init_var = assign(&tok, tok);
+    obj->init_var = assign(&tok, tok, lookahead);
   }
   expect(&tok, tok, ";");
 
@@ -88,34 +84,35 @@ Obj *parse_local_decl(Token **rest, Token *tok) {
   return obj;
 }
 
-Type *type_name(Token **rest, Token *tok) {
-  Type *type = decl_specifier(&tok, tok);
+Type *type_name(Token **rest, Token *tok, bool lookahead) {
+  Type *type = decl_specifier(&tok, tok, lookahead);
   if (!type) {
     *rest = tok;
     return NULL;
   }
 
-  type = abstract_declarator(&tok, tok, type);
+  type = abstract_declarator(&tok, tok, type, lookahead);
   *rest = tok;
   return type;
 }
 
-Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
+Type *abstract_declarator(Token **rest, Token *tok, Type *type,
+                          bool lookahead) {
   while (consume(&tok, tok, "*"))
     type = newtype_ptr(type);
 
   if (consume(&tok, tok, "(")) {
     Token *nest_start = tok;
     Type *tmp = &(Type){};
-    abstract_declarator(&tok, tok, tmp);
+    abstract_declarator(&tok, tok, tmp, lookahead);
     expect(&tok, tok, ")");
 
     Obj *obj = calloc(1, sizeof(Obj));
     obj->type = type;
-    obj = type_suffix(&tok, tok, obj);
+    obj = type_suffix(&tok, tok, obj, lookahead);
     Token *type_end = tok;
 
-    type = abstract_declarator(&tok, nest_start, obj->type);
+    type = abstract_declarator(&tok, nest_start, obj->type, lookahead);
 
     *rest = type_end;
     return type;
@@ -123,13 +120,13 @@ Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
 
   Obj *obj = calloc(1, sizeof(Obj));
   obj->type = type;
-  obj = type_suffix(&tok, tok, obj);
+  obj = type_suffix(&tok, tok, obj, lookahead);
 
   *rest = tok;
   return obj->type;
 }
 
-Type *decl_specifier(Token **rest, Token *tok) {
+Type *decl_specifier(Token **rest, Token *tok, bool lookahead) {
   if (consume_kind(&tok, tok, TK_VOID)) {
     *rest = tok;
     return type_void;
@@ -161,8 +158,11 @@ Type *decl_specifier(Token **rest, Token *tok) {
 
     if (!st_def) {
       st_def = calloc(1, sizeof(StructDef));
-      st_def->next = struct_defs;
-      struct_defs = st_def;
+
+      if (!lookahead) {
+        st_def->next = struct_defs;
+        struct_defs = st_def;
+      }
     }
 
     st_def->name = ty_name->str;
@@ -178,7 +178,7 @@ Type *decl_specifier(Token **rest, Token *tok) {
     st_def->is_defined = true;
 
     while (!consume(&tok, tok, "}")) {
-      Obj *obj = parse_local_decl(&tok, tok);
+      Obj *obj = parse_local_decl(&tok, tok, lookahead);
       Member *member = calloc(1, sizeof(Member));
 
       member->name = obj->name;
@@ -201,58 +201,7 @@ Type *decl_specifier(Token **rest, Token *tok) {
   return NULL;
 }
 
-Type *parse_decl_specifier(Token **rest, Token *tok) {
-  if (consume_kind(&tok, tok, TK_VOID)) {
-    *rest = tok;
-    return type_void;
-  }
-
-  if (consume_kind(&tok, tok, TK_INT)) {
-    *rest = tok;
-    return type_int;
-  }
-
-  if (consume_kind(&tok, tok, TK_CHAR)) {
-    *rest = tok;
-    return type_char;
-  }
-
-  if (consume_kind(&tok, tok, TK_STRUCT)) {
-    Token *ty_name = consume_kind(&tok, tok, TK_IDENT);
-
-    StructDef *st_def = calloc(1, sizeof(StructDef));
-
-    if (!consume(&tok, tok, "{")) {
-      *rest = tok;
-      return newtype_struct(st_def);
-    }
-
-    st_def->is_defined = true;
-
-    while (!consume(&tok, tok, "}")) {
-      Obj *obj = parse_local_decl(&tok, tok);
-      Member *member = calloc(1, sizeof(Member));
-
-      member->name = obj->name;
-      member->len = obj->len;
-      member->offset = offset_alignment(st_def->size, type_size(obj->type),
-                                        type_alignment(obj->type));
-
-      st_def->size = member->offset;
-
-      member->next = st_def->members;
-      st_def->members = member;
-    }
-
-    *rest = tok;
-    return newtype_struct(st_def);
-  }
-
-  *rest = tok;
-  return NULL;
-}
-
-Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
+Obj *type_suffix(Token **rest, Token *tok, Obj *obj, bool lookahead) {
   if (consume(&tok, tok, "(")) {
     Type *func_type = calloc(1, sizeof(Type));
     func_type->ty = FUNC;
@@ -274,7 +223,7 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
 
     if (!consume(&tok, tok, ")")) {
       do {
-        Obj *arg = parse_global_decl(&tok, tok, true);
+        Obj *arg = parse_global_decl(&tok, tok, lookahead);
         if (arg->type->ty == ARRAY)
           arg->type->ty = PTR;
 
@@ -331,7 +280,7 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     array_type->array_size = expect_number(&tok, tok);
 
     expect(&tok, tok, "]");
-    obj = type_suffix(&tok, tok, obj);
+    obj = type_suffix(&tok, tok, obj, lookahead);
 
     array_type->ptr_to = obj->type;
     obj->type = array_type;
@@ -344,7 +293,7 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
   return obj;
 }
 
-Obj *declarator(Token **rest, Token *tok, Obj *obj) {
+Obj *declarator(Token **rest, Token *tok, Obj *obj, bool lookahead) {
   while (consume(&tok, tok, "*")) {
     obj->type = newtype_ptr(obj->type);
   }
@@ -354,7 +303,7 @@ Obj *declarator(Token **rest, Token *tok, Obj *obj) {
 
     obj->name = ident->str;
     obj->len = ident->len;
-    obj = type_suffix(&tok, tok, obj);
+    obj = type_suffix(&tok, tok, obj, lookahead);
 
     *rest = tok;
     return obj;
@@ -363,13 +312,13 @@ Obj *declarator(Token **rest, Token *tok, Obj *obj) {
   if (consume(&tok, tok, "(")) {
     Token *nest_start = tok;
     Obj *tmp = &(Obj){};
-    declarator(&tok, tok, tmp);
+    declarator(&tok, tok, tmp, lookahead);
     expect(&tok, tok, ")");
 
-    obj = type_suffix(&tok, tok, obj);
+    obj = type_suffix(&tok, tok, obj, lookahead);
     Token *type_end = tok;
 
-    obj = declarator(&tok, nest_start, obj);
+    obj = declarator(&tok, nest_start, obj, lookahead);
 
     *rest = type_end;
     return obj;

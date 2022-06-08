@@ -268,8 +268,8 @@ void debug_token(Token *token);
 Member *find_member(StructDef *st, char *name, int len);
 
 Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead);
-Obj *parse_local_decl(Token **rest, Token *tok);
-Type *type_name(Token **rest, Token *tok);
+Obj *parse_local_decl(Token **rest, Token *tok, bool lookahead);
+Type *type_name(Token **rest, Token *tok, bool lookahead);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
 bool is_same_type(Type *a, Type *b);
@@ -281,6 +281,6 @@ int offset_alignment(int start, int data_size, int alignment);
 Obj *find_obj(ObjList *list, char *str, int len);
 Obj *find_lvar(char *str, int len);
 void program(Token *tok);
-Node *assign(Token **rest, Token *tok);
+Node *assign(Token **rest, Token *tok, bool lookahead);
 
 void codegen_all(FILE *output);
