@@ -927,6 +927,15 @@ Node *unary(Token **rest, Token *tok) {
     return node;
   }
 
+  if (consume_kind(&tok, tok, TK_ALIGNOF)) {
+    expect(&tok, tok, "(");
+    Type *type = type_name(&tok, tok);
+    expect(&tok, tok, ")");
+
+    *rest = tok;
+    return new_node_num(type_alignment(type));
+  }
+
   if (consume(&tok, tok, "++")) {
     Node *lhs = unary(&tok, tok);
     Node *add_node = new_add_node(lhs, new_node_num(1));

@@ -10,6 +10,7 @@ typedef enum {
   TK_RESERVED,
   TK_RETURN,
   TK_SIZEOF,
+  TK_ALIGNOF,
   TK_STRUCT,
   TK_IF,
   TK_ELSE,
