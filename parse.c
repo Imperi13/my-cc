@@ -27,6 +27,11 @@ Node *unary(Token **rest, Token *tok, bool lookahead);
 Node *postfix(Token **rest, Token *tok, bool lookahead);
 Node *primary(Token **rest, Token *tok, bool lookahead);
 
+bool is_label_stmt(Token *tok);
+bool is_selection_stmt(Token *tok);
+bool is_iteration_stmt(Token *tok);
+bool is_jump_stmt(Token *tok);
+
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -308,14 +313,14 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
 
-  if (label_stmt(&dummy_token, tok, true)) {
+  if (is_label_stmt(tok)) {
     node = label_stmt(&tok, tok, lookahead);
 
     *rest = tok;
     return node;
   }
 
-  if (selection_stmt(&dummy_token, tok, true)) {
+  if (is_selection_stmt(tok)) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
 
@@ -331,7 +336,7 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
 
-  if (iteration_stmt(&dummy_token, tok, true)) {
+  if (is_iteration_stmt(tok)) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
 
@@ -347,7 +352,7 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
 
-  if (jump_stmt(&dummy_token, tok, true)) {
+  if (is_jump_stmt(tok)) {
     node = jump_stmt(&tok, tok, lookahead);
     *rest = tok;
     return node;
@@ -356,6 +361,10 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
   node = expr_stmt(&tok, tok, lookahead);
   *rest = tok;
   return node;
+}
+
+bool is_label_stmt(Token *tok) {
+  return equal_kind(tok, TK_IDENT) && equal(tok->next, ":");
 }
 
 Node *label_stmt(Token **rest, Token *tok, bool lookahead) {
@@ -444,6 +453,11 @@ Node *compound_stmt(Token **rest, Token *tok, bool lookahead) {
   return node;
 }
 
+bool is_jump_stmt(Token *tok) {
+  return equal_kind(tok, TK_RETURN) || equal_kind(tok, TK_BREAK) ||
+         equal_kind(tok, TK_CONTINUE);
+}
+
 Node *jump_stmt(Token **rest, Token *tok, bool lookahead) {
   Node *node = NULL;
   if (consume_kind(&tok, tok, TK_RETURN)) {
@@ -484,6 +498,11 @@ Node *jump_stmt(Token **rest, Token *tok, bool lookahead) {
 
   *rest = tok;
   return node;
+}
+
+bool is_iteration_stmt(Token *tok) {
+  return equal_kind(tok, TK_WHILE) || equal_kind(tok, TK_DO) ||
+         equal_kind(tok, TK_FOR);
 }
 
 Node *iteration_stmt(Token **rest, Token *tok, bool lookahead) {
@@ -543,6 +562,8 @@ Node *iteration_stmt(Token **rest, Token *tok, bool lookahead) {
   *rest = tok;
   return node;
 }
+
+bool is_selection_stmt(Token *tok) { return equal_kind(tok, TK_IF); }
 
 Node *selection_stmt(Token **rest, Token *tok, bool lookahead) {
   Node *node = NULL;
