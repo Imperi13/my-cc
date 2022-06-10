@@ -12,6 +12,7 @@ typedef enum {
   TK_SIZEOF,
   TK_ALIGNOF,
   TK_STRUCT,
+  TK_ENUM,
   TK_IF,
   TK_ELSE,
   TK_SWITCH,
@@ -62,6 +63,7 @@ typedef enum {
   ARRAY,
   FUNC,
   STRUCT,
+  ENUM,
 } TypeKind;
 
 typedef struct Type Type;
@@ -69,6 +71,10 @@ typedef struct TypeList TypeList;
 
 typedef struct StructDef StructDef;
 typedef struct Member Member;
+
+typedef struct EnumDef EnumDef;
+typedef struct EnumConst EnumConst;
+typedef struct ConstList ConstList;
 
 struct Type {
   TypeKind ty;
@@ -83,6 +89,9 @@ struct Type {
 
   // for struct
   StructDef *st;
+
+  // for enum
+  EnumDef *en;
 };
 
 struct TypeList {
@@ -110,6 +119,28 @@ struct Member {
 
   // for linked list
   Member *next;
+};
+
+struct EnumDef {
+  char *name;
+  int len;
+  bool is_defined;
+
+  ConstList *enum_consts;
+
+  // for linked list
+  EnumDef *next;
+};
+
+struct EnumConst {
+  char *name;
+  int len;
+  int val;
+};
+
+struct ConstList {
+  EnumConst *en_const;
+  ConstList *next;
 };
 
 typedef enum {
@@ -258,6 +289,8 @@ extern char *filename;
 extern char *user_input;
 extern StrLiteral *str_literals;
 extern StructDef *struct_defs;
+extern EnumDef *enum_defs;
+extern ConstList *enum_consts;
 extern ObjList *globals;
 extern Obj *now_function;
 
@@ -280,6 +313,7 @@ Token *tokenize(char *p);
 void debug_token(Token *token);
 
 Member *find_member(StructDef *st, char *name, int len);
+EnumConst *find_enum_const(char *name, int len);
 
 Obj *parse_global_decl(Token **rest, Token *tok);
 Obj *parse_local_decl(Token **rest, Token *tok);

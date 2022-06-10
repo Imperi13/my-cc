@@ -7,6 +7,8 @@ Obj *declarator(Token **rest, Token *tok, Obj *type);
 Type *abstract_declarator(Token **rest, Token *tok, Type *type);
 
 StructDef *struct_defs;
+EnumDef *enum_defs;
+ConstList *enum_consts;
 
 Type *type_void = &(Type){.ty = VOID};
 Type *type_int = &(Type){.ty = INT};
@@ -26,10 +28,32 @@ Type *newtype_struct(StructDef *st_def) {
   return type;
 }
 
+Type *newtype_enum(EnumDef *enum_def) {
+  Type *type = calloc(1, sizeof(Type));
+  type->ty = ENUM;
+  type->en = enum_def;
+  return type;
+}
+
 StructDef *find_struct(char *name, int len) {
   for (StructDef *now = struct_defs; now; now = now->next)
     if (now->len == len && !memcmp(name, now->name, now->len))
       return now;
+  return NULL;
+}
+
+EnumDef *find_enum(char *name, int len) {
+  for (EnumDef *now = enum_defs; now; now = now->next)
+    if (now->len == len && !memcmp(name, now->name, now->len))
+      return now;
+  return NULL;
+}
+
+EnumConst *find_enum_const(char *name, int len) {
+  for (ConstList *now = enum_consts; now; now = now->next)
+    if (now->en_const->len == len &&
+        !memcmp(name, now->en_const->name, now->en_const->len))
+      return now->en_const;
   return NULL;
 }
 
@@ -127,7 +151,8 @@ Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
 
 bool is_decl_spec(Token *tok) {
   return equal_kind(tok, TK_VOID) || equal_kind(tok, TK_INT) ||
-         equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_STRUCT);
+         equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_STRUCT) ||
+         equal_kind(tok, TK_ENUM);
 }
 
 Type *decl_specifier(Token **rest, Token *tok) {
@@ -197,6 +222,69 @@ Type *decl_specifier(Token **rest, Token *tok) {
 
     *rest = tok;
     return newtype_struct(st_def);
+  }
+
+  if (consume_kind(&tok, tok, TK_ENUM)) {
+    if (!equal_kind(tok, TK_IDENT))
+      error_at(tok->str, "anonymous enum is not implemented");
+
+    Token *ty_name = consume_kind(&tok, tok, TK_IDENT);
+
+    EnumDef *en_def = find_enum(ty_name->str, ty_name->len);
+    if (en_def && en_def->is_defined) {
+      if (consume(&tok, tok, "{"))
+        error_at(tok->str, "struct '%.*s' is already defined", ty_name->len,
+                 ty_name->str);
+
+      *rest = tok;
+      return newtype_enum(en_def);
+    }
+
+    if (!en_def) {
+      en_def = calloc(1, sizeof(EnumDef));
+
+      en_def->next = enum_defs;
+      enum_defs = en_def;
+    }
+
+    en_def->name = ty_name->str;
+    en_def->len = ty_name->len;
+    en_def->is_defined = false;
+
+    if (!consume(&tok, tok, "{")) {
+      *rest = tok;
+      return newtype_enum(en_def);
+    }
+
+    en_def->is_defined = true;
+
+    int const_val = 0;
+    while (!consume(&tok, tok, "}")) {
+      Token *const_name = consume_kind(&tok, tok, TK_IDENT);
+      EnumConst *en_const = calloc(1, sizeof(EnumConst));
+
+      en_const->name = const_name->str;
+      en_const->len = const_name->len;
+      en_const->val = const_val;
+
+      ConstList *push_const = calloc(1,sizeof(ConstList));
+      push_const->en_const = en_const;
+
+      push_const->next = en_def->enum_consts;
+      en_def->enum_consts = push_const;
+
+      push_const = calloc(1,sizeof(ConstList));
+      push_const->en_const = en_const;
+
+      push_const->next = enum_consts;
+      enum_consts = push_const;
+
+      const_val++;
+      consume(&tok, tok, ",");
+    }
+
+    *rest = tok;
+    return newtype_enum(en_def);
   }
 
   *rest = tok;
@@ -364,6 +452,8 @@ bool is_same_type(Type *a, Type *b) {
 
 bool is_convertible(Type *a, Type *b) {
   if (is_numeric(a) && is_numeric(b))
+    return true;
+  if (a->ty == ENUM && is_numeric(b))
     return true;
   if (a->ty == PTR && b->ty == PTR &&
       (a->ptr_to->ty == VOID || b->ptr_to->ty == VOID))

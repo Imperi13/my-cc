@@ -247,6 +247,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "enum", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_ENUM, cur, p, 4);
+      p += 4;
+      continue;
+    }
+
     if (strncmp(p, "switch", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_SWITCH, cur, p, 6);
       p += 6;

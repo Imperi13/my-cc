@@ -1109,6 +1109,12 @@ Node *primary(Token **rest, Token *tok) {
       return node;
     }
 
+    EnumConst *enum_val = find_enum_const(ident->str,ident->len); 
+    if(enum_val){
+      *rest = tok;
+      return new_node_num(enum_val->val);
+    }
+
     error_at(tok->str, "ident '%.*s' is not defined", ident->len, ident->str);
   }
 
