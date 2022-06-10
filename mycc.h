@@ -269,6 +269,7 @@ Member *find_member(StructDef *st, char *name, int len);
 
 Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead);
 Obj *parse_local_decl(Token **rest, Token *tok, bool lookahead);
+bool is_decl_spec(Token *tok);
 Type *type_name(Token **rest, Token *tok, bool lookahead);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);

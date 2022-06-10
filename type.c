@@ -63,7 +63,7 @@ Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead) {
 
 Obj *parse_local_decl(Token **rest, Token *tok, bool lookahead) {
   Obj *obj = calloc(1, sizeof(Obj));
-  if (!decl_specifier(&dummy_token, tok, lookahead)) {
+  if (!is_decl_spec(tok)){
     return NULL;
   }
   obj->type = decl_specifier(&tok, tok, lookahead);
@@ -124,6 +124,10 @@ Type *abstract_declarator(Token **rest, Token *tok, Type *type,
 
   *rest = tok;
   return obj->type;
+}
+
+bool is_decl_spec(Token *tok){
+  return equal_kind(tok,TK_VOID) || equal_kind(tok,TK_INT) || equal_kind(tok,TK_CHAR) || equal_kind(tok,TK_STRUCT);
 }
 
 Type *decl_specifier(Token **rest, Token *tok, bool lookahead) {

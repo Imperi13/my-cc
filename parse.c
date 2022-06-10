@@ -395,7 +395,7 @@ Node *compound_stmt(Token **rest, Token *tok, bool lookahead) {
 
     while (!consume(&tok, tok, "}")) {
       NodeList *push_stmt = calloc(1, sizeof(NodeList));
-      if (parse_local_decl(&dummy_token, tok, lookahead)) {
+      if (is_decl_spec(tok)) {
 
         Obj *lvar = parse_local_decl(&tok, tok, lookahead);
         if (lvar->name) {
