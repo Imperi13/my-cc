@@ -1,8 +1,8 @@
 #include "mycc.h"
 
 void global_definition(Token **rest, Token *tok, bool lookahead);
-void var_definition(Token **rest, Token *tok, bool lookahead);
-void function_definition(Token **rest, Token *tok, bool lookahead);
+void var_definition(Token **rest, Token *tok,Obj *decl, bool lookahead);
+void function_definition(Token **rest, Token *tok,Obj *decl, bool lookahead);
 Node *stmt(Token **rest, Token *tok, bool lookahead);
 Node *label_stmt(Token **rest, Token *tok, bool lookahead);
 Node *compound_stmt(Token **rest, Token *tok, bool lookahead);
@@ -247,22 +247,26 @@ void program(Token *tok) {
 }
 
 void global_definition(Token **rest, Token *tok, bool lookahead) {
-  Obj *tmp = parse_global_decl(&dummy_token, tok, true);
+  Obj *tmp = parse_global_decl(&tok, tok, false);
   if (!tmp)
     error_at(tok->str, "cannot parse global definition");
-  if (tmp->name == NULL)
-    parse_global_decl(&tok, tok, lookahead);
-  else if (tmp->type->ty == FUNC)
-    function_definition(&tok, tok, lookahead);
+  if (tmp->name == NULL){
+    *rest = tok;
+    return;
+  }
+
+
+  if (tmp->type->ty == FUNC)
+    function_definition(&tok, tok,tmp, lookahead);
   else
-    var_definition(&tok, tok, lookahead);
+    var_definition(&tok, tok,tmp, lookahead);
 
   *rest = tok;
 }
 
-void var_definition(Token **rest, Token *tok, bool lookahead) {
+void var_definition(Token **rest, Token *tok,Obj *decl, bool lookahead) {
   ObjList *push_var = calloc(1, sizeof(ObjList));
-  push_var->obj = parse_global_decl(&tok, tok, lookahead);
+  push_var->obj = decl; 
   if (!lookahead) {
     push_var->next = globals;
     globals = push_var;
@@ -272,9 +276,9 @@ void var_definition(Token **rest, Token *tok, bool lookahead) {
   *rest = tok;
 }
 
-void function_definition(Token **rest, Token *tok, bool lookahead) {
+void function_definition(Token **rest, Token *tok,Obj *decl, bool lookahead) {
   ObjList *push_function = calloc(1, sizeof(ObjList));
-  Obj *func_def = parse_global_decl(&tok, tok, lookahead);
+  Obj *func_def = decl;
   push_function->obj = func_def;
 
   if (!lookahead) {
