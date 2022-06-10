@@ -359,7 +359,8 @@ Node *stmt(Token **rest, Token *tok) {
 }
 
 bool is_label_stmt(Token *tok) {
-  return equal_kind(tok, TK_IDENT) && equal(tok->next, ":");
+  return (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) ||
+         equal_kind(tok, TK_DEFAULT);
 }
 
 Node *label_stmt(Token **rest, Token *tok) {
@@ -574,7 +575,9 @@ Node *iteration_stmt(Token **rest, Token *tok) {
   return node;
 }
 
-bool is_selection_stmt(Token *tok) { return equal_kind(tok, TK_IF); }
+bool is_selection_stmt(Token *tok) {
+  return equal_kind(tok, TK_IF) || equal_kind(tok, TK_SWITCH);
+}
 
 Node *selection_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
