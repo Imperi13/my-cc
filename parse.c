@@ -360,7 +360,7 @@ Node *stmt(Token **rest, Token *tok) {
 
 bool is_label_stmt(Token *tok) {
   return (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) ||
-         equal_kind(tok, TK_DEFAULT);
+         equal_kind(tok, TK_DEFAULT) || equal_kind(tok, TK_CASE);
 }
 
 Node *label_stmt(Token **rest, Token *tok) {
@@ -393,6 +393,26 @@ Node *label_stmt(Token **rest, Token *tok) {
 
     if (rest != &dummy_token)
       switch_node->default_node = node;
+
+    *rest = tok;
+    return node;
+  }
+
+  if (consume_kind(&tok, tok, TK_CASE)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_CASE;
+
+    Node *tmp = conditional(&tok, tok);
+    if (!is_constexpr(tmp))
+      error_at(tok->str, "must be constexpr");
+    node->case_num = eval_constexpr(tmp);
+    expect(&tok, tok, ":");
+    node->lhs = stmt(&tok, tok);
+
+    NodeList *push_case = calloc(1, sizeof(NodeList));
+    push_case->node = node;
+    push_case->next = switch_node->case_nodes;
+    switch_node->case_nodes = push_case;
 
     *rest = tok;
     return node;

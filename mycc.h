@@ -15,6 +15,7 @@ typedef enum {
   TK_ELSE,
   TK_SWITCH,
   TK_DEFAULT,
+  TK_CASE,
   TK_DO,
   TK_WHILE,
   TK_FOR,
@@ -152,6 +153,7 @@ typedef enum {
   ND_BREAK,
   ND_CONTINUE,
   ND_DEFAULT,
+  ND_CASE,
   ND_BLOCK,
   ND_LABEL,
   ND_FUNCTION_CALL,
@@ -194,11 +196,15 @@ struct Node {
   Member *member;
 
   // for switch
+  NodeList *case_nodes;
   Node *default_node;
 
   // for label
   char *label_name;
   int label_len;
+
+  // for case
+  int case_num;
 };
 
 struct NodeList {

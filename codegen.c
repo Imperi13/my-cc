@@ -313,8 +313,12 @@ void gen(Node *node) {
 
     gen(node->expr);
     //分岐
+    for (NodeList *now = node->case_nodes; now; now = now->next) {
+      printf("  cmp rax, %d\n", now->node->case_num);
+      printf("  je .Lswitch%dcase%d\n", now_count, now->node->case_num);
+    }
     if (node->default_node)
-      printf("  jmp .Ldefault%d\n", now_count);
+      printf("  jmp .Lswitch%ddefault\n", now_count);
     printf("  jmp .Lend%d\n", now_count);
     gen(node->lhs);
     printf(".Lend%d:\n", now_count);
@@ -396,7 +400,11 @@ void gen(Node *node) {
     gen(node->lhs);
     return;
   case ND_DEFAULT:
-    printf(".Ldefault%d:\n", switch_id);
+    printf(".Lswitch%ddefault:\n", switch_id);
+    gen(node->lhs);
+    return;
+  case ND_CASE:
+    printf(".Lswitch%dcase%d:\n", switch_id, node->case_num);
     gen(node->lhs);
     return;
   case ND_COMMA:
