@@ -1,31 +1,31 @@
 #include "mycc.h"
 
-void global_definition(Token **rest, Token *tok, bool lookahead);
-void var_definition(Token **rest, Token *tok,Obj *decl, bool lookahead);
-void function_definition(Token **rest, Token *tok,Obj *decl, bool lookahead);
-Node *stmt(Token **rest, Token *tok, bool lookahead);
-Node *label_stmt(Token **rest, Token *tok, bool lookahead);
-Node *compound_stmt(Token **rest, Token *tok, bool lookahead);
-Node *jump_stmt(Token **rest, Token *tok, bool lookahead);
-Node *iteration_stmt(Token **rest, Token *tok, bool lookahead);
-Node *selection_stmt(Token **rest, Token *tok, bool lookahead);
-Node *expr_stmt(Token **rest, Token *tok, bool lookahead);
-Node *expr(Token **rest, Token *tok, bool lookahead);
-Node *conditional(Token **rest, Token *tok, bool lookahead);
-Node *logical_or(Token **rest, Token *tok, bool lookahead);
-Node *logical_and(Token **rest, Token *tok, bool lookahead);
-Node *bit_or(Token **rest, Token *tok, bool lookahead);
-Node *bit_xor(Token **rest, Token *tok, bool lookahead);
-Node *bit_and(Token **rest, Token *tok, bool lookahead);
-Node *equality(Token **rest, Token *tok, bool lookahead);
-Node *relational(Token **rest, Token *tok, bool lookahead);
-Node *shift(Token **rest, Token *tok, bool lookahead);
-Node *add(Token **rest, Token *tok, bool lookahead);
-Node *mul(Token **rest, Token *tok, bool lookahead);
-Node *cast(Token **rest, Token *tok, bool lookahead);
-Node *unary(Token **rest, Token *tok, bool lookahead);
-Node *postfix(Token **rest, Token *tok, bool lookahead);
-Node *primary(Token **rest, Token *tok, bool lookahead);
+void global_definition(Token **rest, Token *tok);
+void var_definition(Token **rest, Token *tok, Obj *decl);
+void function_definition(Token **rest, Token *tok, Obj *decl);
+Node *stmt(Token **rest, Token *tok);
+Node *label_stmt(Token **rest, Token *tok);
+Node *compound_stmt(Token **rest, Token *tok);
+Node *jump_stmt(Token **rest, Token *tok);
+Node *iteration_stmt(Token **rest, Token *tok);
+Node *selection_stmt(Token **rest, Token *tok);
+Node *expr_stmt(Token **rest, Token *tok);
+Node *expr(Token **rest, Token *tok);
+Node *conditional(Token **rest, Token *tok);
+Node *logical_or(Token **rest, Token *tok);
+Node *logical_and(Token **rest, Token *tok);
+Node *bit_or(Token **rest, Token *tok);
+Node *bit_xor(Token **rest, Token *tok);
+Node *bit_and(Token **rest, Token *tok);
+Node *equality(Token **rest, Token *tok);
+Node *relational(Token **rest, Token *tok);
+Node *shift(Token **rest, Token *tok);
+Node *add(Token **rest, Token *tok);
+Node *mul(Token **rest, Token *tok);
+Node *cast(Token **rest, Token *tok);
+Node *unary(Token **rest, Token *tok);
+Node *postfix(Token **rest, Token *tok);
+Node *primary(Token **rest, Token *tok);
 
 bool is_label_stmt(Token *tok);
 bool is_selection_stmt(Token *tok);
@@ -242,50 +242,45 @@ int offset_alignment(int start, int data_size, int alignment) {
 
 void program(Token *tok) {
   while (!at_eof(tok)) {
-    global_definition(&tok, tok, false);
+    global_definition(&tok, tok);
   }
 }
 
-void global_definition(Token **rest, Token *tok, bool lookahead) {
-  Obj *tmp = parse_global_decl(&tok, tok, false);
+void global_definition(Token **rest, Token *tok) {
+  Obj *tmp = parse_global_decl(&tok, tok);
   if (!tmp)
     error_at(tok->str, "cannot parse global definition");
-  if (tmp->name == NULL){
+  if (tmp->name == NULL) {
     *rest = tok;
     return;
   }
 
-
   if (tmp->type->ty == FUNC)
-    function_definition(&tok, tok,tmp, lookahead);
+    function_definition(&tok, tok, tmp);
   else
-    var_definition(&tok, tok,tmp, lookahead);
+    var_definition(&tok, tok, tmp);
 
   *rest = tok;
 }
 
-void var_definition(Token **rest, Token *tok,Obj *decl, bool lookahead) {
+void var_definition(Token **rest, Token *tok, Obj *decl) {
   ObjList *push_var = calloc(1, sizeof(ObjList));
-  push_var->obj = decl; 
-  if (!lookahead) {
-    push_var->next = globals;
-    globals = push_var;
-  }
+  push_var->obj = decl;
+  push_var->next = globals;
+  globals = push_var;
 
   expect(&tok, tok, ";");
   *rest = tok;
 }
 
-void function_definition(Token **rest, Token *tok,Obj *decl, bool lookahead) {
+void function_definition(Token **rest, Token *tok, Obj *decl) {
   ObjList *push_function = calloc(1, sizeof(ObjList));
   Obj *func_def = decl;
   push_function->obj = func_def;
 
-  if (!lookahead) {
-    push_function->next = globals;
-    globals = push_function;
-    now_function = func_def;
-  }
+  push_function->next = globals;
+  globals = push_function;
+  now_function = func_def;
 
   if (!equal(tok, "{")) {
     expect(&tok, tok, ";");
@@ -294,31 +289,29 @@ void function_definition(Token **rest, Token *tok,Obj *decl, bool lookahead) {
   }
 
   func_def->is_defined = true;
-  func_def->code = compound_stmt(&tok, tok, lookahead);
+  func_def->code = compound_stmt(&tok, tok);
 
   *rest = tok;
 }
 
-Node *stmt(Token **rest, Token *tok, bool lookahead) {
+Node *stmt(Token **rest, Token *tok) {
   Node *node;
   if (equal(tok, "{")) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
 
-    if (!lookahead)
-      now_function->local_scope = var_scope;
+    now_function->local_scope = var_scope;
 
-    node = compound_stmt(&tok, tok, lookahead);
+    node = compound_stmt(&tok, tok);
 
-    if (!lookahead)
-      now_function->local_scope = now_function->local_scope->next;
+    now_function->local_scope = now_function->local_scope->next;
 
     *rest = tok;
     return node;
   }
 
   if (is_label_stmt(tok)) {
-    node = label_stmt(&tok, tok, lookahead);
+    node = label_stmt(&tok, tok);
 
     *rest = tok;
     return node;
@@ -328,13 +321,11 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
 
-    if (!lookahead)
-      now_function->local_scope = var_scope;
+    now_function->local_scope = var_scope;
 
-    node = selection_stmt(&tok, tok, lookahead);
+    node = selection_stmt(&tok, tok);
 
-    if (!lookahead)
-      now_function->local_scope = now_function->local_scope->next;
+    now_function->local_scope = now_function->local_scope->next;
 
     *rest = tok;
     return node;
@@ -344,25 +335,23 @@ Node *stmt(Token **rest, Token *tok, bool lookahead) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
 
-    if (!lookahead)
-      now_function->local_scope = var_scope;
+    now_function->local_scope = var_scope;
 
-    node = iteration_stmt(&tok, tok, lookahead);
+    node = iteration_stmt(&tok, tok);
 
-    if (!lookahead)
-      now_function->local_scope = now_function->local_scope->next;
+    now_function->local_scope = now_function->local_scope->next;
 
     *rest = tok;
     return node;
   }
 
   if (is_jump_stmt(tok)) {
-    node = jump_stmt(&tok, tok, lookahead);
+    node = jump_stmt(&tok, tok);
     *rest = tok;
     return node;
   }
 
-  node = expr_stmt(&tok, tok, lookahead);
+  node = expr_stmt(&tok, tok);
   *rest = tok;
   return node;
 }
@@ -371,7 +360,7 @@ bool is_label_stmt(Token *tok) {
   return equal_kind(tok, TK_IDENT) && equal(tok->next, ":");
 }
 
-Node *label_stmt(Token **rest, Token *tok, bool lookahead) {
+Node *label_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
     Token *ident = consume_kind(&tok, tok, TK_IDENT);
@@ -381,7 +370,7 @@ Node *label_stmt(Token **rest, Token *tok, bool lookahead) {
     node->kind = ND_LABEL;
     node->label_len = ident->len;
     node->label_name = ident->str;
-    node->lhs = stmt(&tok, tok, lookahead);
+    node->lhs = stmt(&tok, tok);
 
     *rest = tok;
     return node;
@@ -391,7 +380,7 @@ Node *label_stmt(Token **rest, Token *tok, bool lookahead) {
   return node;
 }
 
-Node *compound_stmt(Token **rest, Token *tok, bool lookahead) {
+Node *compound_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
   if (consume(&tok, tok, "{")) {
     node = calloc(1, sizeof(Node));
@@ -401,7 +390,7 @@ Node *compound_stmt(Token **rest, Token *tok, bool lookahead) {
       NodeList *push_stmt = calloc(1, sizeof(NodeList));
       if (is_decl_spec(tok)) {
 
-        Obj *lvar = parse_local_decl(&tok, tok, lookahead);
+        Obj *lvar = parse_local_decl(&tok, tok);
         if (lvar->name) {
           if (find_obj(now_function->local_scope->locals, lvar->name,
                        lvar->len))
@@ -411,15 +400,12 @@ Node *compound_stmt(Token **rest, Token *tok, bool lookahead) {
           lvar->offset =
               offset_alignment(now_function->stack_size, type_size(lvar->type),
                                type_alignment(lvar->type));
-          if (!lookahead)
-            now_function->stack_size = lvar->offset;
+          now_function->stack_size = lvar->offset;
 
           ObjList *push_lvar = calloc(1, sizeof(ObjList));
           push_lvar->obj = lvar;
-          if (!lookahead) {
-            push_lvar->next = now_function->local_scope->locals;
-            now_function->local_scope->locals = push_lvar;
-          }
+          push_lvar->next = now_function->local_scope->locals;
+          now_function->local_scope->locals = push_lvar;
         }
 
         Node *init;
@@ -437,7 +423,7 @@ Node *compound_stmt(Token **rest, Token *tok, bool lookahead) {
 
         push_stmt->node = init;
       } else {
-        push_stmt->node = stmt(&tok, tok, lookahead);
+        push_stmt->node = stmt(&tok, tok);
       }
 
       if (!node->stmt_back) {
@@ -462,7 +448,7 @@ bool is_jump_stmt(Token *tok) {
          equal_kind(tok, TK_CONTINUE);
 }
 
-Node *jump_stmt(Token **rest, Token *tok, bool lookahead) {
+Node *jump_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
   if (consume_kind(&tok, tok, TK_RETURN)) {
     node = calloc(1, sizeof(Node));
@@ -472,7 +458,7 @@ Node *jump_stmt(Token **rest, Token *tok, bool lookahead) {
       if (now_function->type->return_type != type_void)
         error_at(tok->str, "must return a value in non-void function");
     } else {
-      node->lhs = expr(&tok, tok, lookahead);
+      node->lhs = expr(&tok, tok);
       expect(&tok, tok, ";");
     }
 
@@ -509,15 +495,15 @@ bool is_iteration_stmt(Token *tok) {
          equal_kind(tok, TK_FOR);
 }
 
-Node *iteration_stmt(Token **rest, Token *tok, bool lookahead) {
+Node *iteration_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
   if (consume_kind(&tok, tok, TK_WHILE)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_WHILE;
     expect(&tok, tok, "(");
-    node->expr = expr(&tok, tok, lookahead);
+    node->expr = expr(&tok, tok);
     expect(&tok, tok, ")");
-    node->lhs = stmt(&tok, tok, lookahead);
+    node->lhs = stmt(&tok, tok);
 
     *rest = tok;
     return node;
@@ -527,10 +513,10 @@ Node *iteration_stmt(Token **rest, Token *tok, bool lookahead) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_DO_WHILE;
 
-    node->lhs = stmt(&tok, tok, lookahead);
+    node->lhs = stmt(&tok, tok);
     expect_kind(&tok, tok, TK_WHILE);
     expect(&tok, tok, "(");
-    node->expr = expr(&tok, tok, lookahead);
+    node->expr = expr(&tok, tok);
     expect(&tok, tok, ")");
     expect(&tok, tok, ";");
 
@@ -543,21 +529,21 @@ Node *iteration_stmt(Token **rest, Token *tok, bool lookahead) {
     node->kind = ND_FOR;
     expect(&tok, tok, "(");
     if (!consume(&tok, tok, ";")) {
-      node->init_expr = expr(&tok, tok, lookahead);
+      node->init_expr = expr(&tok, tok);
       expect(&tok, tok, ";");
     }
     if (!consume(&tok, tok, ";")) {
-      node->expr = expr(&tok, tok, lookahead);
+      node->expr = expr(&tok, tok);
       expect(&tok, tok, ";");
     } else {
       node->expr = new_node_num(1);
     }
     if (!consume(&tok, tok, ")")) {
-      node->update_expr = expr(&tok, tok, lookahead);
+      node->update_expr = expr(&tok, tok);
       expect(&tok, tok, ")");
     }
 
-    node->lhs = stmt(&tok, tok, lookahead);
+    node->lhs = stmt(&tok, tok);
 
     *rest = tok;
     return node;
@@ -569,19 +555,19 @@ Node *iteration_stmt(Token **rest, Token *tok, bool lookahead) {
 
 bool is_selection_stmt(Token *tok) { return equal_kind(tok, TK_IF); }
 
-Node *selection_stmt(Token **rest, Token *tok, bool lookahead) {
+Node *selection_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
   if (consume_kind(&tok, tok, TK_IF)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_IF;
     expect(&tok, tok, "(");
-    node->expr = expr(&tok, tok, lookahead);
+    node->expr = expr(&tok, tok);
     expect(&tok, tok, ")");
-    node->lhs = stmt(&tok, tok, lookahead);
+    node->lhs = stmt(&tok, tok);
 
     if (consume_kind(&tok, tok, TK_ELSE)) {
       node->kind = ND_IFELSE;
-      node->rhs = stmt(&tok, tok, lookahead);
+      node->rhs = stmt(&tok, tok);
     }
 
     *rest = tok;
@@ -592,24 +578,24 @@ Node *selection_stmt(Token **rest, Token *tok, bool lookahead) {
   return node;
 }
 
-Node *expr_stmt(Token **rest, Token *tok, bool lookahead) {
+Node *expr_stmt(Token **rest, Token *tok) {
   if (consume(&tok, tok, ";")) {
     Node *node = new_node(ND_NOP, NULL, NULL, NULL);
     *rest = tok;
     return node;
   }
 
-  Node *node = expr(&tok, tok, lookahead);
+  Node *node = expr(&tok, tok);
   expect(&tok, tok, ";");
   *rest = tok;
   return node;
 }
 
-Node *expr(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = assign(&tok, tok, lookahead);
+Node *expr(Token **rest, Token *tok) {
+  Node *lhs = assign(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, ",")) {
-      Node *rhs = assign(&tok, tok, lookahead);
+      Node *rhs = assign(&tok, tok);
       lhs = new_node(ND_COMMA, lhs, rhs, rhs->type);
     } else {
       *rest = tok;
@@ -618,48 +604,48 @@ Node *expr(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *assign(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = conditional(&tok, tok, lookahead);
+Node *assign(Token **rest, Token *tok) {
+  Node *lhs = conditional(&tok, tok);
   if (consume(&tok, tok, "=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     lhs = new_assign_node(lhs, rhs);
   } else if (consume(&tok, tok, "+=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     lhs = new_node(ND_ADD_ASSIGN, lhs, rhs, lhs->type);
   } else if (consume(&tok, tok, "-=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *sub_node = new_sub_node(lhs, rhs);
     lhs = new_assign_node(lhs, sub_node);
   } else if (consume(&tok, tok, "*=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *mul_node = new_mul_node(lhs, rhs);
     lhs = new_assign_node(lhs, mul_node);
   } else if (consume(&tok, tok, "/=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *div_node = new_div_node(lhs, rhs);
     lhs = new_assign_node(lhs, div_node);
   } else if (consume(&tok, tok, "%=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *mod_node = new_mod_node(lhs, rhs);
     lhs = new_assign_node(lhs, mod_node);
   } else if (consume(&tok, tok, "&=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *and_node = new_and_node(lhs, rhs);
     lhs = new_assign_node(lhs, and_node);
   } else if (consume(&tok, tok, "|=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *or_node = new_or_node(lhs, rhs);
     lhs = new_assign_node(lhs, or_node);
   } else if (consume(&tok, tok, "^=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *xor_node = new_xor_node(lhs, rhs);
     lhs = new_assign_node(lhs, xor_node);
   } else if (consume(&tok, tok, "<<=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *lshift_node = new_lshift_node(lhs, rhs);
     lhs = new_assign_node(lhs, lshift_node);
   } else if (consume(&tok, tok, ">>=")) {
-    Node *rhs = assign(&tok, tok, lookahead);
+    Node *rhs = assign(&tok, tok);
     Node *rshift_node = new_rshift_node(lhs, rhs);
     lhs = new_assign_node(lhs, rshift_node);
   }
@@ -668,12 +654,12 @@ Node *assign(Token **rest, Token *tok, bool lookahead) {
   return lhs;
 }
 
-Node *conditional(Token **rest, Token *tok, bool lookahead) {
-  Node *cond = logical_or(&tok, tok, lookahead);
+Node *conditional(Token **rest, Token *tok) {
+  Node *cond = logical_or(&tok, tok);
   if (consume(&tok, tok, "?")) {
-    Node *lhs = expr(&tok, tok, lookahead);
+    Node *lhs = expr(&tok, tok);
     expect(&tok, tok, ":");
-    Node *rhs = conditional(&tok, tok, lookahead);
+    Node *rhs = conditional(&tok, tok);
     Node *node = new_node(ND_CONDITIONAL, lhs, rhs, lhs->type);
     node->expr = cond;
     *rest = tok;
@@ -683,11 +669,11 @@ Node *conditional(Token **rest, Token *tok, bool lookahead) {
   return cond;
 }
 
-Node *logical_or(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = logical_and(&tok, tok, lookahead);
+Node *logical_or(Token **rest, Token *tok) {
+  Node *lhs = logical_and(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, "||")) {
-      Node *rhs = logical_and(&tok, tok, lookahead);
+      Node *rhs = logical_and(&tok, tok);
       lhs = new_node(ND_LOGICAL_OR, lhs, rhs, type_int);
     } else {
       *rest = tok;
@@ -696,11 +682,11 @@ Node *logical_or(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *logical_and(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = bit_or(&tok, tok, lookahead);
+Node *logical_and(Token **rest, Token *tok) {
+  Node *lhs = bit_or(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, "&&")) {
-      Node *rhs = bit_or(&tok, tok, lookahead);
+      Node *rhs = bit_or(&tok, tok);
       lhs = new_node(ND_LOGICAL_AND, lhs, rhs, type_int);
     } else {
       *rest = tok;
@@ -709,11 +695,11 @@ Node *logical_and(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *bit_or(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = bit_xor(&tok, tok, lookahead);
+Node *bit_or(Token **rest, Token *tok) {
+  Node *lhs = bit_xor(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, "|")) {
-      Node *rhs = bit_xor(&tok, tok, lookahead);
+      Node *rhs = bit_xor(&tok, tok);
       lhs = new_node(ND_BIT_OR, lhs, rhs, lhs->type);
     } else {
       *rest = tok;
@@ -722,11 +708,11 @@ Node *bit_or(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *bit_xor(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = bit_and(&tok, tok, lookahead);
+Node *bit_xor(Token **rest, Token *tok) {
+  Node *lhs = bit_and(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, "^")) {
-      Node *rhs = bit_and(&tok, tok, lookahead);
+      Node *rhs = bit_and(&tok, tok);
       lhs = new_node(ND_BIT_XOR, lhs, rhs, lhs->type);
     } else {
       *rest = tok;
@@ -735,11 +721,11 @@ Node *bit_xor(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *bit_and(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = equality(&tok, tok, lookahead);
+Node *bit_and(Token **rest, Token *tok) {
+  Node *lhs = equality(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, "&")) {
-      Node *rhs = equality(&tok, tok, lookahead);
+      Node *rhs = equality(&tok, tok);
       lhs = new_node(ND_BIT_AND, lhs, rhs, lhs->type);
     } else {
       *rest = tok;
@@ -748,16 +734,16 @@ Node *bit_and(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *equality(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = relational(&tok, tok, lookahead);
+Node *equality(Token **rest, Token *tok) {
+  Node *lhs = relational(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, "==")) {
-      Node *rhs = relational(&tok, tok, lookahead);
+      Node *rhs = relational(&tok, tok);
       if (!is_same_type(lhs->type, rhs->type))
         error_at(tok->str, "invalid argument type to equality ==");
       lhs = new_node(ND_EQUAL, lhs, rhs, lhs->type);
     } else if (consume(&tok, tok, "!=")) {
-      Node *rhs = relational(&tok, tok, lookahead);
+      Node *rhs = relational(&tok, tok);
       if (!is_same_type(lhs->type, rhs->type))
         error_at(tok->str, "invalid argument type to equality !=");
       lhs = new_node(ND_NOT_EQUAL, lhs, rhs, lhs->type);
@@ -768,26 +754,26 @@ Node *equality(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *relational(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = shift(&tok, tok, lookahead);
+Node *relational(Token **rest, Token *tok) {
+  Node *lhs = shift(&tok, tok);
   for (;;) {
     if (consume(&tok, tok, "<")) {
-      Node *rhs = shift(&tok, tok, lookahead);
+      Node *rhs = shift(&tok, tok);
       if (!is_same_type(lhs->type, rhs->type))
         error_at(tok->str, "invalid argument type to relational <");
       lhs = new_node(ND_SMALLER, lhs, rhs, lhs->type);
     } else if (consume(&tok, tok, "<=")) {
-      Node *rhs = shift(&tok, tok, lookahead);
+      Node *rhs = shift(&tok, tok);
       if (!is_same_type(lhs->type, rhs->type))
         error_at(tok->str, "invalid argument type to relational <=");
       lhs = new_node(ND_SMALLER_EQUAL, lhs, rhs, lhs->type);
     } else if (consume(&tok, tok, ">")) {
-      Node *rhs = shift(&tok, tok, lookahead);
+      Node *rhs = shift(&tok, tok);
       if (!is_same_type(lhs->type, rhs->type))
         error_at(tok->str, "invalid argument type to relational >");
       lhs = new_node(ND_GREATER, lhs, rhs, lhs->type);
     } else if (consume(&tok, tok, ">=")) {
-      Node *rhs = shift(&tok, tok, lookahead);
+      Node *rhs = shift(&tok, tok);
       if (!is_same_type(lhs->type, rhs->type))
         error_at(tok->str, "invalid argument type to relational >=");
       lhs = new_node(ND_GREATER_EQUAL, lhs, rhs, lhs->type);
@@ -798,15 +784,15 @@ Node *relational(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *shift(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = add(&tok, tok, lookahead);
+Node *shift(Token **rest, Token *tok) {
+  Node *lhs = add(&tok, tok);
 
   for (;;) {
     if (consume(&tok, tok, "<<")) {
-      Node *rhs = add(&tok, tok, lookahead);
+      Node *rhs = add(&tok, tok);
       lhs = new_lshift_node(lhs, rhs);
     } else if (consume(&tok, tok, ">>")) {
-      Node *rhs = add(&tok, tok, lookahead);
+      Node *rhs = add(&tok, tok);
       lhs = new_rshift_node(lhs, rhs);
     } else {
       *rest = tok;
@@ -815,15 +801,15 @@ Node *shift(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *add(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = mul(&tok, tok, lookahead);
+Node *add(Token **rest, Token *tok) {
+  Node *lhs = mul(&tok, tok);
 
   for (;;) {
     if (consume(&tok, tok, "+")) {
-      Node *rhs = mul(&tok, tok, lookahead);
+      Node *rhs = mul(&tok, tok);
       lhs = new_add_node(lhs, rhs);
     } else if (consume(&tok, tok, "-")) {
-      Node *rhs = mul(&tok, tok, lookahead);
+      Node *rhs = mul(&tok, tok);
       lhs = new_sub_node(lhs, rhs);
     } else {
       *rest = tok;
@@ -832,18 +818,18 @@ Node *add(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *mul(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = cast(&tok, tok, lookahead);
+Node *mul(Token **rest, Token *tok) {
+  Node *lhs = cast(&tok, tok);
 
   for (;;) {
     if (consume(&tok, tok, "*")) {
-      Node *rhs = cast(&tok, tok, lookahead);
+      Node *rhs = cast(&tok, tok);
       lhs = new_mul_node(lhs, rhs);
     } else if (consume(&tok, tok, "/")) {
-      Node *rhs = cast(&tok, tok, lookahead);
+      Node *rhs = cast(&tok, tok);
       lhs = new_div_node(lhs, rhs);
     } else if (consume(&tok, tok, "%")) {
-      Node *rhs = cast(&tok, tok, lookahead);
+      Node *rhs = cast(&tok, tok);
       lhs = new_mod_node(lhs, rhs);
     } else {
       *rest = tok;
@@ -852,17 +838,17 @@ Node *mul(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *cast(Token **rest, Token *tok, bool lookahead) {
-  Node *node = unary(&tok, tok, lookahead);
+Node *cast(Token **rest, Token *tok) {
+  Node *node = unary(&tok, tok);
   *rest = tok;
   return node;
 }
 
-Node *unary(Token **rest, Token *tok, bool lookahead) {
+Node *unary(Token **rest, Token *tok) {
   if (consume_kind(&tok, tok, TK_SIZEOF)) {
     Token *save = tok;
     if (consume(&tok, tok, "(")) {
-      Type *type = type_name(&tok, tok, false);
+      Type *type = type_name(&tok, tok);
       if (type) {
         expect(&tok, tok, ")");
         *rest = tok;
@@ -872,7 +858,7 @@ Node *unary(Token **rest, Token *tok, bool lookahead) {
 
     tok = save;
 
-    Node *node = unary(&tok, tok, lookahead);
+    Node *node = unary(&tok, tok);
     node = new_node_num(type_size(node->type));
 
     *rest = tok;
@@ -880,7 +866,7 @@ Node *unary(Token **rest, Token *tok, bool lookahead) {
   }
 
   if (consume(&tok, tok, "++")) {
-    Node *lhs = unary(&tok, tok, lookahead);
+    Node *lhs = unary(&tok, tok);
     Node *add_node = new_add_node(lhs, new_node_num(1));
     Node *node = new_assign_node(lhs, add_node);
 
@@ -889,7 +875,7 @@ Node *unary(Token **rest, Token *tok, bool lookahead) {
   }
 
   if (consume(&tok, tok, "--")) {
-    Node *lhs = unary(&tok, tok, lookahead);
+    Node *lhs = unary(&tok, tok);
     Node *sub_node = new_sub_node(lhs, new_node_num(1));
     Node *node = new_assign_node(lhs, sub_node);
 
@@ -898,12 +884,12 @@ Node *unary(Token **rest, Token *tok, bool lookahead) {
   }
 
   if (consume(&tok, tok, "+")) {
-    Node *node = cast(&tok, tok, lookahead);
+    Node *node = cast(&tok, tok);
     *rest = tok;
     return node;
   }
   if (consume(&tok, tok, "-")) {
-    Node *node = cast(&tok, tok, lookahead);
+    Node *node = cast(&tok, tok);
     if (node->type->ty != INT)
       error_at(tok->str, "invalid argument type ptr to unary");
     node = new_node(ND_SUB, new_node_num(0), node, node->type);
@@ -912,14 +898,14 @@ Node *unary(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
   if (consume(&tok, tok, "*")) {
-    Node *node = cast(&tok, tok, lookahead);
+    Node *node = cast(&tok, tok);
     node = new_deref_node(node);
 
     *rest = tok;
     return node;
   }
   if (consume(&tok, tok, "&")) {
-    Node *node = cast(&tok, tok, lookahead);
+    Node *node = cast(&tok, tok);
     Type *type = newtype_ptr(node->type);
     node = new_node(ND_ADDR, node, NULL, type);
 
@@ -927,30 +913,30 @@ Node *unary(Token **rest, Token *tok, bool lookahead) {
     return node;
   }
   if (consume(&tok, tok, "!")) {
-    Node *node = cast(&tok, tok, lookahead);
+    Node *node = cast(&tok, tok);
     node = new_node(ND_LOGICAL_NOT, node, NULL, type_int);
     *rest = tok;
     return node;
   }
   if (consume(&tok, tok, "~")) {
-    Node *node = cast(&tok, tok, lookahead);
+    Node *node = cast(&tok, tok);
     node = new_node(ND_BIT_NOT, node, NULL, node->type);
     *rest = tok;
     return node;
   }
 
-  Node *node = postfix(&tok, tok, lookahead);
+  Node *node = postfix(&tok, tok);
 
   *rest = tok;
   return node;
 }
 
-Node *postfix(Token **rest, Token *tok, bool lookahead) {
-  Node *lhs = primary(&tok, tok, lookahead);
+Node *postfix(Token **rest, Token *tok) {
+  Node *lhs = primary(&tok, tok);
 
   for (;;) {
     if (consume(&tok, tok, "[")) {
-      Node *rhs = expr(&tok, tok, lookahead);
+      Node *rhs = expr(&tok, tok);
       Node *add_node = new_add_node(lhs, rhs);
       lhs = new_deref_node(add_node);
       expect(&tok, tok, "]");
@@ -970,7 +956,7 @@ Node *postfix(Token **rest, Token *tok, bool lookahead) {
 
       while (!consume(&tok, tok, ")")) {
         NodeList *push_expr = calloc(1, sizeof(NodeList));
-        push_expr->node = assign(&tok, tok, lookahead);
+        push_expr->node = assign(&tok, tok);
 
         if (!node->expr_back) {
           node->expr_front = push_expr;
@@ -1017,9 +1003,9 @@ Node *postfix(Token **rest, Token *tok, bool lookahead) {
   }
 }
 
-Node *primary(Token **rest, Token *tok, bool lookahead) {
+Node *primary(Token **rest, Token *tok) {
   if (consume(&tok, tok, "(")) {
-    Node *node = expr(&tok, tok, lookahead);
+    Node *node = expr(&tok, tok);
     expect(&tok, tok, ")");
 
     *rest = tok;
