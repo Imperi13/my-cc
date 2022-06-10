@@ -1,8 +1,8 @@
 #include "mycc.h"
 
 void global_definition(Token **rest, Token *tok);
-void var_definition(Token **rest, Token *tok);
-void function_definition(Token **rest, Token *tok);
+void var_definition(Token **rest, Token *tok, Obj *decl);
+void function_definition(Token **rest, Token *tok, Obj *decl);
 Node *stmt(Token **rest, Token *tok);
 Node *label_stmt(Token **rest, Token *tok);
 Node *compound_stmt(Token **rest, Token *tok);
@@ -26,6 +26,11 @@ Node *cast(Token **rest, Token *tok);
 Node *unary(Token **rest, Token *tok);
 Node *postfix(Token **rest, Token *tok);
 Node *primary(Token **rest, Token *tok);
+
+bool is_label_stmt(Token *tok);
+bool is_selection_stmt(Token *tok);
+bool is_iteration_stmt(Token *tok);
+bool is_jump_stmt(Token *tok);
 
 void error(char *fmt, ...) {
   va_list ap;
@@ -244,49 +249,39 @@ void program(Token *tok) {
 }
 
 void global_definition(Token **rest, Token *tok) {
-  Obj *tmp = parse_global_decl(&dummy_token, tok, true);
+  Obj *tmp = parse_global_decl(&tok, tok);
   if (!tmp)
     error_at(tok->str, "cannot parse global definition");
   if (tmp->name == NULL) {
-    parse_global_decl(&tok, tok, false);
     *rest = tok;
     return;
   }
 
   if (tmp->type->ty == FUNC)
-    function_definition(&tok, tok);
+    function_definition(&tok, tok, tmp);
   else
-    var_definition(&tok, tok);
+    var_definition(&tok, tok, tmp);
 
   *rest = tok;
 }
 
-void var_definition(Token **rest, Token *tok) {
+void var_definition(Token **rest, Token *tok, Obj *decl) {
   ObjList *push_var = calloc(1, sizeof(ObjList));
-  push_var->obj = parse_global_decl(&tok, tok, false);
-  if (!globals) {
-    globals = push_var;
-  } else {
-    push_var->next = globals;
-    globals = push_var;
-  }
+  push_var->obj = decl;
+  push_var->next = globals;
+  globals = push_var;
 
   expect(&tok, tok, ";");
   *rest = tok;
 }
 
-void function_definition(Token **rest, Token *tok) {
+void function_definition(Token **rest, Token *tok, Obj *decl) {
   ObjList *push_function = calloc(1, sizeof(ObjList));
-  Obj *func_def = parse_global_decl(&tok, tok, false);
-  now_function = func_def;
+  Obj *func_def = decl;
   push_function->obj = func_def;
-  if (!globals) {
-    globals = push_function;
-  } else {
-    push_function->next = globals;
-    globals = push_function;
-  }
 
+  push_function->next = globals;
+  globals = push_function;
   now_function = func_def;
 
   if (!equal(tok, "{")) {
@@ -306,6 +301,7 @@ Node *stmt(Token **rest, Token *tok) {
   if (equal(tok, "{")) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
+
     now_function->local_scope = var_scope;
 
     node = compound_stmt(&tok, tok);
@@ -316,16 +312,17 @@ Node *stmt(Token **rest, Token *tok) {
     return node;
   }
 
-  if (label_stmt(&dummy_token, tok)) {
+  if (is_label_stmt(tok)) {
     node = label_stmt(&tok, tok);
 
     *rest = tok;
     return node;
   }
 
-  if (selection_stmt(&dummy_token, tok)) {
+  if (is_selection_stmt(tok)) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
+
     now_function->local_scope = var_scope;
 
     node = selection_stmt(&tok, tok);
@@ -336,9 +333,10 @@ Node *stmt(Token **rest, Token *tok) {
     return node;
   }
 
-  if (iteration_stmt(&dummy_token, tok)) {
+  if (is_iteration_stmt(tok)) {
     VarScope *var_scope = calloc(1, sizeof(VarScope));
     var_scope->next = now_function->local_scope;
+
     now_function->local_scope = var_scope;
 
     node = iteration_stmt(&tok, tok);
@@ -349,7 +347,7 @@ Node *stmt(Token **rest, Token *tok) {
     return node;
   }
 
-  if (jump_stmt(&dummy_token, tok)) {
+  if (is_jump_stmt(tok)) {
     node = jump_stmt(&tok, tok);
     *rest = tok;
     return node;
@@ -358,6 +356,10 @@ Node *stmt(Token **rest, Token *tok) {
   node = expr_stmt(&tok, tok);
   *rest = tok;
   return node;
+}
+
+bool is_label_stmt(Token *tok) {
+  return equal_kind(tok, TK_IDENT) && equal(tok->next, ":");
 }
 
 Node *label_stmt(Token **rest, Token *tok) {
@@ -407,7 +409,7 @@ Node *compound_stmt(Token **rest, Token *tok) {
 
     while (!consume(&tok, tok, "}")) {
       NodeList *push_stmt = calloc(1, sizeof(NodeList));
-      if (parse_local_decl(&dummy_token, tok)) {
+      if (is_decl_spec(tok)) {
 
         Obj *lvar = parse_local_decl(&tok, tok);
         if (lvar->name) {
@@ -462,6 +464,11 @@ Node *compound_stmt(Token **rest, Token *tok) {
   return node;
 }
 
+bool is_jump_stmt(Token *tok) {
+  return equal_kind(tok, TK_RETURN) || equal_kind(tok, TK_BREAK) ||
+         equal_kind(tok, TK_CONTINUE);
+}
+
 Node *jump_stmt(Token **rest, Token *tok) {
   Node *node = NULL;
   if (consume_kind(&tok, tok, TK_RETURN)) {
@@ -502,6 +509,11 @@ Node *jump_stmt(Token **rest, Token *tok) {
 
   *rest = tok;
   return node;
+}
+
+bool is_iteration_stmt(Token *tok) {
+  return equal_kind(tok, TK_WHILE) || equal_kind(tok, TK_DO) ||
+         equal_kind(tok, TK_FOR);
 }
 
 Node *iteration_stmt(Token **rest, Token *tok) {
@@ -561,6 +573,8 @@ Node *iteration_stmt(Token **rest, Token *tok) {
   *rest = tok;
   return node;
 }
+
+bool is_selection_stmt(Token *tok) { return equal_kind(tok, TK_IF); }
 
 Node *selection_stmt(Token **rest, Token *tok) {
   Node *node = NULL;

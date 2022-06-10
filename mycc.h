@@ -274,8 +274,9 @@ void debug_token(Token *token);
 
 Member *find_member(StructDef *st, char *name, int len);
 
-Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead);
+Obj *parse_global_decl(Token **rest, Token *tok);
 Obj *parse_local_decl(Token **rest, Token *tok);
+bool is_decl_spec(Token *tok);
 Type *type_name(Token **rest, Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
