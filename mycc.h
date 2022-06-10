@@ -10,9 +10,13 @@ typedef enum {
   TK_RESERVED,
   TK_RETURN,
   TK_SIZEOF,
+  TK_ALIGNOF,
   TK_STRUCT,
   TK_IF,
   TK_ELSE,
+  TK_SWITCH,
+  TK_DEFAULT,
+  TK_CASE,
   TK_DO,
   TK_WHILE,
   TK_FOR,
@@ -143,11 +147,14 @@ typedef enum {
   ND_RETURN,
   ND_IF,
   ND_IFELSE,
+  ND_SWITCH,
   ND_DO_WHILE,
   ND_WHILE,
   ND_FOR,
   ND_BREAK,
   ND_CONTINUE,
+  ND_DEFAULT,
+  ND_CASE,
   ND_BLOCK,
   ND_LABEL,
   ND_FUNCTION_CALL,
@@ -189,9 +196,16 @@ struct Node {
   // for struct-dot
   Member *member;
 
+  // for switch
+  NodeList *case_nodes;
+  Node *default_node;
+
   // for label
   char *label_name;
   int label_len;
+
+  // for case
+  int case_num;
 };
 
 struct NodeList {
@@ -267,9 +281,10 @@ void debug_token(Token *token);
 
 Member *find_member(StructDef *st, char *name, int len);
 
-Obj *parse_global_decl(Token **rest, Token *tok, bool lookahead);
-Obj *parse_local_decl(Token **rest, Token *tok, bool lookahead);
-Type *type_name(Token **rest, Token *tok, bool lookahead);
+Obj *parse_global_decl(Token **rest, Token *tok);
+Obj *parse_local_decl(Token **rest, Token *tok);
+bool is_decl_spec(Token *tok);
+Type *type_name(Token **rest, Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
 bool is_same_type(Type *a, Type *b);
@@ -281,6 +296,6 @@ int offset_alignment(int start, int data_size, int alignment);
 Obj *find_obj(ObjList *list, char *str, int len);
 Obj *find_lvar(char *str, int len);
 void program(Token *tok);
-Node *assign(Token **rest, Token *tok, bool lookahead);
+Node *assign(Token **rest, Token *tok);
 
 void codegen_all(FILE *output);

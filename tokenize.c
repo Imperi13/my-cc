@@ -235,8 +235,20 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "_Alignof", 8) == 0 && !is_alnum(p[8])) {
+      cur = new_token(TK_ALIGNOF, cur, p, 8);
+      p += 8;
+      continue;
+    }
+
     if (strncmp(p, "struct", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_STRUCT, cur, p, 6);
+      p += 6;
+      continue;
+    }
+
+    if (strncmp(p, "switch", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_SWITCH, cur, p, 6);
       p += 6;
       continue;
     }
@@ -280,6 +292,18 @@ Token *tokenize(char *p) {
     if (strncmp(p, "continue", 8) == 0 && !is_alnum(p[8])) {
       cur = new_token(TK_CONTINUE, cur, p, 8);
       p += 8;
+      continue;
+    }
+
+    if (strncmp(p, "default", 7) == 0 && !is_alnum(p[7])) {
+      cur = new_token(TK_DEFAULT, cur, p, 7);
+      p += 7;
+      continue;
+    }
+
+    if (strncmp(p, "case", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_CASE, cur, p, 4);
+      p += 4;
       continue;
     }
 
