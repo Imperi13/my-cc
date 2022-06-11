@@ -313,6 +313,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "const", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_CONST, cur, p, 5);
+      p += 5;
+      continue;
+    }
+
     if (strncmp(p, "void", 4) == 0 && !is_alnum(p[4])) {
       cur = new_token(TK_VOID, cur, p, 4);
       p += 4;

@@ -27,6 +27,7 @@ typedef enum {
   TK_VOID,
   TK_INT,
   TK_CHAR,
+  TK_CONST,
   TK_NUM,
   TK_STR,
   TK_EOF,
@@ -68,6 +69,7 @@ typedef enum {
 
 typedef struct Type Type;
 typedef struct TypeList TypeList;
+typedef struct TypeQual TypeQual;
 
 typedef struct StructDef StructDef;
 typedef struct Member Member;
@@ -97,6 +99,10 @@ struct Type {
 struct TypeList {
   TypeList *next;
   Type *type;
+};
+
+struct TypeQual {
+  bool is_const;
 };
 
 struct StructDef {
