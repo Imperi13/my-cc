@@ -425,18 +425,16 @@ void gen(Node *node) {
     printf("  push r8\n");
     printf("  push 0\n");
     arg_count = 0;
-    while (node->expr_front) {
-      if (arg_count >= 6)
-        error("more than 6 arguments is not implemented");
-      gen(node->expr_front->node);
+    while (node->args) {
+      gen(node->args->node);
       printf("  push rax\n");
-      node->expr_front = node->expr_front->next;
+      node->args = node->args->next;
       arg_count++;
     }
-    for (int i = arg_count - 1; i >= 0; i--) {
+    gen_addr(node->lhs);
+    for (int i = 0; i < (arg_count >= 6 ? 6 : arg_count); i++) {
       printf("  pop %s\n", call_register64[i]);
     }
-    gen_addr(node->lhs);
     printf("  mov r10,rax\n");
     // printf("  call %.*s\n",node->len,node->name);
     printf("  call r10\n");
@@ -545,7 +543,7 @@ void gen_function(Obj *func) {
 
   printf("  .text\n");
 
-  if(func->qual->is_static)
+  if (func->qual->is_static)
     printf(".local %.*s\n", func->len, func->name);
   else
     printf(".globl %.*s\n", func->len, func->name);
@@ -577,7 +575,7 @@ void gen_function(Obj *func) {
 }
 
 void gen_var_definition(Obj *var) {
-  if(var->qual->is_static)
+  if (var->qual->is_static)
     printf("  .local %.*s\n", var->len, var->name);
   else
     printf("  .globl %.*s\n", var->len, var->name);

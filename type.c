@@ -385,9 +385,6 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
           obj->arg_back->next = push_arg;
           obj->arg_back = push_arg;
         }
-
-        if (obj->arg_size > 6)
-          error_at(tok->str, "more than 6 args is not implemented");
       } while (consume(&tok, tok, ","));
       expect(&tok, tok, ")");
     }
