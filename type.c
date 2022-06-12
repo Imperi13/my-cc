@@ -412,7 +412,7 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
 Obj *declarator(Token **rest, Token *tok, Obj *obj) {
   while (consume(&tok, tok, "*")) {
     obj->type = newtype_ptr(obj->type);
-    while(consume_kind(&tok,tok,TK_CONST)){
+    while (consume_kind(&tok, tok, TK_CONST)) {
     }
   }
 
@@ -486,6 +486,8 @@ bool is_convertible(Type *a, Type *b) {
   if (a->ty == PTR && b->ty == PTR &&
       (a->ptr_to->ty == VOID || b->ptr_to->ty == VOID))
     return true;
+  if (a->ty == STRUCT && b->ty == STRUCT)
+    return a->st == b->st;
   if (a->ty == INT || b->ty == INT)
     return false;
   return is_same_type(a->ptr_to, b->ptr_to);

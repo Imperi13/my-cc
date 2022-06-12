@@ -105,7 +105,8 @@ void gen(Node *node) {
     return;
   case ND_VAR:
     gen_addr(node);
-    if (node->type->ty == ARRAY || node->type->ty == FUNC)
+    if (node->type->ty == ARRAY || node->type->ty == FUNC ||
+        node->type->ty == STRUCT)
       return;
     if (type_size(node->type) == 8)
       printf("  mov rax, [rax]\n");
@@ -118,20 +119,27 @@ void gen(Node *node) {
     printf("  lea rax, [rip + .LC%d]\n", node->str_literal->id);
     return;
   case ND_ASSIGN:
+    if (node->lhs->type->ty == STRUCT) {
+      gen_addr(node->lhs);
+      printf("  push rax\n");
+      gen(node->rhs);
+      printf("  pop rdi\n");
+      printf("  mov rsi, rax\n");
+      printf("  mov rcx, %d\n", type_size(node->lhs->type));
+      printf("  rep movsb\n");
+      return;
+    }
     gen_addr(node->lhs);
     printf("  push rax\n");
     gen(node->rhs);
-    printf("  push rax\n");
 
     printf("  pop rdi\n");
-    printf("  pop rax\n");
     if (type_size(node->lhs->type) == 8)
-      printf("  mov [rax], rdi\n");
+      printf("  mov [rdi], rax\n");
     else if (type_size(node->lhs->type) == 4)
-      printf("  mov [rax], edi\n");
+      printf("  mov [rdi], eax\n");
     else if (type_size(node->lhs->type) == 1)
-      printf("  mov [rax], dil\n");
-    printf("  mov rax, rdi\n");
+      printf("  mov [rdi], al\n");
     return;
   case ND_ADD_ASSIGN:
     gen_addr(node->lhs);
