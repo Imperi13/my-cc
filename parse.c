@@ -238,6 +238,24 @@ Node *new_assign_node(Node *lhs, Node *rhs) {
   return node;
 }
 
+Node *new_equal_node(Node *lhs, Node *rhs) {
+  if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0)
+    return new_node(ND_EQUAL, lhs, rhs, type_int);
+  if (!is_same_type(lhs->type, rhs->type))
+    error("invalid argument type to equality ==");
+
+  return new_node(ND_EQUAL, lhs, rhs, type_int);
+}
+
+Node *new_not_equal_node(Node *lhs, Node *rhs) {
+  if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0)
+    return new_node(ND_NOT_EQUAL, lhs, rhs, type_int);
+  if (!is_same_type(lhs->type, rhs->type))
+    error("invalid argument type to equality ==");
+
+  return new_node(ND_NOT_EQUAL, lhs, rhs, type_int);
+}
+
 int offset_alignment(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;
 }
@@ -830,14 +848,10 @@ Node *equality(Token **rest, Token *tok) {
   for (;;) {
     if (consume(&tok, tok, "==")) {
       Node *rhs = relational(&tok, tok);
-      if (!is_same_type(lhs->type, rhs->type))
-        error_at(tok->str, "invalid argument type to equality ==");
-      lhs = new_node(ND_EQUAL, lhs, rhs, lhs->type);
+      lhs = new_equal_node(lhs, rhs);
     } else if (consume(&tok, tok, "!=")) {
       Node *rhs = relational(&tok, tok);
-      if (!is_same_type(lhs->type, rhs->type))
-        error_at(tok->str, "invalid argument type to equality !=");
-      lhs = new_node(ND_NOT_EQUAL, lhs, rhs, lhs->type);
+      lhs = new_not_equal_node(lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
