@@ -29,6 +29,7 @@ typedef enum {
   TK_CHAR,
   TK_CONST,
   TK_EXTERN,
+  TK_STATIC,
   TK_NUM,
   TK_STR,
   TK_EOF,
@@ -105,6 +106,7 @@ struct TypeList {
 struct TypeQual {
   bool is_const;
   bool is_extern;
+  bool is_static;
 };
 
 struct StructDef {

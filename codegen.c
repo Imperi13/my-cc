@@ -544,7 +544,12 @@ void gen_function(Obj *func) {
   continue_id = -1;
 
   printf("  .text\n");
-  printf(".globl %.*s\n", func->len, func->name);
+
+  if(func->qual->is_static)
+    printf(".local %.*s\n", func->len, func->name);
+  else
+    printf(".globl %.*s\n", func->len, func->name);
+
   printf("%.*s:\n", func->len, func->name);
 
   printf("  push rbp\n");
@@ -572,7 +577,10 @@ void gen_function(Obj *func) {
 }
 
 void gen_var_definition(Obj *var) {
-  printf("  .globl %.*s\n", var->len, var->name);
+  if(var->qual->is_static)
+    printf("  .local %.*s\n", var->len, var->name);
+  else
+    printf("  .globl %.*s\n", var->len, var->name);
   printf("  .bss\n");
   printf("  .align %d\n", type_alignment(var->type));
   printf("%.*s:\n", var->len, var->name);
@@ -580,7 +588,7 @@ void gen_var_definition(Obj *var) {
 }
 
 void gen_str_literal(StrLiteral *str_literal) {
-  printf("  .globl .LC%d\n", str_literal->id);
+  printf("  .local .LC%d\n", str_literal->id);
   printf("  .data\n");
   printf(".LC%d:\n", str_literal->id);
   printf("  .string \"%.*s\"\n", str_literal->len, str_literal->str);

@@ -353,6 +353,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "static", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_STATIC, cur, p, 6);
+      p += 6;
+      continue;
+    }
+
     if (strncmp(p, "void", 4) == 0 && !is_alnum(p[4])) {
       cur = new_token(TK_VOID, cur, p, 4);
       p += 4;

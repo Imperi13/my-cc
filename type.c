@@ -66,7 +66,6 @@ Member *find_member(StructDef *st, char *name, int len) {
 
 // parse_*_decl
 // parse symbol&type& (argument symbol&type)
-// lookahead = trueのとき先読みして型だけを判別する
 Obj *parse_global_decl(Token **rest, Token *tok) {
   Obj *obj = calloc(1, sizeof(Obj));
   TypeQual *qual = calloc(1, sizeof(TypeQual));
@@ -276,7 +275,7 @@ bool is_decl_spec(Token *tok) {
   return equal_kind(tok, TK_VOID) || equal_kind(tok, TK_INT) ||
          equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_STRUCT) ||
          equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
-         equal_kind(tok, TK_EXTERN);
+         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC);
 }
 
 Type *decl_specifier(Token **rest, Token *tok, TypeQual *qual) {
@@ -287,6 +286,9 @@ Type *decl_specifier(Token **rest, Token *tok, TypeQual *qual) {
 
     if (consume_kind(&tok, tok, TK_EXTERN))
       qual->is_extern = true;
+
+    if (consume_kind(&tok, tok, TK_STATIC))
+      qual->is_static = true;
 
     if (consume_kind(&tok, tok, TK_VOID)) {
       if (type)
