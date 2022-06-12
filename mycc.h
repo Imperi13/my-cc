@@ -28,6 +28,7 @@ typedef enum {
   TK_INT,
   TK_CHAR,
   TK_CONST,
+  TK_EXTERN,
   TK_NUM,
   TK_STR,
   TK_EOF,
@@ -103,6 +104,7 @@ struct TypeList {
 
 struct TypeQual {
   bool is_const;
+  bool is_extern;
 };
 
 struct StructDef {
@@ -258,6 +260,8 @@ struct Obj {
   Type *type;
   char *name;
   int len;
+
+  TypeQual *qual;
 
   // for lvar
   int offset;

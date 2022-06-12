@@ -595,7 +595,7 @@ void codegen_all(FILE *output) {
   }
 
   for (ObjList *now = globals; now; now = now->next) {
-    if (now->obj->type->ty != FUNC)
+    if (now->obj->type->ty != FUNC && !now->obj->qual->is_extern)
       gen_var_definition(now->obj);
   }
 

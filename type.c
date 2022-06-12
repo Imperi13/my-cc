@@ -82,6 +82,8 @@ Obj *parse_global_decl(Token **rest, Token *tok) {
 
   obj = declarator(&tok, tok, obj);
 
+  obj->qual = qual;
+
   *rest = tok;
   return obj;
 }
@@ -273,7 +275,8 @@ Type *parse_enum(Token **rest, Token *tok) {
 bool is_decl_spec(Token *tok) {
   return equal_kind(tok, TK_VOID) || equal_kind(tok, TK_INT) ||
          equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_STRUCT) ||
-         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST);
+         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
+         equal_kind(tok, TK_EXTERN);
 }
 
 Type *decl_specifier(Token **rest, Token *tok, TypeQual *qual) {
@@ -281,6 +284,9 @@ Type *decl_specifier(Token **rest, Token *tok, TypeQual *qual) {
   while (is_decl_spec(tok)) {
     if (consume_kind(&tok, tok, TK_CONST))
       qual->is_const = true;
+
+    if (consume_kind(&tok, tok, TK_EXTERN))
+      qual->is_extern = true;
 
     if (consume_kind(&tok, tok, TK_VOID)) {
       if (type)

@@ -192,11 +192,11 @@ Token *tokenize(char *p) {
         push_literal->next = str_literals;
         str_literals = push_literal;
       }
-      
-      Token *tmp = new_token(TK_STR,cur,tok_start,tok_end-tok_start+1);
+
+      Token *tmp = new_token(TK_STR, cur, tok_start, tok_end - tok_start + 1);
       tmp->str_literal = push_literal;
 
-      p = tok_end+1;
+      p = tok_end + 1;
       cur = tmp;
       continue;
     }
@@ -344,6 +344,12 @@ Token *tokenize(char *p) {
     if (strncmp(p, "const", 5) == 0 && !is_alnum(p[5])) {
       cur = new_token(TK_CONST, cur, p, 5);
       p += 5;
+      continue;
+    }
+
+    if (strncmp(p, "extern", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_EXTERN, cur, p, 6);
+      p += 6;
       continue;
     }
 
