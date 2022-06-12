@@ -27,6 +27,9 @@ typedef enum {
   TK_VOID,
   TK_INT,
   TK_CHAR,
+  TK_CONST,
+  TK_EXTERN,
+  TK_STATIC,
   TK_NUM,
   TK_STR,
   TK_EOF,
@@ -68,6 +71,7 @@ typedef enum {
 
 typedef struct Type Type;
 typedef struct TypeList TypeList;
+typedef struct TypeQual TypeQual;
 
 typedef struct StructDef StructDef;
 typedef struct Member Member;
@@ -97,6 +101,12 @@ struct Type {
 struct TypeList {
   TypeList *next;
   Type *type;
+};
+
+struct TypeQual {
+  bool is_const;
+  bool is_extern;
+  bool is_static;
 };
 
 struct StructDef {
@@ -253,6 +263,8 @@ struct Obj {
   char *name;
   int len;
 
+  TypeQual *qual;
+
   // for lvar
   int offset;
   Node *init_var;
@@ -323,6 +335,7 @@ Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
 bool is_same_type(Type *a, Type *b);
 bool is_convertible(Type *a, Type *b);
+bool is_void_ptr(Type *a);
 int type_size(Type *a);
 int type_alignment(Type *a);
 int offset_alignment(int start, int data_size, int alignment);

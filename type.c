@@ -1,6 +1,6 @@
 #include "mycc.h"
 
-Type *decl_specifier(Token **rest, Token *tok);
+Type *decl_specifier(Token **rest, Token *tok, TypeQual *qual);
 Obj *type_suffix(Token **rest, Token *tok, Obj *type);
 Obj *declarator(Token **rest, Token *tok, Obj *type);
 
@@ -66,10 +66,10 @@ Member *find_member(StructDef *st, char *name, int len) {
 
 // parse_*_decl
 // parse symbol&type& (argument symbol&type)
-// lookahead = trueのとき先読みして型だけを判別する
 Obj *parse_global_decl(Token **rest, Token *tok) {
   Obj *obj = calloc(1, sizeof(Obj));
-  obj->type = decl_specifier(&tok, tok);
+  TypeQual *qual = calloc(1, sizeof(TypeQual));
+  obj->type = decl_specifier(&tok, tok, qual);
 
   if (obj->type == NULL)
     obj->type = type_int;
@@ -81,16 +81,19 @@ Obj *parse_global_decl(Token **rest, Token *tok) {
 
   obj = declarator(&tok, tok, obj);
 
+  obj->qual = qual;
+
   *rest = tok;
   return obj;
 }
 
 Obj *parse_local_decl(Token **rest, Token *tok) {
   Obj *obj = calloc(1, sizeof(Obj));
+  TypeQual *qual = calloc(1, sizeof(TypeQual));
   if (!is_decl_spec(tok)) {
     return NULL;
   }
-  obj->type = decl_specifier(&tok, tok);
+  obj->type = decl_specifier(&tok, tok, qual);
 
   if (consume(&tok, tok, ";")) {
     *rest = tok;
@@ -109,7 +112,8 @@ Obj *parse_local_decl(Token **rest, Token *tok) {
 }
 
 Type *type_name(Token **rest, Token *tok) {
-  Type *type = decl_specifier(&tok, tok);
+  TypeQual *qual = calloc(1, sizeof(TypeQual));
+  Type *type = decl_specifier(&tok, tok, qual);
   if (!type) {
     *rest = tok;
     return NULL;
@@ -149,146 +153,176 @@ Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
   return obj->type;
 }
 
-bool is_decl_spec(Token *tok) {
-  return equal_kind(tok, TK_VOID) || equal_kind(tok, TK_INT) ||
-         equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_STRUCT) ||
-         equal_kind(tok, TK_ENUM);
-}
+Type *parse_struct(Token **rest, Token *tok) {
+  expect_kind(&tok, tok, TK_STRUCT);
+  Token *ty_name = consume_kind(&tok, tok, TK_IDENT);
+  if (!ty_name)
+    error_at(tok->str, "anonymous struct is not implemented");
 
-Type *decl_specifier(Token **rest, Token *tok) {
-  if (consume_kind(&tok, tok, TK_VOID)) {
-    *rest = tok;
-    return type_void;
-  }
-
-  if (consume_kind(&tok, tok, TK_INT)) {
-    *rest = tok;
-    return type_int;
-  }
-
-  if (consume_kind(&tok, tok, TK_CHAR)) {
-    *rest = tok;
-    return type_char;
-  }
-
-  if (consume_kind(&tok, tok, TK_STRUCT)) {
-    Token *ty_name = consume_kind(&tok, tok, TK_IDENT);
-    if (!ty_name)
-      error_at(tok->str, "anonymous struct is not implemented");
-
-    StructDef *st_def = find_struct(ty_name->str, ty_name->len);
-    if (st_def && st_def->is_defined) {
-      if (consume(&tok, tok, "{"))
-        error_at(tok->str, "struct '%.*s' is already defined", ty_name->len,
-                 ty_name->str);
-      *rest = tok;
-      return newtype_struct(st_def);
-    }
-
-    if (!st_def) {
-      st_def = calloc(1, sizeof(StructDef));
-
-      st_def->next = struct_defs;
-      struct_defs = st_def;
-    }
-
-    st_def->name = ty_name->str;
-    st_def->len = ty_name->len;
-    st_def->is_defined = false;
-    st_def->size = 0;
-
-    if (!consume(&tok, tok, "{")) {
-      *rest = tok;
-      return newtype_struct(st_def);
-    }
-
-    st_def->is_defined = true;
-
-    while (!consume(&tok, tok, "}")) {
-      Obj *obj = parse_local_decl(&tok, tok);
-      Member *member = calloc(1, sizeof(Member));
-
-      member->name = obj->name;
-      member->len = obj->len;
-      member->type = obj->type;
-      member->offset =
-          offset_alignment(st_def->size, 0, type_alignment(obj->type));
-
-      st_def->size = member->offset + type_size(member->type);
-
-      member->next = st_def->members;
-      st_def->members = member;
-    }
-
+  StructDef *st_def = find_struct(ty_name->str, ty_name->len);
+  if (st_def && st_def->is_defined) {
+    if (consume(&tok, tok, "{"))
+      error_at(tok->str, "struct '%.*s' is already defined", ty_name->len,
+               ty_name->str);
     *rest = tok;
     return newtype_struct(st_def);
   }
 
-  if (consume_kind(&tok, tok, TK_ENUM)) {
-    if (!equal_kind(tok, TK_IDENT))
-      error_at(tok->str, "anonymous enum is not implemented");
+  if (!st_def) {
+    st_def = calloc(1, sizeof(StructDef));
 
-    Token *ty_name = consume_kind(&tok, tok, TK_IDENT);
+    st_def->next = struct_defs;
+    struct_defs = st_def;
+  }
 
-    EnumDef *en_def = find_enum(ty_name->str, ty_name->len);
-    if (en_def && en_def->is_defined) {
-      if (consume(&tok, tok, "{"))
-        error_at(tok->str, "struct '%.*s' is already defined", ty_name->len,
-                 ty_name->str);
+  st_def->name = ty_name->str;
+  st_def->len = ty_name->len;
+  st_def->is_defined = false;
+  st_def->size = 0;
 
-      *rest = tok;
-      return newtype_enum(en_def);
-    }
+  if (!consume(&tok, tok, "{")) {
+    *rest = tok;
+    return newtype_struct(st_def);
+  }
 
-    if (!en_def) {
-      en_def = calloc(1, sizeof(EnumDef));
+  st_def->is_defined = true;
 
-      en_def->next = enum_defs;
-      enum_defs = en_def;
-    }
+  while (!consume(&tok, tok, "}")) {
+    Obj *obj = parse_local_decl(&tok, tok);
+    Member *member = calloc(1, sizeof(Member));
 
-    en_def->name = ty_name->str;
-    en_def->len = ty_name->len;
-    en_def->is_defined = false;
+    member->name = obj->name;
+    member->len = obj->len;
+    member->type = obj->type;
+    member->offset =
+        offset_alignment(st_def->size, 0, type_alignment(obj->type));
 
-    if (!consume(&tok, tok, "{")) {
-      *rest = tok;
-      return newtype_enum(en_def);
-    }
+    st_def->size = member->offset + type_size(member->type);
 
-    en_def->is_defined = true;
+    member->next = st_def->members;
+    st_def->members = member;
+  }
 
-    int const_val = 0;
-    while (!consume(&tok, tok, "}")) {
-      Token *const_name = consume_kind(&tok, tok, TK_IDENT);
-      EnumConst *en_const = calloc(1, sizeof(EnumConst));
+  *rest = tok;
+  return newtype_struct(st_def);
+}
 
-      en_const->name = const_name->str;
-      en_const->len = const_name->len;
-      en_const->val = const_val;
+Type *parse_enum(Token **rest, Token *tok) {
+  expect_kind(&tok, tok, TK_ENUM);
+  if (!equal_kind(tok, TK_IDENT))
+    error_at(tok->str, "anonymous enum is not implemented");
 
-      ConstList *push_const = calloc(1,sizeof(ConstList));
-      push_const->en_const = en_const;
+  Token *ty_name = consume_kind(&tok, tok, TK_IDENT);
 
-      push_const->next = en_def->enum_consts;
-      en_def->enum_consts = push_const;
-
-      push_const = calloc(1,sizeof(ConstList));
-      push_const->en_const = en_const;
-
-      push_const->next = enum_consts;
-      enum_consts = push_const;
-
-      const_val++;
-      consume(&tok, tok, ",");
-    }
+  EnumDef *en_def = find_enum(ty_name->str, ty_name->len);
+  if (en_def && en_def->is_defined) {
+    if (consume(&tok, tok, "{"))
+      error_at(tok->str, "struct '%.*s' is already defined", ty_name->len,
+               ty_name->str);
 
     *rest = tok;
     return newtype_enum(en_def);
   }
 
+  if (!en_def) {
+    en_def = calloc(1, sizeof(EnumDef));
+
+    en_def->next = enum_defs;
+    enum_defs = en_def;
+  }
+
+  en_def->name = ty_name->str;
+  en_def->len = ty_name->len;
+  en_def->is_defined = false;
+
+  if (!consume(&tok, tok, "{")) {
+    *rest = tok;
+    return newtype_enum(en_def);
+  }
+
+  en_def->is_defined = true;
+
+  int const_val = 0;
+  while (!consume(&tok, tok, "}")) {
+    Token *const_name = consume_kind(&tok, tok, TK_IDENT);
+    EnumConst *en_const = calloc(1, sizeof(EnumConst));
+
+    en_const->name = const_name->str;
+    en_const->len = const_name->len;
+    en_const->val = const_val;
+
+    ConstList *push_const = calloc(1, sizeof(ConstList));
+    push_const->en_const = en_const;
+
+    push_const->next = en_def->enum_consts;
+    en_def->enum_consts = push_const;
+
+    push_const = calloc(1, sizeof(ConstList));
+    push_const->en_const = en_const;
+
+    push_const->next = enum_consts;
+    enum_consts = push_const;
+
+    const_val++;
+    consume(&tok, tok, ",");
+  }
+
   *rest = tok;
-  return NULL;
+  return newtype_enum(en_def);
+}
+
+bool is_decl_spec(Token *tok) {
+  return equal_kind(tok, TK_VOID) || equal_kind(tok, TK_INT) ||
+         equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_STRUCT) ||
+         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
+         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC);
+}
+
+Type *decl_specifier(Token **rest, Token *tok, TypeQual *qual) {
+  Type *type = NULL;
+  while (is_decl_spec(tok)) {
+    if (consume_kind(&tok, tok, TK_CONST))
+      qual->is_const = true;
+
+    if (consume_kind(&tok, tok, TK_EXTERN))
+      qual->is_extern = true;
+
+    if (consume_kind(&tok, tok, TK_STATIC))
+      qual->is_static = true;
+
+    if (consume_kind(&tok, tok, TK_VOID)) {
+      if (type)
+        error_at(tok->str, "dup type");
+      type = type_void;
+    }
+
+    if (consume_kind(&tok, tok, TK_INT)) {
+      if (type)
+        error_at(tok->str, "dup type");
+      type = type_int;
+    }
+
+    if (consume_kind(&tok, tok, TK_CHAR)) {
+      if (type)
+        error_at(tok->str, "dup type");
+      type = type_char;
+    }
+
+    if (equal_kind(tok, TK_STRUCT)) {
+      if (type)
+        error_at(tok->str, "dup type");
+      type = parse_struct(&tok, tok);
+    }
+
+    if (equal_kind(tok, TK_ENUM)) {
+      if (type)
+        error_at(tok->str, "dup type");
+      type = parse_enum(&tok, tok);
+    }
+  }
+
+  *rest = tok;
+  return type;
 }
 
 Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
@@ -386,6 +420,8 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
 Obj *declarator(Token **rest, Token *tok, Obj *obj) {
   while (consume(&tok, tok, "*")) {
     obj->type = newtype_ptr(obj->type);
+    while (consume_kind(&tok, tok, TK_CONST)) {
+    }
   }
 
   if (equal_kind(tok, TK_IDENT)) {
@@ -438,6 +474,8 @@ bool is_primitive(Type *a) {
   return false;
 }
 
+bool is_void_ptr(Type *a) { return a->ty == PTR && a->ptr_to->ty == VOID; }
+
 bool is_same_type(Type *a, Type *b) {
   if (a->ty != b->ty)
     return false;
@@ -458,6 +496,8 @@ bool is_convertible(Type *a, Type *b) {
   if (a->ty == PTR && b->ty == PTR &&
       (a->ptr_to->ty == VOID || b->ptr_to->ty == VOID))
     return true;
+  if (a->ty == STRUCT && b->ty == STRUCT)
+    return a->st == b->st;
   if (a->ty == INT || b->ty == INT)
     return false;
   return is_same_type(a->ptr_to, b->ptr_to);

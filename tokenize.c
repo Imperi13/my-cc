@@ -73,6 +73,15 @@ bool is_alnum(char c) {
   return false;
 }
 
+char *skip_space(char *str, char c) {
+  while (*str == ' ')
+    str++;
+
+  if (*str == c)
+    return str;
+  return NULL;
+}
+
 int digit_base(char t, unsigned long base) {
   if (base == 16) {
     if ('0' <= t && t <= '9')
@@ -146,15 +155,34 @@ Token *tokenize(char *p) {
 
     if (*p == '"') {
       char *tok_start = p;
-      p++;
-      char *tok_end = strchr(p, '"');
+      char *tok_end = strchr(tok_start + 1, '"');
       if (!tok_end)
         error_at(tok_start, "not found end \"");
 
       int len = tok_end - tok_start - 1;
+      while (skip_space(tok_end + 1, '"')) {
+        char *start = skip_space(tok_end + 1, '"');
+        tok_end = strchr(start + 1, '"');
+        if (!tok_end)
+          error_at(start, "not found end \"");
+
+        len += tok_end - start - 1;
+      }
+
       StrLiteral *push_literal = calloc(1, sizeof(StrLiteral));
-      push_literal->str = p;
+      char *str = malloc(len + 1);
+      push_literal->str = str;
       push_literal->len = len;
+
+      tok_end = strchr(tok_start + 1, '"');
+      strncpy(str, tok_start + 1, tok_end - tok_start - 1);
+      str += tok_end - tok_start - 1;
+      while (skip_space(tok_end + 1, '"')) {
+        char *start = skip_space(tok_end + 1, '"');
+        tok_end = strchr(start + 1, '"');
+        strncpy(str, start + 1, tok_end - start - 1);
+        str += tok_end - start - 1;
+      }
 
       if (!str_literals) {
         push_literal->id = 0;
@@ -165,7 +193,7 @@ Token *tokenize(char *p) {
         str_literals = push_literal;
       }
 
-      Token *tmp = new_token(TK_STR, cur, tok_start, len + 2);
+      Token *tmp = new_token(TK_STR, cur, tok_start, tok_end - tok_start + 1);
       tmp->str_literal = push_literal;
 
       p = tok_end + 1;
@@ -310,6 +338,24 @@ Token *tokenize(char *p) {
     if (strncmp(p, "case", 4) == 0 && !is_alnum(p[4])) {
       cur = new_token(TK_CASE, cur, p, 4);
       p += 4;
+      continue;
+    }
+
+    if (strncmp(p, "const", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_CONST, cur, p, 5);
+      p += 5;
+      continue;
+    }
+
+    if (strncmp(p, "extern", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_EXTERN, cur, p, 6);
+      p += 6;
+      continue;
+    }
+
+    if (strncmp(p, "static", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_STATIC, cur, p, 6);
+      p += 6;
       continue;
     }
 

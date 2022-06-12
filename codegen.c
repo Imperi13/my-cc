@@ -105,7 +105,8 @@ void gen(Node *node) {
     return;
   case ND_VAR:
     gen_addr(node);
-    if (node->type->ty == ARRAY || node->type->ty == FUNC)
+    if (node->type->ty == ARRAY || node->type->ty == FUNC ||
+        node->type->ty == STRUCT)
       return;
     if (type_size(node->type) == 8)
       printf("  mov rax, [rax]\n");
@@ -118,20 +119,27 @@ void gen(Node *node) {
     printf("  lea rax, [rip + .LC%d]\n", node->str_literal->id);
     return;
   case ND_ASSIGN:
+    if (node->lhs->type->ty == STRUCT) {
+      gen_addr(node->lhs);
+      printf("  push rax\n");
+      gen(node->rhs);
+      printf("  pop rdi\n");
+      printf("  mov rsi, rax\n");
+      printf("  mov rcx, %d\n", type_size(node->lhs->type));
+      printf("  rep movsb\n");
+      return;
+    }
     gen_addr(node->lhs);
     printf("  push rax\n");
     gen(node->rhs);
-    printf("  push rax\n");
 
     printf("  pop rdi\n");
-    printf("  pop rax\n");
     if (type_size(node->lhs->type) == 8)
-      printf("  mov [rax], rdi\n");
+      printf("  mov [rdi], rax\n");
     else if (type_size(node->lhs->type) == 4)
-      printf("  mov [rax], edi\n");
+      printf("  mov [rdi], eax\n");
     else if (type_size(node->lhs->type) == 1)
-      printf("  mov [rax], dil\n");
-    printf("  mov rax, rdi\n");
+      printf("  mov [rdi], al\n");
     return;
   case ND_ADD_ASSIGN:
     gen_addr(node->lhs);
@@ -536,7 +544,12 @@ void gen_function(Obj *func) {
   continue_id = -1;
 
   printf("  .text\n");
-  printf(".globl %.*s\n", func->len, func->name);
+
+  if(func->qual->is_static)
+    printf(".local %.*s\n", func->len, func->name);
+  else
+    printf(".globl %.*s\n", func->len, func->name);
+
   printf("%.*s:\n", func->len, func->name);
 
   printf("  push rbp\n");
@@ -564,7 +577,10 @@ void gen_function(Obj *func) {
 }
 
 void gen_var_definition(Obj *var) {
-  printf("  .globl %.*s\n", var->len, var->name);
+  if(var->qual->is_static)
+    printf("  .local %.*s\n", var->len, var->name);
+  else
+    printf("  .globl %.*s\n", var->len, var->name);
   printf("  .bss\n");
   printf("  .align %d\n", type_alignment(var->type));
   printf("%.*s:\n", var->len, var->name);
@@ -572,7 +588,7 @@ void gen_var_definition(Obj *var) {
 }
 
 void gen_str_literal(StrLiteral *str_literal) {
-  printf("  .globl .LC%d\n", str_literal->id);
+  printf("  .local .LC%d\n", str_literal->id);
   printf("  .data\n");
   printf(".LC%d:\n", str_literal->id);
   printf("  .string \"%.*s\"\n", str_literal->len, str_literal->str);
@@ -587,7 +603,7 @@ void codegen_all(FILE *output) {
   }
 
   for (ObjList *now = globals; now; now = now->next) {
-    if (now->obj->type->ty != FUNC)
+    if (now->obj->type->ty != FUNC && !now->obj->qual->is_extern)
       gen_var_definition(now->obj);
   }
 
