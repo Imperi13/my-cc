@@ -335,6 +335,7 @@ Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
 bool is_same_type(Type *a, Type *b);
 bool is_convertible(Type *a, Type *b);
+bool is_void_ptr(Type *a);
 int type_size(Type *a);
 int type_alignment(Type *a);
 int offset_alignment(int start, int data_size, int alignment);

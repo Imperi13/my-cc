@@ -474,6 +474,8 @@ bool is_primitive(Type *a) {
   return false;
 }
 
+bool is_void_ptr(Type *a) { return a->ty == PTR && a->ptr_to->ty == VOID; }
+
 bool is_same_type(Type *a, Type *b) {
   if (a->ty != b->ty)
     return false;

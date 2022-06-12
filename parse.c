@@ -226,6 +226,8 @@ Node *new_deref_node(Node *lhs) {
 Node *new_assign_node(Node *lhs, Node *rhs) {
   if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0)
     return new_node(ND_ASSIGN, lhs, rhs, lhs->type);
+  if (is_void_ptr(lhs->type) || is_void_ptr(rhs->type))
+    return new_node(ND_ASSIGN, lhs, rhs, lhs->type);
 
   if (!is_convertible(lhs->type, rhs->type))
     error("invalid argument type to assign =");
@@ -234,6 +236,7 @@ Node *new_assign_node(Node *lhs, Node *rhs) {
     error("lhs is not lvalue");
   if (lhs->type->ty == ARRAY)
     error("cannot assign to ARRAY");
+
   Node *node = new_node(ND_ASSIGN, lhs, rhs, lhs->type);
   return node;
 }
