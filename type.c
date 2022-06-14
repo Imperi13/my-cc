@@ -337,7 +337,8 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     obj->local_scope = calloc(1, sizeof(VarScope));
     obj->stack_size = 0;
 
-    if (consume_kind(&tok, tok, TK_VOID)) {
+    if (equal_kind(tok, TK_VOID) && equal(tok->next, ")")) {
+      expect_kind(&tok, tok, TK_VOID);
       expect(&tok, tok, ")");
       obj->type = func_type;
 
