@@ -1075,13 +1075,8 @@ Node *postfix(Token **rest, Token *tok) {
         NodeList *push_expr = calloc(1, sizeof(NodeList));
         push_expr->node = assign(&tok, tok);
 
-        if (!node->expr_back) {
-          node->expr_front = push_expr;
-          node->expr_back = push_expr;
-        } else {
-          node->expr_back->next = push_expr;
-          node->expr_back = push_expr;
-        }
+        push_expr->next = node->args;
+        node->args = push_expr;
 
         consume(&tok, tok, ",");
       }

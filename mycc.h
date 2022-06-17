@@ -229,8 +229,7 @@ struct Node {
   NodeList *stmt_back;
   char *name;
   int len;
-  NodeList *expr_front;
-  NodeList *expr_back;
+  NodeList *args;
 
   bool is_defined;
 

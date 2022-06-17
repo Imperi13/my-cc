@@ -337,7 +337,8 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     obj->local_scope = calloc(1, sizeof(VarScope));
     obj->stack_size = 0;
 
-    if (consume_kind(&tok, tok, TK_VOID)) {
+    if (equal_kind(tok, TK_VOID) && equal(tok->next, ")")) {
+      expect_kind(&tok, tok, TK_VOID);
       expect(&tok, tok, ")");
       obj->type = func_type;
 
@@ -385,9 +386,6 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
           obj->arg_back->next = push_arg;
           obj->arg_back = push_arg;
         }
-
-        if (obj->arg_size > 6)
-          error_at(tok->str, "more than 6 args is not implemented");
       } while (consume(&tok, tok, ","));
       expect(&tok, tok, ")");
     }
