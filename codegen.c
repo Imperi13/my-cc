@@ -6,17 +6,27 @@ char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 char call_register32[][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
 char call_register8[][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 
-char rax[][4] = {"rax", "eax", "ax", "al"};
-char rdi[][4] = {"rdi", "edi", "di", "dil"};
-char rdx[][4] = {"rdx", "edx", "dx", "dl"};
+const char rax[][4] = {"rax", "eax", "ax", "al"};
+const char rdi[][4] = {"rdi", "edi", "di", "dil"};
+const char rdx[][4] = {"rdx", "edx", "dx", "dl"};
 
 // 指定レジスタとr10レジスタを利用する
-void regncpy_from_frame(const char reg[][4], const char addr_reg[][4], int n) {
-  printf("  mov %s,0\n", reg[0]);
+void regncpy_from_frame(const char dest_reg[][4], const char addr_reg[][4],
+                        int n) {
+  printf("  mov %s,0\n", dest_reg[0]);
   for (int i = 0; i < n; i++) {
     printf("  movzx r10, BYTE PTR [%s + %d]\n", addr_reg[0], i);
     printf("  shl r10, %d\n", 8 * i);
-    printf("  or %s, r10\n", reg[0]);
+    printf("  or %s, r10\n", dest_reg[0]);
+  }
+}
+
+// 指定レジスタとr10レジスタを利用する
+void memncpy_from_reg(const char dest_addr[][4], const char src_reg[][4],
+                      int n) {
+  for (int i = 0; i < n; i++) {
+    printf("  mov BYTE PTR [%s + %d],%s\n", dest_addr[0], i, src_reg[3]);
+    printf("  shr %s,8\n", src_reg[0]);
   }
 }
 
@@ -469,6 +479,19 @@ void gen(Node *node) {
     printf("  mov r10,rax\n");
     // printf("  call %.*s\n",node->len,node->name);
     printf("  call r10\n");
+    if (node->type->ty == STRUCT) {
+      printf("  lea rdi, [rbp - %d]\n", node->ret_offset);
+      if (type_size(node->type) <= 8) {
+        memncpy_from_reg(rdi, rax, type_size(node->type));
+      } else if (type_size(node->type) <= 16) {
+        printf("  mov [rdi], rax\n");
+        printf("  add rdi, 8\n");
+        memncpy_from_reg(rdi, rdx, type_size(node->type) - 8);
+      } else {
+        error("not implemented");
+      }
+      printf("  lea rax, [rbp - %d]\n", node->ret_offset);
+    }
     printf("  pop r10\n");
     printf("  pop rsp\n");
     return;

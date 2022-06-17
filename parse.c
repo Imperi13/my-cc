@@ -1062,8 +1062,12 @@ Node *postfix(Token **rest, Token *tok) {
         node->type = lhs->type->ptr_to->return_type;
       else
         error_at(tok->str, "invalid type to funcall");
-      // 関数の返り値は全部intということにしている
-      // node->type = type_int;
+
+      if(node->type->ty == STRUCT){
+        node->ret_offset = offset_alignment(now_function->stack_size,type_size(node->type),type_alignment(node->type));
+        now_function->stack_size = node->ret_offset;
+      }
+
 
       while (!consume(&tok, tok, ")")) {
         NodeList *push_expr = calloc(1, sizeof(NodeList));

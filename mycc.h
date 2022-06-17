@@ -224,7 +224,7 @@ struct Node {
   Node *init_expr;
   Node *update_expr;
 
-  // for function
+  // for function call
   NodeList *stmt_front;
   NodeList *stmt_back;
   char *name;
@@ -232,6 +232,8 @@ struct Node {
   NodeList *args;
 
   bool is_defined;
+
+  int ret_offset;
 
   // for struct-dot
   Member *member;
