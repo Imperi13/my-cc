@@ -5,6 +5,7 @@
 #
 
 run_test_with_supplement0() {
+  rm -f ./tmp
   echo -e "$2" > ./external/tmp.in
   ./mycc ./external/tmp.in > tmp.s
 	gcc ./external/misc/supplement0.c -S -o supplement0.s
@@ -15,6 +16,7 @@ run_test_with_supplement0() {
 }
 
 run_test() {
+  rm -f ./tmp
   echo -e "$2" > ./external/tmp.in
 	./mycc ./external/tmp.in > tmp.s
   gcc -o tmp tmp.s util/ten.o util/add.o util/many_arg.o util/alloc4.o
@@ -24,6 +26,7 @@ run_test() {
 }
 
 run_test_with_supplement1() {
+  rm -f ./tmp
   echo -e "$2" > ./external/tmp.in
   ./mycc ./external/tmp.in > tmp.s
 	gcc ./external/misc/supplement1.c -S -o supplement1.s
@@ -32,6 +35,7 @@ run_test_with_supplement1() {
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (mixed)" $1: $2; exit 1; }; else echo -e "\033[32mPASS (mixed)\033[m"; fi
 
+  rm -f ./tmp
   echo -e $2 > ./external/tmp.in
   ./mycc ./external/tmp.in > tmp.s
   ./mycc ./external/misc/supplement1.c > supplement1.s

@@ -6,6 +6,20 @@ char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 char call_register32[][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
 char call_register8[][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 
+char rax[][4] = {"rax", "eax", "ax", "al"};
+char rdi[][4] = {"rdi", "edi", "di", "dil"};
+char rdx[][4] = {"rdx", "edx", "dx", "dl"};
+
+// 指定レジスタとr10レジスタを利用する
+void regncpy_from_frame(const char reg[][4], const char addr_reg[][4], int n) {
+  printf("  mov %s,0\n", reg[0]);
+  for (int i = 0; i < n; i++) {
+    printf("  movzx r10, BYTE PTR [%s + %d]\n", addr_reg[0], i);
+    printf("  shl r10, %d\n", 8 * i);
+    printf("  or %s, r10\n", reg[0]);
+  }
+}
+
 char *rax_register(Type *a) {
   int size = type_size(a);
   if (size == 8)
@@ -229,8 +243,25 @@ void gen(Node *node) {
       printf("  movsx rax, BYTE PTR [rax]\n");
     return;
   case ND_RETURN:
-    if (node->lhs)
-      gen(node->lhs);
+    if (!node->lhs) {
+      printf("  mov rsp,rbp\n");
+      printf("  pop rbp\n");
+      printf("  ret\n");
+      return;
+    }
+    gen(node->lhs);
+    if (node->lhs->type->ty == STRUCT) {
+      printf("  mov rdi,rax\n");
+      if (type_size(node->lhs->type) <= 8) {
+        regncpy_from_frame(rax, rdi, type_size(node->lhs->type));
+      } else if (type_size(node->lhs->type) <= 16) {
+        printf("  mov rax,[rdi]\n");
+        printf("  add rdi,8\n");
+        regncpy_from_frame(rdx, rdi, type_size(node->lhs->type) - 8);
+      } else {
+        error("not implemented");
+      }
+    }
     printf("  mov rsp,rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
@@ -420,9 +451,9 @@ void gen(Node *node) {
     gen(node->rhs);
     return;
   case ND_FUNCTION_CALL:
-    printf("  mov r8,rsp\n");
+    printf("  mov r10,rsp\n");
     printf("  and rsp,0xfffffffffffffff0\n");
-    printf("  push r8\n");
+    printf("  push r10\n");
     printf("  push 0\n");
     arg_count = 0;
     while (node->args) {
@@ -438,7 +469,7 @@ void gen(Node *node) {
     printf("  mov r10,rax\n");
     // printf("  call %.*s\n",node->len,node->name);
     printf("  call r10\n");
-    printf("  pop r8\n");
+    printf("  pop r10\n");
     printf("  pop rsp\n");
     return;
   default:
