@@ -333,11 +333,14 @@ Type *type_name(Token **rest, Token *tok);
 Type *newtype_ptr(Type *base);
 bool is_numeric(Type *a);
 bool is_same_type(Type *a, Type *b);
-bool is_convertible(Type *a, Type *b);
+bool is_compatible(Type *a, Node *b);
 bool is_void_ptr(Type *a);
 int type_size(Type *a);
 int type_alignment(Type *a);
 int offset_alignment(int start, int data_size, int alignment);
+
+bool is_constexpr(Node *a);
+int eval_constexpr(Node *a);
 
 Obj *find_obj(ObjList *list, char *str, int len);
 Obj *find_lvar(char *str, int len);

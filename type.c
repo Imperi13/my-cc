@@ -461,7 +461,7 @@ bool is_complete(Type *a) {
 }
 
 bool is_numeric(Type *a) {
-  if (a->ty == INT || a->ty == CHAR)
+  if (a->ty == INT || a->ty == CHAR || a->ty == ENUM)
     return true;
   return false;
 }
@@ -486,19 +486,21 @@ bool is_same_type(Type *a, Type *b) {
   return is_same_type(a->ptr_to, b->ptr_to);
 }
 
-bool is_convertible(Type *a, Type *b) {
-  if (is_numeric(a) && is_numeric(b))
+bool is_compatible(Type *a, Node *b) {
+  if (is_numeric(a) && is_numeric(b->type))
     return true;
-  if (a->ty == ENUM && is_numeric(b))
+  if (a->ty == PTR && b->type->ty == PTR &&
+      (a->ptr_to->ty == VOID || b->type->ptr_to->ty == VOID))
     return true;
-  if (a->ty == PTR && b->ty == PTR &&
-      (a->ptr_to->ty == VOID || b->ptr_to->ty == VOID))
+  if (a->ty == PTR && is_constexpr(b) && eval_constexpr(b) == 0)
     return true;
-  if (a->ty == STRUCT && b->ty == STRUCT)
-    return a->st == b->st;
-  if (a->ty == INT || b->ty == INT)
+  if (a->ty == PTR && b->type->ty == ARRAY)
+    return a->ptr_to->ty == VOID || is_same_type(a->ptr_to, b->type->ptr_to);
+  if (a->ty == STRUCT && b->type->ty == STRUCT)
+    return a->st == b->type->st;
+  if (a->ty == INT || b->type->ty == INT)
     return false;
-  return is_same_type(a->ptr_to, b->ptr_to);
+  return is_same_type(a->ptr_to, b->type->ptr_to);
 }
 
 int type_size(Type *a) {

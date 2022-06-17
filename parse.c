@@ -224,12 +224,7 @@ Node *new_deref_node(Node *lhs) {
 }
 
 Node *new_assign_node(Node *lhs, Node *rhs) {
-  if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0)
-    return new_node(ND_ASSIGN, lhs, rhs, lhs->type);
-  if (is_void_ptr(lhs->type) || is_void_ptr(rhs->type))
-    return new_node(ND_ASSIGN, lhs, rhs, lhs->type);
-
-  if (!is_convertible(lhs->type, rhs->type))
+  if (!is_compatible(lhs->type, rhs))
     error("invalid argument type to assign =");
   if (lhs->kind != ND_VAR && lhs->kind != ND_DEREF && lhs->kind != ND_DOT &&
       lhs->kind != ND_ARROW)
@@ -242,18 +237,14 @@ Node *new_assign_node(Node *lhs, Node *rhs) {
 }
 
 Node *new_equal_node(Node *lhs, Node *rhs) {
-  if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0)
-    return new_node(ND_EQUAL, lhs, rhs, type_int);
-  if (!is_same_type(lhs->type, rhs->type))
+  if (!is_compatible(lhs->type, rhs))
     error("invalid argument type to equality ==");
 
   return new_node(ND_EQUAL, lhs, rhs, type_int);
 }
 
 Node *new_not_equal_node(Node *lhs, Node *rhs) {
-  if (lhs->type->ty == PTR && is_constexpr(rhs) && eval_constexpr(rhs) == 0)
-    return new_node(ND_NOT_EQUAL, lhs, rhs, type_int);
-  if (!is_same_type(lhs->type, rhs->type))
+  if (!is_compatible(lhs->type, rhs))
     error("invalid argument type to equality ==");
 
   return new_node(ND_NOT_EQUAL, lhs, rhs, type_int);
@@ -523,6 +514,9 @@ Node *jump_stmt(Token **rest, Token *tok) {
     } else {
       node->lhs = expr(&tok, tok);
       expect(&tok, tok, ";");
+
+      if (!is_compatible(now_function->type->return_type, node->lhs))
+        error("incompatible return type");
     }
 
     *rest = tok;
