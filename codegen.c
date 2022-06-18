@@ -67,8 +67,18 @@ int switch_id = -1;
 
 void gen_addr(Node *node) {
   if (node->kind != ND_VAR && node->kind != ND_DEREF && node->kind != ND_DOT &&
-      node->kind != ND_ARROW)
+      node->kind != ND_ARROW && node->kind != ND_ASSIGN &&
+      node->kind != ND_COMMA && node->kind != ND_CONDITIONAL)
     error("not lval");
+
+  if (node->kind == ND_ASSIGN || node->kind == ND_COMMA ||
+      node->kind == ND_CONDITIONAL) {
+    if (node->type->ty != STRUCT)
+      error("not lval assign");
+
+    gen(node);
+    return;
+  }
 
   if (node->kind == ND_DEREF) {
     gen(node->lhs);
@@ -148,9 +158,11 @@ void gen(Node *node) {
       printf("  push rax\n");
       gen(node->rhs);
       printf("  pop rdi\n");
+      printf("  mov r10, rdi\n");
       printf("  mov rsi, rax\n");
       printf("  mov rcx, %d\n", type_size(node->lhs->type));
       printf("  rep movsb\n");
+      printf("  mov rax, r10\n");
       return;
     }
     gen_addr(node->lhs);
