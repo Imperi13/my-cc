@@ -280,6 +280,8 @@ struct Obj {
   int arg_size;
   ObjList *arg_front;
   ObjList *arg_back;
+
+  bool is_buf_return;
 };
 
 struct ObjList {

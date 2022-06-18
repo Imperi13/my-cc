@@ -337,6 +337,12 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
     obj->local_scope = calloc(1, sizeof(VarScope));
     obj->stack_size = 0;
 
+    if (func_type->return_type->ty == STRUCT &&
+        type_size(func_type->return_type) > 16) {
+      obj->stack_size = 8;
+      obj->is_buf_return = true;
+    }
+
     if (equal_kind(tok, TK_VOID) && equal(tok->next, ")")) {
       expect_kind(&tok, tok, TK_VOID);
       expect(&tok, tok, ")");

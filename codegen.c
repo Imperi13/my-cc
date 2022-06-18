@@ -106,7 +106,7 @@ void gen_addr(Node *node) {
 
 void gen(Node *node) {
   int now_count;
-  int arg_count;
+  int stack_count;
   int saved_break_id;
   int saved_continue_id;
   int saved_switch_id;
@@ -261,15 +261,19 @@ void gen(Node *node) {
     }
     gen(node->lhs);
     if (node->lhs->type->ty == STRUCT) {
-      printf("  mov rdi,rax\n");
       if (type_size(node->lhs->type) <= 8) {
+        printf("  mov rdi,rax\n");
         regncpy_from_frame(rax, rdi, type_size(node->lhs->type));
       } else if (type_size(node->lhs->type) <= 16) {
+        printf("  mov rdi,rax\n");
         printf("  mov rax,[rdi]\n");
         printf("  add rdi,8\n");
         regncpy_from_frame(rdx, rdi, type_size(node->lhs->type) - 8);
       } else {
-        error("not implemented");
+        printf("  mov rsi,rax\n");
+        printf("  mov rdi, [rbp - 8]\n");
+        printf("  mov rcx, %d\n", type_size(node->lhs->type));
+        printf("  rep movsb\n");
       }
     }
     printf("  mov rsp,rbp\n");
@@ -465,15 +469,20 @@ void gen(Node *node) {
     printf("  and rsp,0xfffffffffffffff0\n");
     printf("  push r10\n");
     printf("  push 0\n");
-    arg_count = 0;
+    stack_count = 0;
     while (node->args) {
       gen(node->args->node);
       printf("  push rax\n");
       node->args = node->args->next;
-      arg_count++;
+      stack_count++;
+    }
+    if (node->type->ty == STRUCT && type_size(node->type) > 16) {
+      printf("  lea rax, [rbp - %d]\n", node->ret_offset);
+      printf("  push rax\n");
+      stack_count++;
     }
     gen_addr(node->lhs);
-    for (int i = 0; i < (arg_count >= 6 ? 6 : arg_count); i++) {
+    for (int i = 0; i < (stack_count >= 6 ? 6 : stack_count); i++) {
       printf("  pop %s\n", call_register64[i]);
     }
     printf("  mov r10,rax\n");
@@ -487,8 +496,6 @@ void gen(Node *node) {
         printf("  mov [rdi], rax\n");
         printf("  add rdi, 8\n");
         memncpy_from_reg(rdi, rdx, type_size(node->type) - 8);
-      } else {
-        error("not implemented");
       }
       printf("  lea rax, [rbp - %d]\n", node->ret_offset);
     }
@@ -608,8 +615,13 @@ void gen_function(Obj *func) {
   printf("  mov rbp, rsp\n");
   printf("  sub rsp, %d\n", offset_alignment(0, func->stack_size, 8));
 
+  if (func->is_buf_return) {
+    printf("  lea rax, [rbp - 8]\n");
+    printf("  mov [rax], rdi\n");
+  }
+
   ObjList *now_arg = func->arg_front;
-  for (int i = 0; i < func->arg_size; i++) {
+  for (int i = (func->is_buf_return ? 1 : 0); i < func->arg_size; i++) {
     printf(" mov rax, rbp\n");
     printf("  sub rax, %d\n", now_arg->obj->offset);
     if (type_size(now_arg->obj->type) == 8)
