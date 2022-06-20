@@ -124,14 +124,18 @@ Type *type_name(Token **rest, Token *tok) {
   return type;
 }
 
+// abstract_declaratorとしてparseできないときはNULLを返す
 Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
-  while (consume(&tok, tok, "*"))
+  while (consume(&tok, tok, "*")) {
     type = newtype_ptr(type);
+    consume_kind(&tok, tok, TK_CONST);
+  }
 
   if (consume(&tok, tok, "(")) {
     Token *nest_start = tok;
     Type *tmp = &(Type){};
-    abstract_declarator(&tok, tok, tmp);
+    if (!abstract_declarator(&tok, tok, tmp))
+      return NULL;
     expect(&tok, tok, ")");
 
     Obj *obj = calloc(1, sizeof(Obj));
@@ -144,6 +148,9 @@ Type *abstract_declarator(Token **rest, Token *tok, Type *type) {
     *rest = type_end;
     return type;
   }
+
+  if (equal_kind(tok, TK_IDENT))
+    return NULL;
 
   Obj *obj = calloc(1, sizeof(Obj));
   obj->type = type;
@@ -354,6 +361,49 @@ Obj *type_suffix(Token **rest, Token *tok, Obj *obj) {
 
     if (!consume(&tok, tok, ")")) {
       do {
+
+        if (type_name(&dummy_token, tok)) {
+          Type *arg_type = type_name(&tok, tok);
+
+          TypeList *push_argtype = calloc(1, sizeof(TypeList));
+          push_argtype->type = arg_type;
+
+          if (!func_type->argtype_back) {
+            func_type->argtype_front = push_argtype;
+            func_type->argtype_back = push_argtype;
+          } else {
+            func_type->argtype_back->next = push_argtype;
+            func_type->argtype_back = push_argtype;
+          }
+
+          Obj *arg = calloc(1, sizeof(Obj));
+          arg->type = arg_type;
+
+          arg->offset = offset_alignment(obj->stack_size, type_size(arg->type),
+                                         type_alignment(arg->type));
+          obj->stack_size = arg->offset;
+
+          ObjList *push_lvar = calloc(1, sizeof(ObjList));
+          push_lvar->obj = arg;
+          push_lvar->next = obj->local_scope->locals;
+          obj->local_scope->locals = push_lvar;
+
+          func_type->arg_size++;
+          obj->arg_size++;
+          ObjList *push_arg = calloc(1, sizeof(ObjList));
+          push_arg->obj = arg;
+          if (!obj->arg_front) {
+            obj->arg_front = push_arg;
+            obj->arg_back = push_arg;
+          } else {
+            obj->arg_back->next = push_arg;
+            obj->arg_back = push_arg;
+          }
+
+          consume(&tok, tok, ",");
+          continue;
+        }
+
         Obj *arg = parse_global_decl(&tok, tok);
         if (arg->type->ty == ARRAY)
           arg->type->ty = PTR;
