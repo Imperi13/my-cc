@@ -250,6 +250,19 @@ Node *new_not_equal_node(Node *lhs, Node *rhs) {
   return new_node(ND_NOT_EQUAL, lhs, rhs, type_int);
 }
 
+Node *new_conditional_node(Node *cond, Node *lhs, Node *rhs) {
+  Node *node;
+  if (is_null_ptr(lhs) && rhs->type->ty == PTR)
+    node = new_node(ND_CONDITIONAL, lhs, rhs, rhs->type);
+  else if (is_null_ptr(rhs) && lhs->type->ty == PTR)
+    node = new_node(ND_CONDITIONAL, lhs, rhs, lhs->type);
+  else
+    node = new_node(ND_CONDITIONAL, lhs, rhs, lhs->type);
+
+  node->expr = cond;
+  return node;
+}
+
 int offset_alignment(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;
 }
@@ -766,10 +779,8 @@ Node *conditional(Token **rest, Token *tok) {
     Node *lhs = expr(&tok, tok);
     expect(&tok, tok, ":");
     Node *rhs = conditional(&tok, tok);
-    Node *node = new_node(ND_CONDITIONAL, lhs, rhs, lhs->type);
-    node->expr = cond;
     *rest = tok;
-    return node;
+    return new_conditional_node(cond, lhs, rhs);
   }
   *rest = tok;
   return cond;

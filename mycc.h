@@ -339,6 +339,7 @@ bool is_numeric(Type *a);
 bool is_same_type(Type *a, Type *b);
 bool is_compatible(Type *a, Node *b);
 bool is_void_ptr(Type *a);
+bool is_null_ptr(Node *a);
 int type_size(Type *a);
 int type_alignment(Type *a);
 int offset_alignment(int start, int data_size, int alignment);

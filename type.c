@@ -530,6 +530,8 @@ bool is_primitive(Type *a) {
 
 bool is_void_ptr(Type *a) { return a->ty == PTR && a->ptr_to->ty == VOID; }
 
+bool is_null_ptr(Node *a) { return is_constexpr(a) && eval_constexpr(a) == 0; }
+
 bool is_same_type(Type *a, Type *b) {
   if (a->ty != b->ty)
     return false;
@@ -548,7 +550,7 @@ bool is_compatible(Type *a, Node *b) {
   if (a->ty == PTR && b->type->ty == PTR &&
       (a->ptr_to->ty == VOID || b->type->ptr_to->ty == VOID))
     return true;
-  if (a->ty == PTR && is_constexpr(b) && eval_constexpr(b) == 0)
+  if (a->ty == PTR && is_null_ptr(b))
     return true;
   if (a->ty == PTR && b->type->ty == ARRAY)
     return a->ptr_to->ty == VOID || is_same_type(a->ptr_to, b->type->ptr_to);
