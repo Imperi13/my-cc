@@ -493,7 +493,7 @@ void gen(Node *node) {
       printf("  push rax\n");
       stack_count++;
     }
-    gen_addr(node->lhs);
+    gen(node->lhs);
     for (int i = 0; i < (stack_count >= 6 ? 6 : stack_count); i++) {
       printf("  pop %s\n", call_register64[i]);
     }
