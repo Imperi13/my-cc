@@ -153,6 +153,16 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    // skip macro
+    if (*p == '#') {
+      char *line_end = strchr(p, '\n');
+      if (!line_end)
+        break;
+
+      p = line_end + 1;
+      continue;
+    }
+
     if (*p == '"') {
       char *tok_start = p;
       char *tok_end = strchr(tok_start + 1, '"');
