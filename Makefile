@@ -6,8 +6,6 @@ OBJS=$(SRCS:.c=.o)
 mycc: $(OBJS)
 	$(CC) -o mycc $(OBJS) $(LDFLAGS)
 
-$(OBJS): mycc.h
-
 test: mycc
 	./assert_test.sh
 
