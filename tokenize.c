@@ -1,4 +1,11 @@
-#include "mycc.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <ctype.h>
+
+#include "tokenize.h"
+#include "error.h"
 
 bool equal(Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
