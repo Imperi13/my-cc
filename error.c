@@ -1,6 +1,6 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 
 #include "error.h"
 #include "file.h"
@@ -42,3 +42,5 @@ void error_at(char *loc, char *fmt, ...) {
 
   exit(1);
 }
+
+void not_implemented() { error("not implemented"); }
