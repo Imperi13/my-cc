@@ -2,6 +2,8 @@
 
 
 typedef enum {
+  FUNC_DEF,
+  DECL,
   FOR_STMT,
 } TreeKind;
 
