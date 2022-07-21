@@ -1,16 +1,33 @@
 #pragma once
 
+#include <stdbool.h>
 
 typedef enum {
   FUNC_DEF,
-  DECL,
-  FOR_STMT,
+  DECLARATION,
 } TreeKind;
 
 typedef struct Tree Tree;
+typedef struct DeclSpec DeclSpec;
+typedef struct Declarator Declarator;
 
-struct Tree{
+struct Tree {
+  TreeKind kind;
+
+  // for FUNC_DEF,DECLARATION
+  DeclSpec *decl_specs;
+  Declarator *declarator;
+
+  // for FUNC_DEF
+  Tree *func_body;
+
   // for linked-list
   Tree *next;
 };
 
+struct DeclSpec {
+  bool has_int;
+};
+
+struct Declarator {
+};
