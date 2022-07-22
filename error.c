@@ -4,6 +4,7 @@
 
 #include "error.h"
 #include "file.h"
+#include "tokenize.h"
 
 void error(char *fmt, ...) {
   va_list ap;
@@ -44,3 +45,5 @@ void error_at(char *loc, char *fmt, ...) {
 }
 
 void not_implemented() { error("not implemented"); }
+
+void not_implemented_at(char *loc) { error_at(loc, "not implemented"); }

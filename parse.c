@@ -6,7 +6,6 @@
 #include "parse.h"
 #include "tokenize.h"
 
-static Tree *parse_translation_unit(Token *tok);
 static Tree *parse_external_decl(Token **rest, Token *tok);
 static DeclSpec *parse_declaration_specs(Token **rest, Token *tok);
 static Declarator *parse_declarator(Token **rest, Token *tok);
@@ -45,6 +44,7 @@ Tree *parse_translation_unit(Token *tok) {
     cur->next = ex_decl;
     cur = ex_decl;
   }
+
   return head->next;
 }
 
@@ -59,7 +59,7 @@ Tree *parse_external_decl(Token **rest, Token *tok) {
     return ex_decl;
   }
 
-  not_implemented();
+  not_implemented_at(tok->str);
   return NULL;
 }
 
@@ -70,7 +70,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok) {
     consume_kind(rest, tok, TK_INT);
     return decl_spec;
   }
-  not_implemented();
+  not_implemented_at(tok->str);
   return NULL;
 }
 
@@ -79,11 +79,11 @@ Declarator *parse_declarator(Token **rest, Token *tok) {
 
   // parse ident or nest-declarator
   if (equal_kind(tok, TK_IDENT)) {
-    Token *tok = consume_kind(&tok, tok, TK_IDENT);
-    declarator->name = tok->str;
-    declarator->len = tok->len;
+    Token *decl_name = consume_kind(&tok, tok, TK_IDENT);
+    declarator->name = decl_name->str;
+    declarator->len = decl_name->len;
   } else if (equal(tok, "(")) {
-    not_implemented();
+    not_implemented_at(tok->str);
   } else {
     error("cannot parse declarator");
   }
@@ -95,38 +95,58 @@ Declarator *parse_declarator(Token **rest, Token *tok) {
     expect(&tok, tok, ")");
     declarator->type_suffix_kind = FUNC_DECLARATOR;
   } else if (equal(tok, "[")) {
-    not_implemented();
+    not_implemented_at(tok->str);
   }
 
+  *rest = tok;
   return declarator;
 }
 
 Tree *parse_compound_stmt(Token **rest, Token *tok) {
-  not_implemented();
+  not_implemented_at(tok->str);
   return NULL;
 }
 
 Tree *parse_unary(Token **rest, Token *tok) {
-  not_implemented();
+  not_implemented_at(tok->str);
   return NULL;
 }
 
 Tree *parse_postfix(Token **rest, Token *tok) {
-  not_implemented();
-  return NULL;
+  Tree *lhs = parse_primary(&tok, tok);
+
+  for (;;) {
+    if (equal(tok, "[")) {
+      not_implemented_at(tok->str);
+    } else if (equal(tok, "(")) {
+      not_implemented_at(tok->str);
+    } else if (equal(tok, ".")) {
+      not_implemented_at(tok->str);
+    } else if (equal(tok, "->")) {
+      not_implemented_at(tok->str);
+    } else if (equal(tok, "++")) {
+      not_implemented_at(tok->str);
+    } else if (equal(tok, "--")) {
+      not_implemented_at(tok->str);
+    }
+  }
+
+  return lhs;
 }
 
 Tree *parse_primary(Token **rest, Token *tok) {
   Tree *primary = calloc(1, sizeof(Tree));
 
-  if (equal_kind(tok, TK_IDENT)) {
-    not_implemented();
+  if (equal_kind(tok, TK_NUM)) {
+    Token *tok = consume_kind(rest, tok, TK_NUM);
+    primary->kind = NUM;
+    primary->num = tok->val;
   } else if (equal_kind(tok, TK_STR)) {
-    not_implemented();
-  } else if (equal_kind(tok, TK_NUM)) {
-    not_implemented();
+    not_implemented_at(tok->str);
+  } else if (equal_kind(tok, TK_IDENT)) {
+    not_implemented_at(tok->str);
   } else if (equal(tok, "(")) {
-    not_implemented();
+    not_implemented_at(tok->str);
   } else {
     error("cannot parse primary");
   }

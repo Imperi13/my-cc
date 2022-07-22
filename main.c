@@ -1,6 +1,7 @@
 #include "error.h"
 #include "file.h"
 #include "tokenize.h"
+#include "parse.h"
 
 char *filename;
 char *user_input;
@@ -15,8 +16,8 @@ int main(int argc, char **argv) {
 
   // debug_token(token);
 
-  // program(token);
-
+  Tree *ast = parse_translation_unit(token);
+  
   // codegen_all(stdout);
   return 0;
 }

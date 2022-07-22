@@ -2,9 +2,12 @@
 
 #include <stdbool.h>
 
+#include "tokenize.h"
+
 typedef enum {
   FUNC_DEF,
   DECLARATION,
+  NUM,
 } TreeKind;
 
 typedef struct Tree Tree;
@@ -28,6 +31,13 @@ struct Tree {
 
   // for FUNC_DEF
   Tree *func_body;
+
+  // for unary and binary op
+  Tree *lhs; // for unary
+  Tree *rhs;
+
+  // for const-val
+  unsigned long num;
 
   // for linked-list
   Tree *next;
@@ -53,3 +63,5 @@ struct Declarator {
 };
 
 struct Pointer {};
+
+Tree *parse_translation_unit(Token *tok);
