@@ -10,6 +10,14 @@ typedef enum {
 typedef struct Tree Tree;
 typedef struct DeclSpec DeclSpec;
 typedef struct Declarator Declarator;
+typedef struct Pointer Pointer;
+typedef struct Argument Argument;
+
+typedef enum {
+  NONE,
+  ARRAY_DECLARATOR,
+  FUNC_DECLARATOR,
+} TypeSuffixKind;
 
 struct Tree {
   TreeKind kind;
@@ -30,4 +38,18 @@ struct DeclSpec {
 };
 
 struct Declarator {
+  Pointer *pointer;
+  char *name;
+  int len;
+
+  // for nested-declarator
+  Declarator *nest;
+
+  // for type-suffix
+  TypeSuffixKind type_suffix_kind;
+
+  // for FUNC_DECLARATOR
+  Argument *arg;
 };
+
+struct Pointer {};
