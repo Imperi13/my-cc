@@ -4,7 +4,6 @@
 
 #include "error.h"
 #include "file.h"
-#include "tokenize.h"
 
 void error(char *fmt, ...) {
   va_list ap;
