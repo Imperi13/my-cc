@@ -7,6 +7,8 @@
 typedef enum {
   FUNC_DEF,
   DECLARATION,
+  COMPOUND_STMT,
+  RETURN,
   NUM,
 } TreeKind;
 
@@ -35,6 +37,9 @@ struct Tree {
   // for unary and binary op
   Tree *lhs; // for unary
   Tree *rhs;
+
+  // for compound_stmt
+  Tree *stmts;
 
   // for const-val
   unsigned long num;
