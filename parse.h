@@ -26,6 +26,10 @@ typedef enum {
   MUL,
   DIV,
   MOD,
+  PLUS,
+  MINUS,
+  LOGICAL_NOT,
+  BIT_NOT,
   NUM,
 } TreeKind;
 

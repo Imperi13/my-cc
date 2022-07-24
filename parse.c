@@ -497,13 +497,21 @@ Tree *parse_unary(Token **rest, Token *tok) {
   }
 
   if (equal(tok, "+")) {
-    not_implemented_at(tok->str);
-    return NULL;
+    consume(&tok,tok,"+");
+    Tree *node = calloc(1,sizeof(Tree));
+    node->kind = PLUS;
+    node->lhs = parse_cast(&tok,tok);
+    *rest = tok;
+    return node;
   }
 
   if (equal(tok, "-")) {
-    not_implemented_at(tok->str);
-    return NULL;
+    consume(&tok,tok,"-");
+    Tree *node = calloc(1,sizeof(Tree));
+    node->kind = MINUS;
+    node->lhs = parse_cast(&tok,tok);
+    *rest = tok;
+    return node;
   }
 
   if (equal(tok, "*")) {
@@ -517,13 +525,21 @@ Tree *parse_unary(Token **rest, Token *tok) {
   }
 
   if (equal(tok, "!")) {
-    not_implemented_at(tok->str);
-    return NULL;
+    consume(&tok, tok, "!");
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = LOGICAL_NOT;
+    node->lhs = parse_cast(&tok, tok);
+    *rest = tok;
+    return node;
   }
 
   if (equal(tok, "~")) {
-    not_implemented_at(tok->str);
-    return NULL;
+    consume(&tok, tok, "~");
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = BIT_NOT;
+    node->lhs = parse_cast(&tok, tok);
+    *rest = tok;
+    return node;
   }
 
   Tree *lhs = parse_postfix(rest, tok);

@@ -69,6 +69,23 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->lhs);
     codegen_stmt(stmt->rhs);
     return;
+  case LOGICAL_NOT:
+    codegen_stmt(stmt->lhs);
+    printf("  cmp rax,0\n");
+    printf("  sete al\n");
+    printf("  movsx rax,al\n");
+    return;
+  case BIT_NOT:
+    codegen_stmt(stmt->lhs);
+    printf("  not rax\n");
+    return;
+  case PLUS:
+    codegen_stmt(stmt->lhs);
+    return;
+  case MINUS:
+    codegen_stmt(stmt->lhs);
+    printf("  neg rax\n");
+    return;
   default:
     break;
   }
