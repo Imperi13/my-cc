@@ -51,22 +51,47 @@ void codegen_stmt(Tree *stmt) {
   switch (stmt->kind) {
   case NUM:
     printf("  mov rax, %ld\n", stmt->num);
-    break;
+    return;
   case RETURN:
     codegen_stmt(stmt->lhs);
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
-    break;
+    return;
   case COMPOUND_STMT:
     cur = stmt->stmts;
     while (cur) {
       codegen_stmt(cur);
       cur = cur->next;
     }
+    return;
+  default:
+    break;
+  }
+
+  // binary-op
+  codegen_stmt(stmt->lhs);
+  printf("  push rax\n");
+  codegen_stmt(stmt->rhs);
+  printf("  mov rdi,rax\n");
+  printf("  pop rax\n");
+
+  switch (stmt->kind) {
+  case ADD:
+    printf("  add rax,rdi\n");
+    break;
+  case SUB:
+    printf("  sub rax,rdi\n");
+    break;
+  case MUL:
+    printf("  imul rax,rdi\n");
+    break;
+  case DIV:
+    printf("  cqo\n");
+    printf("  idiv rdi\n");
     break;
   default:
-    not_implemented();
+    error("cannnot codegen binary_op");
     break;
   }
 }

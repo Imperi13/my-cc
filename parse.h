@@ -9,6 +9,10 @@ typedef enum {
   DECLARATION,
   COMPOUND_STMT,
   RETURN,
+  ADD,
+  SUB,
+  MUL,
+  DIV,
   NUM,
 } TreeKind;
 

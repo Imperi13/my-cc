@@ -402,9 +402,21 @@ Tree *parse_add(Token **rest, Token *tok) {
 
   for (;;) {
     if (equal(tok, "+")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "+");
+      Tree *add_node = calloc(1, sizeof(Tree));
+      add_node->kind = ADD;
+      add_node->lhs = lhs;
+      add_node->rhs = parse_mul(&tok, tok);
+
+      lhs = add_node;
     } else if (equal(tok, "-")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "-");
+      Tree *sub_node = calloc(1, sizeof(Tree));
+      sub_node->kind = SUB;
+      sub_node->lhs = lhs;
+      sub_node->rhs = parse_mul(&tok, tok);
+
+      lhs = sub_node;
     } else {
       *rest = tok;
       return lhs;
@@ -417,9 +429,21 @@ Tree *parse_mul(Token **rest, Token *tok) {
 
   for (;;) {
     if (equal(tok, "*")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "*");
+      Tree *mul_node = calloc(1, sizeof(Tree));
+      mul_node->kind = MUL;
+      mul_node->lhs = lhs;
+      mul_node->rhs = parse_cast(&tok, tok);
+
+      lhs = mul_node;
     } else if (equal(tok, "/")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "/");
+      Tree *div_node = calloc(1, sizeof(Tree));
+      div_node->kind = DIV;
+      div_node->lhs = lhs;
+      div_node->rhs = parse_cast(&tok, tok);
+
+      lhs = div_node;
     } else if (equal(tok, "%")) {
       not_implemented_at(tok->str);
     } else {
@@ -523,7 +547,9 @@ Tree *parse_primary(Token **rest, Token *tok) {
   } else if (equal_kind(tok, TK_IDENT)) {
     not_implemented_at(tok->str);
   } else if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "(");
+    primary = parse_expr(&tok, tok);
+    expect(&tok, tok, ")");
   } else {
     error("cannot parse primary");
   }
