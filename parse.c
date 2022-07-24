@@ -40,6 +40,14 @@ static bool is_selection_stmt(Token *tok);
 static bool is_iteration_stmt(Token *tok);
 static bool is_jump_stmt(Token *tok);
 
+Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs) {
+  Tree *node = calloc(1, sizeof(Tree));
+  node->kind = kind;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
 Tree *parse_translation_unit(Token *tok) {
   Tree *head = calloc(1, sizeof(Tree));
   Tree *cur = head;
@@ -240,7 +248,9 @@ Tree *parse_expr(Token **rest, Token *tok) {
   Tree *lhs = parse_assign(&tok, tok);
   for (;;) {
     if (equal(tok, ",")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, ",");
+      Tree *rhs = parse_assign(&tok, tok);
+      lhs = new_binary_node(COMMA, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -316,7 +326,9 @@ Tree *parse_bit_or(Token **rest, Token *tok) {
   Tree *lhs = parse_bit_xor(&tok, tok);
   for (;;) {
     if (equal(tok, "|")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "|");
+      Tree *rhs = parse_bit_xor(&tok, tok);
+      lhs = new_binary_node(BIT_OR, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -328,7 +340,9 @@ Tree *parse_bit_xor(Token **rest, Token *tok) {
   Tree *lhs = parse_bit_and(&tok, tok);
   for (;;) {
     if (equal(tok, "^")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "^");
+      Tree *rhs = parse_bit_and(&tok, tok);
+      lhs = new_binary_node(BIT_XOR, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -340,7 +354,9 @@ Tree *parse_bit_and(Token **rest, Token *tok) {
   Tree *lhs = parse_equality(&tok, tok);
   for (;;) {
     if (equal(tok, "&")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "&");
+      Tree *rhs = parse_equality(&tok, tok);
+      lhs = new_binary_node(BIT_AND, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -353,9 +369,13 @@ Tree *parse_equality(Token **rest, Token *tok) {
 
   for (;;) {
     if (equal(tok, "==")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "==");
+      Tree *rhs = parse_relational(&tok, tok);
+      lhs = new_binary_node(EQUAL, lhs, rhs);
     } else if (equal(tok, "!=")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "!=");
+      Tree *rhs = parse_relational(&tok, tok);
+      lhs = new_binary_node(NOT_EQUAL, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -368,13 +388,21 @@ Tree *parse_relational(Token **rest, Token *tok) {
 
   for (;;) {
     if (equal(tok, "<")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "<");
+      Tree *rhs = parse_shift(&tok, tok);
+      lhs = new_binary_node(SMALLER, lhs, rhs);
     } else if (equal(tok, "<=")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "<=");
+      Tree *rhs = parse_shift(&tok, tok);
+      lhs = new_binary_node(SMALLER_EQUAL, lhs, rhs);
     } else if (equal(tok, ">")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, ">");
+      Tree *rhs = parse_shift(&tok, tok);
+      lhs = new_binary_node(GREATER, lhs, rhs);
     } else if (equal(tok, ">=")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, ">=");
+      Tree *rhs = parse_shift(&tok, tok);
+      lhs = new_binary_node(GREATER_EQUAL, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -387,9 +415,13 @@ Tree *parse_shift(Token **rest, Token *tok) {
 
   for (;;) {
     if (equal(tok, "<<")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "<<");
+      Tree *rhs = parse_add(&tok, tok);
+      lhs = new_binary_node(LSHIFT, lhs, rhs);
     } else if (equal(tok, ">>")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, ">>");
+      Tree *rhs = parse_add(&tok, tok);
+      lhs = new_binary_node(RSHIFT, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -403,20 +435,12 @@ Tree *parse_add(Token **rest, Token *tok) {
   for (;;) {
     if (equal(tok, "+")) {
       consume(&tok, tok, "+");
-      Tree *add_node = calloc(1, sizeof(Tree));
-      add_node->kind = ADD;
-      add_node->lhs = lhs;
-      add_node->rhs = parse_mul(&tok, tok);
-
-      lhs = add_node;
+      Tree *rhs = parse_mul(&tok, tok);
+      lhs = new_binary_node(ADD, lhs, rhs);
     } else if (equal(tok, "-")) {
       consume(&tok, tok, "-");
-      Tree *sub_node = calloc(1, sizeof(Tree));
-      sub_node->kind = SUB;
-      sub_node->lhs = lhs;
-      sub_node->rhs = parse_mul(&tok, tok);
-
-      lhs = sub_node;
+      Tree *rhs = parse_mul(&tok, tok);
+      lhs = new_binary_node(SUB, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -430,22 +454,16 @@ Tree *parse_mul(Token **rest, Token *tok) {
   for (;;) {
     if (equal(tok, "*")) {
       consume(&tok, tok, "*");
-      Tree *mul_node = calloc(1, sizeof(Tree));
-      mul_node->kind = MUL;
-      mul_node->lhs = lhs;
-      mul_node->rhs = parse_cast(&tok, tok);
-
-      lhs = mul_node;
+      Tree *rhs = parse_cast(&tok, tok);
+      lhs = new_binary_node(MUL, lhs, rhs);
     } else if (equal(tok, "/")) {
       consume(&tok, tok, "/");
-      Tree *div_node = calloc(1, sizeof(Tree));
-      div_node->kind = DIV;
-      div_node->lhs = lhs;
-      div_node->rhs = parse_cast(&tok, tok);
-
-      lhs = div_node;
+      Tree *rhs = parse_cast(&tok, tok);
+      lhs = new_binary_node(DIV, lhs, rhs);
     } else if (equal(tok, "%")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "%");
+      Tree *rhs = parse_cast(&tok, tok);
+      lhs = new_binary_node(MOD, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;

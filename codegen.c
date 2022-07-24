@@ -65,11 +65,16 @@ void codegen_stmt(Tree *stmt) {
       cur = cur->next;
     }
     return;
+  case COMMA:
+    codegen_stmt(stmt->lhs);
+    codegen_stmt(stmt->rhs);
+    return;
   default:
     break;
   }
 
-  // binary-op
+  // arithmetic-op
+
   codegen_stmt(stmt->lhs);
   printf("  push rax\n");
   codegen_stmt(stmt->rhs);
@@ -77,6 +82,53 @@ void codegen_stmt(Tree *stmt) {
   printf("  pop rax\n");
 
   switch (stmt->kind) {
+  case BIT_AND:
+    printf("  and rax, rdi\n");
+    break;
+  case BIT_XOR:
+    printf("  xor rax, rdi\n");
+    break;
+  case BIT_OR:
+    printf("  or rax, rdi\n");
+    break;
+  case EQUAL:
+    printf("  cmp rax,rdi\n");
+    printf("  sete al\n");
+    printf("  movzb rax,al\n");
+    break;
+  case NOT_EQUAL:
+    printf("  cmp rax,rdi\n");
+    printf("  setne al\n");
+    printf("  movzb rax,al\n");
+    break;
+  case SMALLER:
+    printf("  cmp rax,rdi\n");
+    printf("  setl al\n");
+    printf("  movzb rax,al\n");
+    break;
+  case SMALLER_EQUAL:
+    printf("  cmp rax,rdi\n");
+    printf("  setle al\n");
+    printf("  movzb rax,al\n");
+    break;
+  case GREATER:
+    printf("  cmp rdi,rax\n");
+    printf("  setl al\n");
+    printf("  movzb rax,al\n");
+    break;
+  case GREATER_EQUAL:
+    printf("  cmp rdi,rax\n");
+    printf("  setle al\n");
+    printf("  movzb rax,al\n");
+    break;
+  case LSHIFT:
+    printf("  mov rcx, rdi\n");
+    printf("  sal rax, cl\n");
+    break;
+  case RSHIFT:
+    printf("  mov rcx, rdi\n");
+    printf("  sar rax, cl\n");
+    break;
   case ADD:
     printf("  add rax,rdi\n");
     break;
@@ -89,6 +141,11 @@ void codegen_stmt(Tree *stmt) {
   case DIV:
     printf("  cqo\n");
     printf("  idiv rdi\n");
+    break;
+  case MOD:
+    printf("  cqo\n");
+    printf("  idiv rdi\n");
+    printf("  mov rax,rdx\n");
     break;
   default:
     error("cannnot codegen binary_op");
