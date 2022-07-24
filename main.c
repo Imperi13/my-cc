@@ -2,6 +2,8 @@
 #include "file.h"
 #include "tokenize.h"
 #include "parse.h"
+#include "analyze.h"
+#include "codegen.h"
 
 char *filename;
 char *user_input;
@@ -17,7 +19,9 @@ int main(int argc, char **argv) {
   // debug_token(token);
 
   Tree *ast = parse_translation_unit(token);
+  analyze_translation_unit(ast);
   
+  codegen_translation_unit(ast);
   // codegen_all(stdout);
   return 0;
 }
