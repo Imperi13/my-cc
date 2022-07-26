@@ -2,43 +2,50 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "analyze.h"
 #include "error.h"
 #include "parse.h"
 #include "tokenize.h"
 
-static Tree *parse_external_decl(Token **rest, Token *tok);
-static DeclSpec *parse_declaration_specs(Token **rest, Token *tok);
-static Declarator *parse_declarator(Token **rest, Token *tok);
+static Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state);
+static DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
+                                         TypedefScope *state);
+static Declarator *parse_declarator(Token **rest, Token *tok,
+                                    TypedefScope *state);
 
-static Tree *parse_stmt(Token **rest, Token *tok);
-static Tree *parse_label_stmt(Token **rest, Token *tok);
-static Tree *parse_compound_stmt(Token **rest, Token *tok);
-static Tree *parse_jump_stmt(Token **rest, Token *tok);
-static Tree *parse_iteration_stmt(Token **rest, Token *tok);
-static Tree *parse_selection_stmt(Token **rest, Token *tok);
-static Tree *parse_expr_stmt(Token **rest, Token *tok);
-static Tree *parse_expr(Token **rest, Token *tok);
-static Tree *parse_assign(Token **rest, Token *tok);
-static Tree *parse_conditional(Token **rest, Token *tok);
-static Tree *parse_logical_or(Token **rest, Token *tok);
-static Tree *parse_logical_and(Token **rest, Token *tok);
-static Tree *parse_bit_or(Token **rest, Token *tok);
-static Tree *parse_bit_xor(Token **rest, Token *tok);
-static Tree *parse_bit_and(Token **rest, Token *tok);
-static Tree *parse_equality(Token **rest, Token *tok);
-static Tree *parse_relational(Token **rest, Token *tok);
-static Tree *parse_shift(Token **rest, Token *tok);
-static Tree *parse_add(Token **rest, Token *tok);
-static Tree *parse_mul(Token **rest, Token *tok);
-static Tree *parse_cast(Token **rest, Token *tok);
-static Tree *parse_unary(Token **rest, Token *tok);
-static Tree *parse_postfix(Token **rest, Token *tok);
-static Tree *parse_primary(Token **rest, Token *tok);
+static Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_compound_stmt(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_jump_stmt(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_iteration_stmt(Token **rest, Token *tok,
+                                  TypedefScope *state);
+static Tree *parse_selection_stmt(Token **rest, Token *tok,
+                                  TypedefScope *state);
+static Tree *parse_expr_stmt(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_expr(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_assign(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_conditional(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_logical_or(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_logical_and(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_bit_or(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_bit_xor(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_bit_and(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_equality(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_relational(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_shift(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_add(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_mul(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_cast(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_primary(Token **rest, Token *tok, TypedefScope *state);
 
 static bool is_label_stmt(Token *tok);
 static bool is_selection_stmt(Token *tok);
 static bool is_iteration_stmt(Token *tok);
 static bool is_jump_stmt(Token *tok);
+
+static bool is_declaration_specs(Token *tok, TypedefScope *state);
 
 Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs) {
   Tree *node = calloc(1, sizeof(Tree));
@@ -52,8 +59,10 @@ Tree *parse_translation_unit(Token *tok) {
   Tree *head = calloc(1, sizeof(Tree));
   Tree *cur = head;
 
+  TypedefScope *state = calloc(1, sizeof(TypedefScope));
+
   while (!at_eof(tok)) {
-    Tree *ex_decl = parse_external_decl(&tok, tok);
+    Tree *ex_decl = parse_external_decl(&tok, tok, state);
     cur->next = ex_decl;
     cur = ex_decl;
   }
@@ -61,23 +70,40 @@ Tree *parse_translation_unit(Token *tok) {
   return head->next;
 }
 
-Tree *parse_external_decl(Token **rest, Token *tok) {
+Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state) {
   Tree *ex_decl = calloc(1, sizeof(Tree));
-  ex_decl->decl_specs = parse_declaration_specs(&tok, tok);
-  ex_decl->declarator = parse_declarator(&tok, tok);
+  ex_decl->decl_specs = parse_declaration_specs(&tok, tok, state);
+
+  if (equal(tok, ";")) {
+    ex_decl->kind = DECLARATION;
+    not_implemented_at(tok->str);
+  }
+
+  ex_decl->declarator = parse_declarator(&tok, tok, state);
 
   if (equal(tok, "{")) {
     ex_decl->kind = FUNC_DEF;
-    ex_decl->func_body = parse_compound_stmt(&tok, tok);
+    ex_decl->func_body = parse_compound_stmt(&tok, tok, state);
     *rest = tok;
     return ex_decl;
   }
 
-  not_implemented_at(tok->str);
-  return NULL;
+  // TODO initialize
+  // TODO multiple declarator
+
+  ex_decl->kind = DECLARATION;
+
+  expect(&tok, tok, ";");
+  *rest = tok;
+  return ex_decl;
 }
 
-DeclSpec *parse_declaration_specs(Token **rest, Token *tok) {
+bool is_declaration_specs(Token *tok, TypedefScope *state) {
+  return equal_kind(tok, TK_INT);
+}
+
+DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
+                                  TypedefScope *state) {
   if (equal_kind(tok, TK_INT)) {
     DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
     decl_spec->has_int = true;
@@ -88,7 +114,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok) {
   return NULL;
 }
 
-Declarator *parse_declarator(Token **rest, Token *tok) {
+Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
   Declarator *declarator = calloc(1, sizeof(Declarator));
 
   // parse ident or nest-declarator
@@ -116,21 +142,21 @@ Declarator *parse_declarator(Token **rest, Token *tok) {
   return declarator;
 }
 
-Tree *parse_stmt(Token **rest, Token *tok) {
+Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node;
 
   if (equal(tok, "{")) {
-    node = parse_compound_stmt(&tok, tok);
+    node = parse_compound_stmt(&tok, tok, state);
   } else if (is_label_stmt(tok)) {
-    node = parse_label_stmt(&tok, tok);
+    node = parse_label_stmt(&tok, tok, state);
   } else if (is_selection_stmt(tok)) {
-    node = parse_selection_stmt(&tok, tok);
+    node = parse_selection_stmt(&tok, tok, state);
   } else if (is_iteration_stmt(tok)) {
-    node = parse_iteration_stmt(&tok, tok);
+    node = parse_iteration_stmt(&tok, tok, state);
   } else if (is_jump_stmt(tok)) {
-    node = parse_jump_stmt(&tok, tok);
+    node = parse_jump_stmt(&tok, tok, state);
   } else {
-    node = parse_expr_stmt(&tok, tok);
+    node = parse_expr_stmt(&tok, tok, state);
   }
   *rest = tok;
   return node;
@@ -141,7 +167,7 @@ bool is_label_stmt(Token *tok) {
          equal_kind(tok, TK_DEFAULT) || equal_kind(tok, TK_CASE);
 }
 
-Tree *parse_label_stmt(Token **rest, Token *tok) {
+Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
     not_implemented_at(tok->str);
@@ -153,13 +179,18 @@ Tree *parse_label_stmt(Token **rest, Token *tok) {
   return node;
 }
 
-Tree *parse_compound_stmt(Token **rest, Token *tok) {
+Tree *parse_compound_stmt(Token **rest, Token *tok, TypedefScope *state) {
   expect(&tok, tok, "{");
   Tree *head = calloc(1, sizeof(Tree));
   Tree *cur = head;
   while (!consume(&tok, tok, "}")) {
-    cur->next = parse_stmt(&tok, tok);
-    cur = cur->next;
+    if (is_declaration_specs(tok, state)) {
+      cur->next = parse_external_decl(&tok, tok, state);
+      cur = cur->next;
+    } else {
+      cur->next = parse_stmt(&tok, tok, state);
+      cur = cur->next;
+    }
   }
   *rest = tok;
 
@@ -174,7 +205,7 @@ bool is_jump_stmt(Token *tok) {
          equal_kind(tok, TK_CONTINUE);
 }
 
-Tree *parse_jump_stmt(Token **rest, Token *tok) {
+Tree *parse_jump_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node = calloc(1, sizeof(Tree));
   if (equal_kind(tok, TK_RETURN)) {
 
@@ -183,7 +214,7 @@ Tree *parse_jump_stmt(Token **rest, Token *tok) {
     if (equal(tok, ";")) {
       consume(&tok, tok, ";");
     } else {
-      node->lhs = parse_expr(&tok, tok);
+      node->lhs = parse_expr(&tok, tok, state);
       expect(&tok, tok, ";");
     }
 
@@ -204,7 +235,7 @@ bool is_iteration_stmt(Token *tok) {
          equal_kind(tok, TK_FOR);
 }
 
-Tree *parse_iteration_stmt(Token **rest, Token *tok) {
+Tree *parse_iteration_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_WHILE)) {
     not_implemented_at(tok->str);
@@ -222,7 +253,7 @@ bool is_selection_stmt(Token *tok) {
   return equal_kind(tok, TK_IF) || equal_kind(tok, TK_SWITCH);
 }
 
-Tree *parse_selection_stmt(Token **rest, Token *tok) {
+Tree *parse_selection_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IF)) {
     not_implemented_at(tok->str);
@@ -234,22 +265,22 @@ Tree *parse_selection_stmt(Token **rest, Token *tok) {
   return node;
 }
 
-Tree *parse_expr_stmt(Token **rest, Token *tok) {
+Tree *parse_expr_stmt(Token **rest, Token *tok, TypedefScope *state) {
   if (equal(tok, ";")) {
     not_implemented_at(tok->str);
   }
 
-  Tree *node = parse_expr(&tok, tok);
+  Tree *node = parse_expr(&tok, tok, state);
   expect(rest, tok, ";");
   return node;
 }
 
-Tree *parse_expr(Token **rest, Token *tok) {
-  Tree *lhs = parse_assign(&tok, tok);
+Tree *parse_expr(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_assign(&tok, tok, state);
   for (;;) {
     if (equal(tok, ",")) {
       consume(&tok, tok, ",");
-      Tree *rhs = parse_assign(&tok, tok);
+      Tree *rhs = parse_assign(&tok, tok, state);
       lhs = new_binary_node(COMMA, lhs, rhs);
     } else {
       *rest = tok;
@@ -258,11 +289,13 @@ Tree *parse_expr(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_assign(Token **rest, Token *tok) {
-  Tree *lhs = parse_conditional(&tok, tok);
+Tree *parse_assign(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_conditional(&tok, tok, state);
 
   if (equal(tok, "=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(ASSIGN, lhs, rhs);
   } else if (equal(tok, "+=")) {
     not_implemented_at(tok->str);
   } else if (equal(tok, "-=")) {
@@ -289,17 +322,29 @@ Tree *parse_assign(Token **rest, Token *tok) {
   return lhs;
 }
 
-Tree *parse_conditional(Token **rest, Token *tok) {
-  Tree *cond = parse_logical_or(&tok, tok);
+Tree *parse_conditional(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *cond = parse_logical_or(&tok, tok, state);
   if (equal(tok, "?")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "?");
+    Tree *lhs = parse_expr(&tok, tok, state);
+    expect(&tok, tok, ":");
+    Tree *rhs = parse_conditional(&tok, tok, state);
+
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = CONDITIONAL;
+    node->cond = cond;
+    node->lhs = lhs;
+    node->rhs = rhs;
+
+    *rest = tok;
+    return node;
   }
   *rest = tok;
   return cond;
 }
 
-Tree *parse_logical_or(Token **rest, Token *tok) {
-  Tree *lhs = parse_logical_and(&tok, tok);
+Tree *parse_logical_or(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_logical_and(&tok, tok, state);
   for (;;) {
     if (equal(tok, "||")) {
       not_implemented_at(tok->str);
@@ -310,8 +355,8 @@ Tree *parse_logical_or(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_logical_and(Token **rest, Token *tok) {
-  Tree *lhs = parse_bit_or(&tok, tok);
+Tree *parse_logical_and(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_bit_or(&tok, tok, state);
   for (;;) {
     if (equal(tok, "&&")) {
       not_implemented_at(tok->str);
@@ -322,12 +367,12 @@ Tree *parse_logical_and(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_bit_or(Token **rest, Token *tok) {
-  Tree *lhs = parse_bit_xor(&tok, tok);
+Tree *parse_bit_or(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_bit_xor(&tok, tok, state);
   for (;;) {
     if (equal(tok, "|")) {
       consume(&tok, tok, "|");
-      Tree *rhs = parse_bit_xor(&tok, tok);
+      Tree *rhs = parse_bit_xor(&tok, tok, state);
       lhs = new_binary_node(BIT_OR, lhs, rhs);
     } else {
       *rest = tok;
@@ -336,12 +381,12 @@ Tree *parse_bit_or(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_bit_xor(Token **rest, Token *tok) {
-  Tree *lhs = parse_bit_and(&tok, tok);
+Tree *parse_bit_xor(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_bit_and(&tok, tok, state);
   for (;;) {
     if (equal(tok, "^")) {
       consume(&tok, tok, "^");
-      Tree *rhs = parse_bit_and(&tok, tok);
+      Tree *rhs = parse_bit_and(&tok, tok, state);
       lhs = new_binary_node(BIT_XOR, lhs, rhs);
     } else {
       *rest = tok;
@@ -350,12 +395,12 @@ Tree *parse_bit_xor(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_bit_and(Token **rest, Token *tok) {
-  Tree *lhs = parse_equality(&tok, tok);
+Tree *parse_bit_and(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_equality(&tok, tok, state);
   for (;;) {
     if (equal(tok, "&")) {
       consume(&tok, tok, "&");
-      Tree *rhs = parse_equality(&tok, tok);
+      Tree *rhs = parse_equality(&tok, tok, state);
       lhs = new_binary_node(BIT_AND, lhs, rhs);
     } else {
       *rest = tok;
@@ -364,17 +409,17 @@ Tree *parse_bit_and(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_equality(Token **rest, Token *tok) {
-  Tree *lhs = parse_relational(&tok, tok);
+Tree *parse_equality(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_relational(&tok, tok, state);
 
   for (;;) {
     if (equal(tok, "==")) {
       consume(&tok, tok, "==");
-      Tree *rhs = parse_relational(&tok, tok);
+      Tree *rhs = parse_relational(&tok, tok, state);
       lhs = new_binary_node(EQUAL, lhs, rhs);
     } else if (equal(tok, "!=")) {
       consume(&tok, tok, "!=");
-      Tree *rhs = parse_relational(&tok, tok);
+      Tree *rhs = parse_relational(&tok, tok, state);
       lhs = new_binary_node(NOT_EQUAL, lhs, rhs);
     } else {
       *rest = tok;
@@ -383,25 +428,25 @@ Tree *parse_equality(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_relational(Token **rest, Token *tok) {
-  Tree *lhs = parse_shift(&tok, tok);
+Tree *parse_relational(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_shift(&tok, tok, state);
 
   for (;;) {
     if (equal(tok, "<")) {
       consume(&tok, tok, "<");
-      Tree *rhs = parse_shift(&tok, tok);
+      Tree *rhs = parse_shift(&tok, tok, state);
       lhs = new_binary_node(SMALLER, lhs, rhs);
     } else if (equal(tok, "<=")) {
       consume(&tok, tok, "<=");
-      Tree *rhs = parse_shift(&tok, tok);
+      Tree *rhs = parse_shift(&tok, tok, state);
       lhs = new_binary_node(SMALLER_EQUAL, lhs, rhs);
     } else if (equal(tok, ">")) {
       consume(&tok, tok, ">");
-      Tree *rhs = parse_shift(&tok, tok);
+      Tree *rhs = parse_shift(&tok, tok, state);
       lhs = new_binary_node(GREATER, lhs, rhs);
     } else if (equal(tok, ">=")) {
       consume(&tok, tok, ">=");
-      Tree *rhs = parse_shift(&tok, tok);
+      Tree *rhs = parse_shift(&tok, tok, state);
       lhs = new_binary_node(GREATER_EQUAL, lhs, rhs);
     } else {
       *rest = tok;
@@ -410,17 +455,17 @@ Tree *parse_relational(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_shift(Token **rest, Token *tok) {
-  Tree *lhs = parse_add(&tok, tok);
+Tree *parse_shift(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_add(&tok, tok, state);
 
   for (;;) {
     if (equal(tok, "<<")) {
       consume(&tok, tok, "<<");
-      Tree *rhs = parse_add(&tok, tok);
+      Tree *rhs = parse_add(&tok, tok, state);
       lhs = new_binary_node(LSHIFT, lhs, rhs);
     } else if (equal(tok, ">>")) {
       consume(&tok, tok, ">>");
-      Tree *rhs = parse_add(&tok, tok);
+      Tree *rhs = parse_add(&tok, tok, state);
       lhs = new_binary_node(RSHIFT, lhs, rhs);
     } else {
       *rest = tok;
@@ -429,17 +474,17 @@ Tree *parse_shift(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_add(Token **rest, Token *tok) {
-  Tree *lhs = parse_mul(&tok, tok);
+Tree *parse_add(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_mul(&tok, tok, state);
 
   for (;;) {
     if (equal(tok, "+")) {
       consume(&tok, tok, "+");
-      Tree *rhs = parse_mul(&tok, tok);
+      Tree *rhs = parse_mul(&tok, tok, state);
       lhs = new_binary_node(ADD, lhs, rhs);
     } else if (equal(tok, "-")) {
       consume(&tok, tok, "-");
-      Tree *rhs = parse_mul(&tok, tok);
+      Tree *rhs = parse_mul(&tok, tok, state);
       lhs = new_binary_node(SUB, lhs, rhs);
     } else {
       *rest = tok;
@@ -448,21 +493,21 @@ Tree *parse_add(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_mul(Token **rest, Token *tok) {
-  Tree *lhs = parse_cast(&tok, tok);
+Tree *parse_mul(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_cast(&tok, tok, state);
 
   for (;;) {
     if (equal(tok, "*")) {
       consume(&tok, tok, "*");
-      Tree *rhs = parse_cast(&tok, tok);
+      Tree *rhs = parse_cast(&tok, tok, state);
       lhs = new_binary_node(MUL, lhs, rhs);
     } else if (equal(tok, "/")) {
       consume(&tok, tok, "/");
-      Tree *rhs = parse_cast(&tok, tok);
+      Tree *rhs = parse_cast(&tok, tok, state);
       lhs = new_binary_node(DIV, lhs, rhs);
     } else if (equal(tok, "%")) {
       consume(&tok, tok, "%");
-      Tree *rhs = parse_cast(&tok, tok);
+      Tree *rhs = parse_cast(&tok, tok, state);
       lhs = new_binary_node(MOD, lhs, rhs);
     } else {
       *rest = tok;
@@ -471,12 +516,12 @@ Tree *parse_mul(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_cast(Token **rest, Token *tok) {
-  Tree *node = parse_unary(rest, tok);
+Tree *parse_cast(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *node = parse_unary(rest, tok, state);
   return node;
 }
 
-Tree *parse_unary(Token **rest, Token *tok) {
+Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state) {
   if (equal_kind(tok, TK_SIZEOF)) {
     not_implemented_at(tok->str);
     return NULL;
@@ -497,19 +542,19 @@ Tree *parse_unary(Token **rest, Token *tok) {
   }
 
   if (equal(tok, "+")) {
-    consume(&tok,tok,"+");
-    Tree *node = calloc(1,sizeof(Tree));
+    consume(&tok, tok, "+");
+    Tree *node = calloc(1, sizeof(Tree));
     node->kind = PLUS;
-    node->lhs = parse_cast(&tok,tok);
+    node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
 
   if (equal(tok, "-")) {
-    consume(&tok,tok,"-");
-    Tree *node = calloc(1,sizeof(Tree));
+    consume(&tok, tok, "-");
+    Tree *node = calloc(1, sizeof(Tree));
     node->kind = MINUS;
-    node->lhs = parse_cast(&tok,tok);
+    node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
@@ -528,7 +573,7 @@ Tree *parse_unary(Token **rest, Token *tok) {
     consume(&tok, tok, "!");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = LOGICAL_NOT;
-    node->lhs = parse_cast(&tok, tok);
+    node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
@@ -537,23 +582,29 @@ Tree *parse_unary(Token **rest, Token *tok) {
     consume(&tok, tok, "~");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = BIT_NOT;
-    node->lhs = parse_cast(&tok, tok);
+    node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
 
-  Tree *lhs = parse_postfix(rest, tok);
+  Tree *lhs = parse_postfix(rest, tok, state);
   return lhs;
 }
 
-Tree *parse_postfix(Token **rest, Token *tok) {
-  Tree *lhs = parse_primary(&tok, tok);
+Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *lhs = parse_primary(&tok, tok, state);
 
   for (;;) {
     if (equal(tok, "[")) {
       not_implemented_at(tok->str);
     } else if (equal(tok, "(")) {
-      not_implemented_at(tok->str);
+      Tree *node = calloc(1, sizeof(Tree));
+      node->kind = FUNC_CALL;
+      node->lhs = lhs;
+      consume(&tok, tok, "(");
+      consume(&tok, tok, ")");
+
+      lhs = node;
     } else if (equal(tok, ".")) {
       not_implemented_at(tok->str);
     } else if (equal(tok, "->")) {
@@ -569,7 +620,7 @@ Tree *parse_postfix(Token **rest, Token *tok) {
   }
 }
 
-Tree *parse_primary(Token **rest, Token *tok) {
+Tree *parse_primary(Token **rest, Token *tok, TypedefScope *state) {
   Tree *primary = calloc(1, sizeof(Tree));
 
   if (equal_kind(tok, TK_NUM)) {
@@ -579,10 +630,13 @@ Tree *parse_primary(Token **rest, Token *tok) {
   } else if (equal_kind(tok, TK_STR)) {
     not_implemented_at(tok->str);
   } else if (equal_kind(tok, TK_IDENT)) {
-    not_implemented_at(tok->str);
+    Token *ident_tok = consume_kind(&tok, tok, TK_IDENT);
+    primary->kind = VAR;
+    primary->var_name = ident_tok->str;
+    primary->var_len = ident_tok->len;
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
-    primary = parse_expr(&tok, tok);
+    primary = parse_expr(&tok, tok, state);
     expect(&tok, tok, ")");
   } else {
     error("cannot parse primary");

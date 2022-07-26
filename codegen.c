@@ -7,6 +7,7 @@
 
 static void codegen_function(Tree *func);
 static void codegen_stmt(Tree *stmt);
+static void codegen_addr(Tree *stmt);
 
 void codegen_translation_unit(Tree *head) {
 
@@ -14,7 +15,7 @@ void codegen_translation_unit(Tree *head) {
 
   Tree *cur = head;
   while (cur) {
-    if (cur->kind == DECLARATION) {
+    if (cur->kind == DECLARATION && cur->def_obj->is_defined) {
       not_implemented();
     }
     cur = cur->next;
@@ -37,7 +38,7 @@ void codegen_function(Tree *func) {
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, 0\n");
+  printf("  sub rsp, %d\n", func->def_obj->stack_size);
 
   codegen_stmt(func->func_body);
 
@@ -46,11 +47,25 @@ void codegen_function(Tree *func) {
   printf("  ret\n");
 }
 
+void codegen_addr(Tree *stmt) {
+  if (stmt->kind == VAR) {
+    if (!stmt->var_obj->is_global)
+      printf("  lea rax, [rbp - %d]\n", stmt->var_obj->rbp_offset);
+    else if (stmt->var_obj->is_defined)
+      printf("  lea rax, [rip + %.*s]\n", stmt->var_obj->obj_len,
+             stmt->var_obj->obj_name);
+    else
+      printf("  mov rax, [%.*s@GOTPCREL + rip]\n", stmt->var_obj->obj_len,
+             stmt->var_obj->obj_name);
+  } else {
+    not_implemented();
+  }
+}
+
 void codegen_stmt(Tree *stmt) {
   Tree *cur;
   switch (stmt->kind) {
-  case NUM:
-    printf("  mov rax, %ld\n", stmt->num);
+  case DECLARATION:
     return;
   case RETURN:
     codegen_stmt(stmt->lhs);
@@ -64,6 +79,25 @@ void codegen_stmt(Tree *stmt) {
       codegen_stmt(cur);
       cur = cur->next;
     }
+    return;
+  case ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  pop rdi\n");
+    printf("  mov [rdi],eax\n");
+    return;
+  case CONDITIONAL:
+    codegen_stmt(stmt->cond);
+    printf("  cmp rax,0\n");
+    printf("  jne .Ltrue%d\n", stmt->label_number);
+    printf("  jmp .Lfalse%d\n", stmt->label_number);
+    printf(".Ltrue%d:\n", stmt->label_number);
+    codegen_stmt(stmt->lhs);
+    printf("  jmp .Lend%d\n", stmt->label_number);
+    printf(".Lfalse%d:\n", stmt->label_number);
+    codegen_stmt(stmt->rhs);
+    printf(".Lend%d:\n", stmt->label_number);
     return;
   case COMMA:
     codegen_stmt(stmt->lhs);
@@ -85,6 +119,25 @@ void codegen_stmt(Tree *stmt) {
   case MINUS:
     codegen_stmt(stmt->lhs);
     printf("  neg rax\n");
+    return;
+  case FUNC_CALL:
+    printf("  mov r10,rsp\n");
+    printf("  and rsp,0xfffffffffffffff0\n");
+    printf("  push r10\n");
+    printf("  push 0\n");
+    codegen_stmt(stmt->lhs);
+    printf("  call rax\n");
+    printf("  pop r10\n");
+    printf("  pop rsp\n");
+    return;
+  case NUM:
+    printf("  mov rax, %ld\n", stmt->num);
+    return;
+  case VAR:
+    codegen_addr(stmt);
+    if (stmt->type->kind == FUNC)
+      return;
+    printf("  mov eax,[rax]\n");
     return;
   default:
     break;

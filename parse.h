@@ -2,14 +2,14 @@
 
 #include <stdbool.h>
 
-#include "tokenize.h"
-
 typedef enum {
   FUNC_DEF,
   DECLARATION,
   COMPOUND_STMT,
   RETURN,
   COMMA,
+  ASSIGN,
+  CONDITIONAL,
   BIT_OR,
   BIT_XOR,
   BIT_AND,
@@ -30,7 +30,9 @@ typedef enum {
   MINUS,
   LOGICAL_NOT,
   BIT_NOT,
+  FUNC_CALL,
   NUM,
+  VAR,
 } TreeKind;
 
 typedef struct Tree Tree;
@@ -38,6 +40,10 @@ typedef struct DeclSpec DeclSpec;
 typedef struct Declarator Declarator;
 typedef struct Pointer Pointer;
 typedef struct Argument Argument;
+
+#include "analyze.h"
+#include "tokenize.h"
+#include "type.h"
 
 typedef enum {
   NONE,
@@ -52,8 +58,16 @@ struct Tree {
   DeclSpec *decl_specs;
   Declarator *declarator;
 
+  Obj *def_obj;
+
   // for FUNC_DEF
   Tree *func_body;
+
+  Type *type;
+
+  // for conditional
+  Tree *cond;
+  int label_number;
 
   // for unary and binary op
   Tree *lhs; // for unary
@@ -64,6 +78,12 @@ struct Tree {
 
   // for const-val
   unsigned long num;
+
+  // for var
+  char *var_name;
+  int var_len;
+
+  Obj *var_obj;
 
   // for linked-list
   Tree *next;
