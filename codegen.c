@@ -9,6 +9,8 @@ static void codegen_function(Tree *func);
 static void codegen_stmt(Tree *stmt);
 static void codegen_addr(Tree *stmt);
 
+char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
 void codegen_translation_unit(Tree *head) {
 
   printf(".intel_syntax noprefix\n");
@@ -120,15 +122,28 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->lhs);
     printf("  neg rax\n");
     return;
-  case FUNC_CALL:
+  case FUNC_CALL: {
     printf("  mov r10,rsp\n");
     printf("  and rsp,0xfffffffffffffff0\n");
     printf("  push r10\n");
     printf("  push 0\n");
+    int stack_count = 0;
+    Tree *cur = stmt->args;
+    while (cur) {
+      codegen_stmt(cur);
+      printf("  push rax\n");
+      stack_count++;
+      cur = cur->next;
+    }
+    if (stack_count > 6)
+      error("more than 6 arguments are not implemented");
     codegen_stmt(stmt->lhs);
+    for (int i = 0; i < stack_count; i++)
+      printf("  pop %s\n", call_register64[i]);
     printf("  call rax\n");
     printf("  pop r10\n");
     printf("  pop rsp\n");
+  }
     return;
   case NUM:
     printf("  mov rax, %ld\n", stmt->num);

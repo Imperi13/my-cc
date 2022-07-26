@@ -177,6 +177,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
+    Tree *cur = ast->args;
+    while (cur) {
+      analyze_stmt(cur, state);
+      cur = cur->next;
+    }
   } else if (ast->kind == NUM) {
   } else if (ast->kind == VAR) {
     Obj *var =

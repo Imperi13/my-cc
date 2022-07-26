@@ -76,6 +76,9 @@ struct Tree {
   // for compound_stmt
   Tree *stmts;
 
+  // for func-call
+  Tree *args;
+
   // for const-val
   unsigned long num;
 

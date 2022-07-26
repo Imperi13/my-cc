@@ -602,7 +602,13 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
       node->kind = FUNC_CALL;
       node->lhs = lhs;
       consume(&tok, tok, "(");
-      consume(&tok, tok, ")");
+
+      while (!consume(&tok, tok, ")")) {
+        Tree *arg = parse_assign(&tok, tok, state);
+        arg->next = node->args;
+        node->args = arg;
+        consume(&tok, tok, ",");
+      }
 
       lhs = node;
     } else if (equal(tok, ".")) {
