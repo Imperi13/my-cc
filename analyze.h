@@ -26,6 +26,8 @@ struct Obj {
   ObjScope *locals;
   int stack_size;
 
+  Obj *args;
+
   // for globals
   bool is_defined;
   bool is_global;
@@ -35,6 +37,7 @@ struct Obj {
 
   // for linked-list
   Obj *next;
+  Obj *arg_next;
 };
 
 struct ObjScope {
@@ -60,3 +63,4 @@ struct Typedef {
 };
 
 void analyze_translation_unit(Tree *ast);
+int offset_alignment(int start,int data_size,int alignment);

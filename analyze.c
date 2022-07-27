@@ -33,6 +33,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
+    Tree *args = getargs_declarator(ast->declarator);
 
     Obj *func = calloc(1, sizeof(Obj));
     func->obj_name = obj_name;
@@ -48,6 +49,12 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     state->globals = func;
 
     ast->def_obj = func;
+
+    Tree *cur = args;
+    while (cur) {
+      analyze_stmt(cur, state);
+      cur = cur->next;
+    }
 
     analyze_stmt(ast->func_body, state);
 
@@ -101,8 +108,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     lvar->obj_name = obj_name;
     lvar->obj_len = strlen(obj_name);
     lvar->type = obj_type;
-    lvar->rbp_offset = state->current_func->stack_size;
-    state->current_func->stack_size += 4;
+    lvar->rbp_offset = offset_alignment(state->current_func->stack_size, 4, 4);
+    state->current_func->stack_size = lvar->rbp_offset;
+
+    ast->def_obj = lvar;
 
     push_lvar(state->current_func->locals, lvar);
   } else if (ast->kind == RETURN) {
@@ -220,4 +229,8 @@ Obj *find_global(Obj *globals, char *var_name, int var_len) {
     if (cur->obj_len == var_len && !memcmp(var_name, cur->obj_name, var_len))
       return cur;
   return NULL;
+}
+
+int offset_alignment(int start, int data_size, int alignment) {
+  return ((start + data_size + alignment - 1) / alignment) * alignment;
 }

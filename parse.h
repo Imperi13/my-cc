@@ -39,7 +39,6 @@ typedef struct Tree Tree;
 typedef struct DeclSpec DeclSpec;
 typedef struct Declarator Declarator;
 typedef struct Pointer Pointer;
-typedef struct Argument Argument;
 
 #include "analyze.h"
 #include "tokenize.h"
@@ -108,7 +107,7 @@ struct Declarator {
   TypeSuffixKind type_suffix_kind;
 
   // for FUNC_DECLARATOR
-  Argument *arg;
+  Tree *args;
 };
 
 struct Pointer {};

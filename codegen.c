@@ -4,12 +4,15 @@
 #include "codegen.h"
 #include "error.h"
 #include "parse.h"
+#include "type.h"
 
 static void codegen_function(Tree *func);
 static void codegen_stmt(Tree *stmt);
 static void codegen_addr(Tree *stmt);
 
 char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+char call_register32[][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
+char call_register8[][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 
 void codegen_translation_unit(Tree *head) {
 
@@ -40,7 +43,16 @@ void codegen_function(Tree *func) {
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, %d\n", func->def_obj->stack_size);
+  printf("  sub rsp, %d\n", offset_alignment(0, func->def_obj->stack_size, 8));
+
+  Tree *cur = getargs_declarator(func->declarator);
+  int count = 0;
+  while (cur) {
+    printf("  mov [rbp - %d], %s\n", cur->def_obj->rbp_offset,
+           call_register32[count]);
+    count++;
+    cur = cur->next;
+  }
 
   codegen_stmt(func->func_body);
 

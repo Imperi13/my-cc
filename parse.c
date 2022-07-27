@@ -12,6 +12,8 @@ static DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
                                          TypedefScope *state);
 static Declarator *parse_declarator(Token **rest, Token *tok,
                                     TypedefScope *state);
+static Tree *parse_parameter_type_list(Token **rest, Token *tok,
+                                       TypedefScope *state);
 
 static Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state);
 static Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state);
@@ -132,7 +134,10 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
   declarator->type_suffix_kind = NONE;
   if (equal(tok, "(")) {
     expect(&tok, tok, "(");
-    expect(&tok, tok, ")");
+    if (!consume(&tok, tok, ")")) {
+      declarator->args = parse_parameter_type_list(&tok, tok, state);
+      consume(&tok, tok, ")");
+    }
     declarator->type_suffix_kind = FUNC_DECLARATOR;
   } else if (equal(tok, "[")) {
     not_implemented_at(tok->str);
@@ -140,6 +145,27 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
 
   *rest = tok;
   return declarator;
+}
+
+Tree *parse_parameter_type_list(Token **rest, Token *tok, TypedefScope *state) {
+  Tree *head = calloc(1, sizeof(Tree));
+  head->kind = DECLARATION;
+  head->decl_specs = parse_declaration_specs(&tok, tok, state);
+  head->declarator = parse_declarator(&tok, tok, state);
+  Tree *cur = head;
+
+  while (consume(&tok, tok, ",")) {
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = DECLARATION;
+    node->decl_specs = parse_declaration_specs(&tok, tok, state);
+    node->declarator = parse_declarator(&tok, tok, state);
+
+    cur->next = node;
+    cur = node;
+  }
+
+  *rest = tok;
+  return head;
 }
 
 Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state) {

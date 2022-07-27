@@ -49,3 +49,13 @@ char *getname_declarator(Declarator *declarator) {
 
   return ret;
 }
+
+Tree *getargs_declarator(Declarator *declarator) {
+  if(declarator->nest)
+    return getargs_declarator(declarator->nest);
+
+  if(declarator->type_suffix_kind != FUNC_DECLARATOR)
+    error("not function");
+
+  return declarator->args;
+}
