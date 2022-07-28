@@ -119,6 +119,20 @@ void codegen_stmt(Tree *stmt) {
     printf("  jne .Lbegin%d\n", stmt->label_number);
     printf(".Lend%d:\n", stmt->label_number);
     return;
+  case FOR:
+    if (stmt->for_init)
+      codegen_stmt(stmt->for_init);
+    printf(".Lbegin%d:\n", stmt->label_number);
+    codegen_stmt(stmt->cond);
+    printf("  cmp rax,0\n");
+    printf("  je .Lend%d\n", stmt->label_number);
+    codegen_stmt(stmt->lhs);
+    printf(".Lloopend%d:\n", stmt->label_number);
+    if (stmt->for_update)
+      codegen_stmt(stmt->for_update);
+    printf("  jmp .Lbegin%d\n", stmt->label_number);
+    printf(".Lend%d:\n", stmt->label_number);
+    return;
   case IF:
     codegen_stmt(stmt->cond);
     printf("  cmp rax,0\n");

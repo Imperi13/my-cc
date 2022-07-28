@@ -157,6 +157,24 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
 
+  } else if (ast->kind == FOR) {
+    ast->label_number = state->label_cnt;
+    state->label_cnt++;
+
+    if (ast->for_init)
+      analyze_stmt(ast->for_init, state);
+    analyze_stmt(ast->cond, state);
+    if (ast->for_update)
+      analyze_stmt(ast->for_update, state);
+
+    push_label(&state->break_labels, ast->label_number);
+    push_label(&state->continue_labels, ast->label_number);
+
+    analyze_stmt(ast->lhs, state);
+
+    pop_label(&state->break_labels);
+    pop_label(&state->continue_labels);
+
   } else if (ast->kind == IF) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;

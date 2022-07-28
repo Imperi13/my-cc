@@ -294,7 +294,35 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, TypedefScope *state) {
     expect(&tok, tok, ")");
     expect(&tok, tok, ";");
   } else if (equal_kind(tok, TK_FOR)) {
-    not_implemented_at(tok->str);
+    consume_kind(&tok, tok, TK_FOR);
+
+    node = calloc(1, sizeof(Tree));
+    node->kind = FOR;
+
+    consume(&tok, tok, "(");
+
+    if (!equal(tok, ";"))
+      node->for_init = parse_expr(&tok, tok, state);
+
+    consume(&tok, tok, ";");
+
+    if (!equal(tok, ";")) {
+      node->cond = parse_expr(&tok, tok, state);
+    } else {
+      node->cond = calloc(1, sizeof(Tree));
+      node->cond->kind = NUM;
+      node->cond->num = 1;
+    }
+
+    consume(&tok, tok, ";");
+
+    if (!equal(tok, ")"))
+      node->for_update = parse_expr(&tok, tok, state);
+
+    consume(&tok, tok, ")");
+
+    node->lhs = parse_stmt(&tok, tok, state);
+
   } else {
     error("cannot parse selection_stmt");
   }

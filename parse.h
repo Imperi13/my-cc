@@ -11,6 +11,7 @@ typedef enum {
   CONTINUE,
   DO_WHILE,
   WHILE,
+  FOR,
   IF,
   COMMA,
   ASSIGN,
@@ -86,6 +87,10 @@ struct Tree {
   // for selection_stmt
   Tree *cond;
   int label_number;
+
+  // for for-stmt
+  Tree *for_init;
+  Tree *for_update;
 
   // for unary and binary op
   Tree *lhs; // for unary
