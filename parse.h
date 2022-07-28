@@ -7,6 +7,7 @@ typedef enum {
   DECLARATION,
   COMPOUND_STMT,
   RETURN,
+  IF,
   COMMA,
   ASSIGN,
   ADD_ASSIGN,
@@ -76,7 +77,7 @@ struct Tree {
 
   Type *type;
 
-  // for conditional
+  // for selection_stmt
   Tree *cond;
   int label_number;
 

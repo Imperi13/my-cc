@@ -94,6 +94,17 @@ void codegen_stmt(Tree *stmt) {
       cur = cur->next;
     }
     return;
+  case IF:
+    codegen_stmt(stmt->cond);
+    printf("  cmp rax,0\n");
+    printf("  je .Lelse%d\n", stmt->label_number);
+    codegen_stmt(stmt->lhs);
+    printf("  jmp .Lend%d\n", stmt->label_number);
+    printf(".Lelse%d:\n", stmt->label_number);
+    if (stmt->rhs)
+      codegen_stmt(stmt->rhs);
+    printf(".Lend%d:\n", stmt->label_number);
+    return;
   case ASSIGN:
     codegen_addr(stmt->lhs);
     printf("  push rax\n");

@@ -116,6 +116,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     push_lvar(state->current_func->locals, lvar);
   } else if (ast->kind == RETURN) {
     analyze_stmt(ast->lhs, state);
+  } else if (ast->kind == IF) {
+    ast->label_number = state->label_cnt;
+    state->label_cnt++;
+    analyze_stmt(ast->cond, state);
+    analyze_stmt(ast->lhs, state);
+    if (ast->rhs)
+      analyze_stmt(ast->rhs, state);
   } else if (ast->kind == COMMA) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);

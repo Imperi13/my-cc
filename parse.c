@@ -282,12 +282,25 @@ bool is_selection_stmt(Token *tok) {
 Tree *parse_selection_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IF)) {
-    not_implemented_at(tok->str);
+    consume_kind(&tok,tok,TK_IF);
+    expect(&tok,tok,"(");
+    node = calloc(1,sizeof(Tree));
+    node->kind = IF;
+    node->cond = parse_expr(&tok,tok,state);
+    expect(&tok,tok,")");
+
+    node->lhs = parse_stmt(&tok,tok,state);
+
+    if(consume_kind(&tok,tok,TK_ELSE))
+      node->rhs = parse_stmt(&tok,tok,state);
+    
   } else if (equal_kind(tok, TK_SWITCH)) {
     not_implemented_at(tok->str);
   } else {
     error("cannot parse selection_stmt");
   }
+
+  *rest = tok;
   return node;
 }
 
