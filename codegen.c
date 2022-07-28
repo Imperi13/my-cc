@@ -94,6 +94,25 @@ void codegen_stmt(Tree *stmt) {
       cur = cur->next;
     }
     return;
+  case WHILE:
+    printf(".Lbegin%d:\n", stmt->label_number);
+    codegen_stmt(stmt->cond);
+    printf("  cmp rax,0\n");
+    printf("  je .Lend%d\n", stmt->label_number);
+    codegen_stmt(stmt->lhs);
+    printf(".Lloopend%d:\n", stmt->label_number);
+    printf("  jmp .Lbegin%d\n", stmt->label_number);
+    printf(".Lend%d:\n", stmt->label_number);
+    return;
+  case DO_WHILE:
+    printf(".Lbegin%d:\n", stmt->label_number);
+    codegen_stmt(stmt->lhs);
+    printf(".Lloopend%d:\n", stmt->label_number);
+    codegen_stmt(stmt->cond);
+    printf("  cmp rax,0\n");
+    printf("  jne .Lbegin%d\n", stmt->label_number);
+    printf(".Lend%d:\n", stmt->label_number);
+    return;
   case IF:
     codegen_stmt(stmt->cond);
     printf("  cmp rax,0\n");
