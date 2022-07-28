@@ -101,6 +101,47 @@ void codegen_stmt(Tree *stmt) {
     printf("  pop rdi\n");
     printf("  mov [rdi],eax\n");
     return;
+  case ADD_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  add rax, rdi\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case SUB_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  sub rax, rdi\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case MUL_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  imul rax, rdi\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case DIV_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  cqo\n");
+    printf("  idiv rdi\n");
+    printf("  mov [rsi], eax\n");
+    return;
   case CONDITIONAL:
     codegen_stmt(stmt->cond);
     printf("  cmp rax,0\n");
@@ -116,6 +157,32 @@ void codegen_stmt(Tree *stmt) {
   case COMMA:
     codegen_stmt(stmt->lhs);
     codegen_stmt(stmt->rhs);
+    return;
+  case LOGICAL_OR:
+    codegen_stmt(stmt->lhs);
+    printf("  cmp rax,0\n");
+    printf("  jne .Ltrue%d\n", stmt->label_number);
+    codegen_stmt(stmt->rhs);
+    printf("  cmp rax,0\n");
+    printf("  jne .Ltrue%d\n", stmt->label_number);
+    printf("  mov rax, 0\n");
+    printf("  jmp .Lend%d\n", stmt->label_number);
+    printf(".Ltrue%d:\n", stmt->label_number);
+    printf("  mov rax, 1\n");
+    printf(".Lend%d:\n", stmt->label_number);
+    return;
+  case LOGICAL_AND:
+    codegen_stmt(stmt->lhs);
+    printf("  cmp rax,0\n");
+    printf("  je .Lfalse%d\n", stmt->label_number);
+    codegen_stmt(stmt->rhs);
+    printf("  cmp rax,0\n");
+    printf("  je .Lfalse%d\n", stmt->label_number);
+    printf("  mov rax, 1\n");
+    printf("  jmp .Lend%d\n", stmt->label_number);
+    printf(".Lfalse%d:\n", stmt->label_number);
+    printf("  mov rax, 0\n");
+    printf(".Lend%d:\n", stmt->label_number);
     return;
   case LOGICAL_NOT:
     codegen_stmt(stmt->lhs);
@@ -140,7 +207,7 @@ void codegen_stmt(Tree *stmt) {
     printf("  push r10\n");
     printf("  push 0\n");
     int stack_count = 0;
-    Tree *cur = stmt->args;
+    Tree *cur = stmt->call_args;
     while (cur) {
       codegen_stmt(cur);
       printf("  push rax\n");

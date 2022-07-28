@@ -122,10 +122,32 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == ADD_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == SUB_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == MUL_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == DIV_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
   } else if (ast->kind == CONDITIONAL) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->cond, state);
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == LOGICAL_OR) {
+    ast->label_number = state->label_cnt;
+    state->label_cnt++;
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == LOGICAL_AND) {
+    ast->label_number = state->label_cnt;
+    state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
   } else if (ast->kind == BIT_OR) {
@@ -186,7 +208,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
-    Tree *cur = ast->args;
+    Tree *cur = ast->call_args;
     while (cur) {
       analyze_stmt(cur, state);
       cur = cur->next;

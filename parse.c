@@ -323,13 +323,21 @@ Tree *parse_assign(Token **rest, Token *tok, TypedefScope *state) {
     Tree *rhs = parse_assign(&tok, tok, state);
     lhs = new_binary_node(ASSIGN, lhs, rhs);
   } else if (equal(tok, "+=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "+=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(ADD_ASSIGN, lhs, rhs);
   } else if (equal(tok, "-=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "-=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(SUB_ASSIGN, lhs, rhs);
   } else if (equal(tok, "*=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "*=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(MUL_ASSIGN, lhs, rhs);
   } else if (equal(tok, "/=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "/=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(DIV_ASSIGN, lhs, rhs);
   } else if (equal(tok, "%=")) {
     not_implemented_at(tok->str);
   } else if (equal(tok, "&=")) {
@@ -373,7 +381,9 @@ Tree *parse_logical_or(Token **rest, Token *tok, TypedefScope *state) {
   Tree *lhs = parse_logical_and(&tok, tok, state);
   for (;;) {
     if (equal(tok, "||")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "||");
+      Tree *rhs = parse_logical_and(&tok, tok, state);
+      lhs = new_binary_node(LOGICAL_OR, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -385,7 +395,9 @@ Tree *parse_logical_and(Token **rest, Token *tok, TypedefScope *state) {
   Tree *lhs = parse_bit_or(&tok, tok, state);
   for (;;) {
     if (equal(tok, "&&")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "&&");
+      Tree *rhs = parse_bit_or(&tok, tok, state);
+      lhs = new_binary_node(LOGICAL_AND, lhs, rhs);
     } else {
       *rest = tok;
       return lhs;
@@ -631,8 +643,8 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
 
       while (!consume(&tok, tok, ")")) {
         Tree *arg = parse_assign(&tok, tok, state);
-        arg->next = node->args;
-        node->args = arg;
+        arg->next = node->call_args;
+        node->call_args = arg;
         consume(&tok, tok, ",");
       }
 

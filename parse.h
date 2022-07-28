@@ -9,7 +9,13 @@ typedef enum {
   RETURN,
   COMMA,
   ASSIGN,
+  ADD_ASSIGN,
+  SUB_ASSIGN,
+  MUL_ASSIGN,
+  DIV_ASSIGN,
   CONDITIONAL,
+  LOGICAL_OR,
+  LOGICAL_AND,
   BIT_OR,
   BIT_XOR,
   BIT_AND,
@@ -76,7 +82,7 @@ struct Tree {
   Tree *stmts;
 
   // for func-call
-  Tree *args;
+  Tree *call_args;
 
   // for const-val
   unsigned long num;
