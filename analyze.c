@@ -134,6 +134,24 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == DIV_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == MOD_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == AND_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == OR_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == XOR_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == LSHIFT_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == RSHIFT_ASSIGN) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
   } else if (ast->kind == CONDITIONAL) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;

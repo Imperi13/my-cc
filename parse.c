@@ -339,17 +339,29 @@ Tree *parse_assign(Token **rest, Token *tok, TypedefScope *state) {
     Tree *rhs = parse_assign(&tok, tok, state);
     lhs = new_binary_node(DIV_ASSIGN, lhs, rhs);
   } else if (equal(tok, "%=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "%=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(MOD_ASSIGN, lhs, rhs);
   } else if (equal(tok, "&=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "&=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(AND_ASSIGN, lhs, rhs);
   } else if (equal(tok, "|=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "|=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(OR_ASSIGN, lhs, rhs);
   } else if (equal(tok, "^=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "^=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(XOR_ASSIGN, lhs, rhs);
   } else if (equal(tok, "<<=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "<<=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(LSHIFT_ASSIGN, lhs, rhs);
   } else if (equal(tok, ">>=")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, ">>=");
+    Tree *rhs = parse_assign(&tok, tok, state);
+    lhs = new_binary_node(RSHIFT_ASSIGN, lhs, rhs);
   }
 
   *rest = tok;

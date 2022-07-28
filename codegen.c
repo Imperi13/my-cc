@@ -142,6 +142,70 @@ void codegen_stmt(Tree *stmt) {
     printf("  idiv rdi\n");
     printf("  mov [rsi], eax\n");
     return;
+  case MOD_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  cqo\n");
+    printf("  idiv rdi\n");
+    printf("  mov rax,rdx\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case AND_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  and rax, rdi\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case OR_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  or rax, rdi\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case XOR_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  xor rax, rdi\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case LSHIFT_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  mov rcx, rdi\n");
+    printf("  sal rax, cl\n");
+    printf("  mov [rsi], eax\n");
+    return;
+  case RSHIFT_ASSIGN:
+    codegen_addr(stmt->lhs);
+    printf("  push rax\n");
+    codegen_stmt(stmt->rhs);
+    printf("  mov rdi,rax\n");
+    printf("  pop rsi\n");
+    printf("  movsxd rax,[rsi]\n");
+    printf("  mov rcx, rdi\n");
+    printf("  sar rax, cl\n");
+    printf("  mov [rsi], eax\n");
+    return;
   case CONDITIONAL:
     codegen_stmt(stmt->cond);
     printf("  cmp rax,0\n");
