@@ -279,6 +279,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       analyze_stmt(cur, state);
       cur = cur->next;
     }
+  } else if (ast->kind == POST_INCREMENT) {
+    analyze_stmt(ast->lhs, state);
+  } else if (ast->kind == POST_DECREMENT) {
+    analyze_stmt(ast->lhs, state);
   } else if (ast->kind == NUM) {
   } else if (ast->kind == VAR) {
     Obj *var =

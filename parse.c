@@ -622,13 +622,25 @@ Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state) {
     return NULL;
   }
   if (equal(tok, "++")) {
-    not_implemented_at(tok->str);
-    return NULL;
+    consume(&tok, tok, "++");
+    Tree *lhs = parse_cast(&tok, tok, state);
+    Tree *rhs = calloc(1, sizeof(Tree));
+    rhs->kind = NUM;
+    rhs->num = 1;
+
+    *rest = tok;
+    return new_binary_node(ADD_ASSIGN, lhs, rhs);
   }
 
   if (equal(tok, "--")) {
-    not_implemented_at(tok->str);
-    return NULL;
+    consume(&tok, tok, "--");
+    Tree *lhs = parse_cast(&tok, tok, state);
+    Tree *rhs = calloc(1, sizeof(Tree));
+    rhs->kind = NUM;
+    rhs->num = 1;
+
+    *rest = tok;
+    return new_binary_node(SUB_ASSIGN, lhs, rhs);
   }
 
   if (equal(tok, "+")) {
@@ -706,9 +718,11 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
     } else if (equal(tok, "->")) {
       not_implemented_at(tok->str);
     } else if (equal(tok, "++")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "++");
+      lhs = new_binary_node(POST_INCREMENT, lhs, NULL);
     } else if (equal(tok, "--")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "--");
+      lhs = new_binary_node(POST_DECREMENT, lhs, NULL);
     } else {
       *rest = tok;
       return lhs;

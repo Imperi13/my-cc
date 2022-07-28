@@ -324,6 +324,22 @@ void codegen_stmt(Tree *stmt) {
     printf("  pop rsp\n");
   }
     return;
+  case POST_INCREMENT:
+    codegen_addr(stmt->lhs);
+    printf("  movsxd rsi,[rax]\n");
+    printf("  mov rdi,rsi\n");
+    printf("  add rdi, 1\n");
+    printf("  mov [rax],edi\n");
+    printf("  mov rax,rsi\n");
+    return;
+  case POST_DECREMENT:
+    codegen_addr(stmt->lhs);
+    printf("  movsxd rsi,[rax]\n");
+    printf("  mov rdi,rsi\n");
+    printf("  sub rdi, 1\n");
+    printf("  mov [rax],edi\n");
+    printf("  mov rax,rsi\n");
+    return;
   case NUM:
     printf("  mov rax, %ld\n", stmt->num);
     return;

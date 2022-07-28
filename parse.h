@@ -48,6 +48,8 @@ typedef enum {
   LOGICAL_NOT,
   BIT_NOT,
   FUNC_CALL,
+  POST_INCREMENT,
+  POST_DECREMENT,
   NUM,
   VAR,
 } TreeKind;
