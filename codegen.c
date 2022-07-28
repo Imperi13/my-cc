@@ -164,7 +164,7 @@ void codegen_stmt(Tree *stmt) {
     codegen_addr(stmt);
     if (stmt->type->kind == FUNC)
       return;
-    printf("  mov eax,[rax]\n");
+    printf("  movsxd rax,[rax]\n");
     return;
   default:
     break;
