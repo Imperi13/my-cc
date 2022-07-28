@@ -7,6 +7,8 @@ typedef enum {
   DECLARATION,
   COMPOUND_STMT,
   RETURN,
+  BREAK,
+  CONTINUE,
   DO_WHILE,
   WHILE,
   IF,

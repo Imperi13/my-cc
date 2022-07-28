@@ -245,9 +245,13 @@ Tree *parse_jump_stmt(Token **rest, Token *tok, TypedefScope *state) {
     }
 
   } else if (equal_kind(tok, TK_BREAK)) {
-    not_implemented_at(tok->str);
+    consume_kind(&tok, tok, TK_BREAK);
+    node->kind = BREAK;
+    expect(&tok, tok, ";");
   } else if (equal_kind(tok, TK_CONTINUE)) {
-    not_implemented_at(tok->str);
+    consume_kind(&tok, tok, TK_CONTINUE);
+    node->kind = CONTINUE;
+    expect(&tok, tok, ";");
   } else {
     error("cannot parse selection_stmt");
   }

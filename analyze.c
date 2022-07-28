@@ -14,6 +14,9 @@ static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name, int lvar_len);
 static Obj *find_global(Obj *globals, char *var_name, int var_len);
 
+static void push_label(LabelScope **lscope, int label_number);
+static void pop_label(LabelScope **lscope);
+
 void analyze_translation_unit(Tree *ast) {
   Analyze *state = calloc(1, sizeof(Analyze));
   state->globals = calloc(1, sizeof(Obj));
@@ -116,16 +119,44 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     push_lvar(state->current_func->locals, lvar);
   } else if (ast->kind == RETURN) {
     analyze_stmt(ast->lhs, state);
+  } else if (ast->kind == BREAK) {
+    if (!state->break_labels)
+      error("invalid break stmt");
+
+    ast->label_number = state->break_labels->label_number;
+  } else if (ast->kind == CONTINUE) {
+    if (!state->continue_labels)
+      error("invalid continue stmt");
+
+    ast->label_number = state->continue_labels->label_number;
   } else if (ast->kind == WHILE) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
+
     analyze_stmt(ast->cond, state);
+
+    push_label(&state->break_labels, ast->label_number);
+    push_label(&state->continue_labels, ast->label_number);
+
     analyze_stmt(ast->lhs, state);
+
+    pop_label(&state->break_labels);
+    pop_label(&state->continue_labels);
+
   } else if (ast->kind == DO_WHILE) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
+
     analyze_stmt(ast->cond, state);
+
+    push_label(&state->break_labels, ast->label_number);
+    push_label(&state->continue_labels, ast->label_number);
+
     analyze_stmt(ast->lhs, state);
+
+    pop_label(&state->break_labels);
+    pop_label(&state->continue_labels);
+
   } else if (ast->kind == IF) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
@@ -287,6 +318,15 @@ Obj *find_global(Obj *globals, char *var_name, int var_len) {
       return cur;
   return NULL;
 }
+
+void push_label(LabelScope **lscope, int label_number) {
+  LabelScope *tmp = calloc(1, sizeof(LabelScope));
+  tmp->label_number = label_number;
+  tmp->next = *lscope;
+  *lscope = tmp;
+}
+
+void pop_label(LabelScope **lscope) { *lscope = (*lscope)->next; }
 
 int offset_alignment(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;

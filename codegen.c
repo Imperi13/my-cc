@@ -87,6 +87,12 @@ void codegen_stmt(Tree *stmt) {
     printf("  pop rbp\n");
     printf("  ret\n");
     return;
+  case BREAK:
+    printf("  jmp .Lend%d\n", stmt->label_number);
+    return;
+  case CONTINUE:
+    printf("  jmp .Lloopend%d\n", stmt->label_number);
+    return;
   case COMPOUND_STMT:
     cur = stmt->stmts;
     while (cur) {

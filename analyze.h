@@ -5,6 +5,7 @@ typedef struct Obj Obj;
 typedef struct ObjScope ObjScope;
 typedef struct TypedefScope TypedefScope;
 typedef struct Typedef Typedef;
+typedef struct LabelScope LabelScope;
 
 #include "parse.h"
 #include "type.h"
@@ -12,6 +13,8 @@ typedef struct Typedef Typedef;
 struct Analyze {
   Obj *globals;
   Obj *current_func;
+  LabelScope *break_labels;
+  LabelScope *continue_labels;
   int label_cnt;
 };
 
@@ -62,5 +65,10 @@ struct Typedef {
   Typedef *next;
 };
 
+struct LabelScope {
+  int label_number;
+  LabelScope *next;
+};
+
 void analyze_translation_unit(Tree *ast);
-int offset_alignment(int start,int data_size,int alignment);
+int offset_alignment(int start, int data_size, int alignment);
