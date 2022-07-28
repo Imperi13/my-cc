@@ -10,6 +10,8 @@
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_stmt(Tree *ast, Analyze *state);
 
+static void push_lvar_scope(ObjScope **lscope);
+static void pop_lvar_scope(ObjScope **lscope);
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name, int lvar_len);
 static Obj *find_global(Obj *globals, char *var_name, int var_len);
@@ -92,11 +94,15 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
 void analyze_stmt(Tree *ast, Analyze *state) {
   if (ast->kind == COMPOUND_STMT) {
+    push_lvar_scope(&state->current_func->locals);
+
     Tree *cur = ast->stmts;
     while (cur) {
       analyze_stmt(cur, state);
       cur = cur->next;
     }
+
+    pop_lvar_scope(&state->current_func->locals);
   } else if (ast->kind == DECLARATION) {
     if (!ast->declarator) {
       not_implemented();
@@ -319,6 +325,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     not_implemented();
   }
 }
+
+void push_lvar_scope(ObjScope **lscope) {
+  ObjScope *lsc = calloc(1, sizeof(ObjScope));
+  lsc->next = *lscope;
+  *lscope = lsc;
+}
+
+void pop_lvar_scope(ObjScope **lscope) { *lscope = (*lscope)->next; }
 
 void push_lvar(ObjScope *locals, Obj *lvar) {
   lvar->next = locals->obj;
