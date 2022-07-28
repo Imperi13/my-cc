@@ -134,6 +134,8 @@ struct Declarator {
   Tree *args;
 };
 
-struct Pointer {};
+struct Pointer {
+  Pointer *nest;
+};
 
 Tree *parse_translation_unit(Token *tok);

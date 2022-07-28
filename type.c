@@ -6,6 +6,8 @@
 #include "parse.h"
 #include "type.h"
 
+static Type *newtype_ptr(Type *type);
+
 Type *type_int = &(Type){.kind = INT};
 
 Type *gettype_decl_spec(DeclSpec *decl_spec) {
@@ -17,6 +19,12 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
 }
 
 Type *gettype_declarator(Declarator *declarator, Type *base_type) {
+  Pointer *cur = declarator->pointer;
+  while (cur) {
+    base_type = newtype_ptr(base_type);
+    cur = cur->nest;
+  }
+
   switch (declarator->type_suffix_kind) {
   case FUNC_DECLARATOR: {
     Type *ty = calloc(1, sizeof(Type));
@@ -51,11 +59,38 @@ char *getname_declarator(Declarator *declarator) {
 }
 
 Tree *getargs_declarator(Declarator *declarator) {
-  if(declarator->nest)
+  if (declarator->nest)
     return getargs_declarator(declarator->nest);
 
-  if(declarator->type_suffix_kind != FUNC_DECLARATOR)
+  if (declarator->type_suffix_kind != FUNC_DECLARATOR)
     error("not function");
 
   return declarator->args;
+}
+
+Type *newtype_ptr(Type *type) {
+  Type *nt = calloc(1, sizeof(Type));
+  nt->kind = PTR;
+  nt->ptr_to = type;
+  return nt;
+}
+
+int type_size(Type *type) {
+  if (type->kind == INT)
+    return 4;
+  if (type->kind == PTR)
+    return 8;
+  if (type->kind == FUNC)
+    error("not defined type_size for FUNC");
+  return 0;
+}
+
+int type_alignment(Type *type) {
+  if (type->kind == INT)
+    return 4;
+  if (type->kind == PTR)
+    return 8;
+  if (type->kind == FUNC)
+    error("not defined type_alignment for FUNC");
+  return 0;
 }

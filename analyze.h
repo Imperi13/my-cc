@@ -71,4 +71,4 @@ struct LabelScope {
 };
 
 void analyze_translation_unit(Tree *ast);
-int offset_alignment(int start, int data_size, int alignment);
+int calc_rbp_offset(int start, int data_size, int alignment);

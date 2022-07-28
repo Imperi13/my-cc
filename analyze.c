@@ -117,7 +117,9 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     lvar->obj_name = obj_name;
     lvar->obj_len = strlen(obj_name);
     lvar->type = obj_type;
-    lvar->rbp_offset = offset_alignment(state->current_func->stack_size, 4, 4);
+    lvar->rbp_offset =
+        calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
+                        type_alignment(obj_type));
     state->current_func->stack_size = lvar->rbp_offset;
 
     ast->def_obj = lvar;
@@ -364,6 +366,6 @@ void push_label(LabelScope **lscope, int label_number) {
 
 void pop_label(LabelScope **lscope) { *lscope = (*lscope)->next; }
 
-int offset_alignment(int start, int data_size, int alignment) {
+int calc_rbp_offset(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;
 }

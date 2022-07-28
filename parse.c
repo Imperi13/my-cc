@@ -119,6 +119,14 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
 Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
   Declarator *declarator = calloc(1, sizeof(Declarator));
 
+  Pointer **cur = &declarator->pointer;
+  while (equal(tok, "*")) {
+    consume(&tok, tok, "*");
+
+    *cur = calloc(1, sizeof(Pointer));
+    cur = &(*cur)->nest;
+  }
+
   // parse ident or nest-declarator
   if (equal_kind(tok, TK_IDENT)) {
     Token *decl_name = consume_kind(&tok, tok, TK_IDENT);

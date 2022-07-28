@@ -2,6 +2,7 @@
 
 typedef enum {
   INT,
+  PTR,
   FUNC,
 } TypeKind;
 
@@ -15,6 +16,9 @@ struct Type {
   // for FUNC
   Type *return_type;
 
+  // for PTR
+  Type *ptr_to;
+
   // for linked-list
   Type *next;
 };
@@ -25,3 +29,6 @@ Type *gettype_decl_spec(DeclSpec *decl_spec);
 Type *gettype_declarator(Declarator *declarator, Type *base_type);
 char *getname_declarator(Declarator *declarator);
 Tree *getargs_declarator(Declarator *declarator);
+
+int type_size(Type *type);
+int type_alignment(Type *type);

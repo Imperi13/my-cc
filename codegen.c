@@ -43,7 +43,7 @@ void codegen_function(Tree *func) {
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, %d\n", offset_alignment(0, func->def_obj->stack_size, 8));
+  printf("  sub rsp, %d\n", calc_rbp_offset(0, func->def_obj->stack_size, 8));
 
   Tree *cur = getargs_declarator(func->declarator);
   int count = 0;
