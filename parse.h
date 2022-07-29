@@ -46,6 +46,8 @@ typedef enum {
   MOD,
   PLUS,
   MINUS,
+  ADDR,
+  DEREF,
   LOGICAL_NOT,
   BIT_NOT,
   FUNC_CALL,

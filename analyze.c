@@ -193,111 +193,155 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == COMMA) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->rhs->type;
   } else if (ast->kind == ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == ADD_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == SUB_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == MUL_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == DIV_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == MOD_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == AND_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == OR_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == XOR_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == LSHIFT_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == RSHIFT_ASSIGN) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == CONDITIONAL) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->cond, state);
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+
+    ast->type = ast->lhs->type;
   } else if (ast->kind == LOGICAL_OR) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == LOGICAL_AND) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == BIT_OR) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == BIT_XOR) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == BIT_AND) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == NOT_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == SMALLER) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == SMALLER_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == GREATER) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == GREATER_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = type_int;
   } else if (ast->kind == LSHIFT) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == RSHIFT) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == ADD) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == SUB) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == MUL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == DIV) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == MOD) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == PLUS) {
     analyze_stmt(ast->lhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == MINUS) {
     analyze_stmt(ast->lhs, state);
+    ast->type = ast->lhs->type;
+  } else if (ast->kind == ADDR) {
+    analyze_stmt(ast->lhs, state);
+    ast->type = newtype_ptr(ast->lhs->type);
+  } else if (ast->kind == DEREF) {
+    analyze_stmt(ast->lhs, state);
+    if (ast->lhs->type->kind != PTR)
+      error("cannot deref");
+    ast->type = ast->lhs->type->ptr_to;
   } else if (ast->kind == LOGICAL_NOT) {
     analyze_stmt(ast->lhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == BIT_NOT) {
     analyze_stmt(ast->lhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
     Tree *cur = ast->call_args;
@@ -305,11 +349,18 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       analyze_stmt(cur, state);
       cur = cur->next;
     }
+
+    if (ast->lhs->type->kind != FUNC)
+      error("cannot call func");
+    ast->type = ast->lhs->type->return_type;
   } else if (ast->kind == POST_INCREMENT) {
     analyze_stmt(ast->lhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == POST_DECREMENT) {
     analyze_stmt(ast->lhs, state);
+    ast->type = ast->lhs->type;
   } else if (ast->kind == NUM) {
+    ast->type = type_int;
   } else if (ast->kind == VAR) {
     Obj *var =
         find_lvar(state->current_func->locals, ast->var_name, ast->var_len);

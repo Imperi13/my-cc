@@ -6,8 +6,6 @@
 #include "parse.h"
 #include "type.h"
 
-static Type *newtype_ptr(Type *type);
-
 Type *type_int = &(Type){.kind = INT};
 
 Type *gettype_decl_spec(DeclSpec *decl_spec) {

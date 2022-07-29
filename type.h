@@ -30,5 +30,7 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type);
 char *getname_declarator(Declarator *declarator);
 Tree *getargs_declarator(Declarator *declarator);
 
+Type *newtype_ptr(Type *type);
+
 int type_size(Type *type);
 int type_alignment(Type *type);

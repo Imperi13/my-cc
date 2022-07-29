@@ -697,14 +697,22 @@ Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state) {
     return node;
   }
 
-  if (equal(tok, "*")) {
-    not_implemented_at(tok->str);
-    return NULL;
+  if (equal(tok, "&")) {
+    consume(&tok, tok, "&");
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = ADDR;
+    node->lhs = parse_cast(&tok, tok, state);
+    *rest = tok;
+    return node;
   }
 
-  if (equal(tok, "&")) {
-    not_implemented_at(tok->str);
-    return NULL;
+  if (equal(tok, "*")) {
+    consume(&tok, tok, "*");
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = DEREF;
+    node->lhs = parse_cast(&tok, tok, state);
+    *rest = tok;
+    return node;
   }
 
   if (equal(tok, "!")) {

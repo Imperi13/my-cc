@@ -10,6 +10,8 @@ static void codegen_function(Tree *func);
 static void codegen_stmt(Tree *stmt);
 static void codegen_addr(Tree *stmt);
 
+static void load2rax_from_raxaddr(Type *type);
+
 char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 char call_register32[][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
 char call_register8[][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
@@ -71,6 +73,8 @@ void codegen_addr(Tree *stmt) {
     else
       printf("  mov rax, [%.*s@GOTPCREL + rip]\n", stmt->var_obj->obj_len,
              stmt->var_obj->obj_name);
+  } else if (stmt->kind == DEREF) {
+    codegen_stmt(stmt->lhs);
   } else {
     not_implemented();
   }
@@ -315,6 +319,13 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->lhs);
     printf("  neg rax\n");
     return;
+  case ADDR:
+    codegen_addr(stmt->lhs);
+    return;
+  case DEREF:
+    codegen_stmt(stmt->lhs);
+    load2rax_from_raxaddr(stmt->type);
+    return;
   case FUNC_CALL: {
     printf("  mov r10,rsp\n");
     printf("  and rsp,0xfffffffffffffff0\n");
@@ -340,19 +351,19 @@ void codegen_stmt(Tree *stmt) {
     return;
   case POST_INCREMENT:
     codegen_addr(stmt->lhs);
-    printf("  movsxd rsi,[rax]\n");
-    printf("  mov rdi,rsi\n");
-    printf("  add rdi, 1\n");
-    printf("  mov [rax],edi\n");
-    printf("  mov rax,rsi\n");
+    printf("  mov rdi,rax\n");
+    load2rax_from_raxaddr(stmt->lhs->type);
+    printf("  mov rsi,rax\n");
+    printf("  add rsi, 1\n");
+    printf("  mov [rdi],esi\n");
     return;
   case POST_DECREMENT:
     codegen_addr(stmt->lhs);
-    printf("  movsxd rsi,[rax]\n");
-    printf("  mov rdi,rsi\n");
-    printf("  sub rdi, 1\n");
-    printf("  mov [rax],edi\n");
-    printf("  mov rax,rsi\n");
+    printf("  mov rdi,rax\n");
+    load2rax_from_raxaddr(stmt->lhs->type);
+    printf("  mov rsi,rax\n");
+    printf("  sub rsi, 1\n");
+    printf("  mov [rdi],esi\n");
     return;
   case NUM:
     printf("  mov rax, %ld\n", stmt->num);
@@ -361,7 +372,7 @@ void codegen_stmt(Tree *stmt) {
     codegen_addr(stmt);
     if (stmt->type->kind == FUNC)
       return;
-    printf("  movsxd rax,[rax]\n");
+    load2rax_from_raxaddr(stmt->type);
     return;
   default:
     break;
@@ -445,4 +456,14 @@ void codegen_stmt(Tree *stmt) {
     error("cannnot codegen binary_op");
     break;
   }
+}
+
+// raxレジスタで指しているアドレスからtype型の値をraxにロードする
+void load2rax_from_raxaddr(Type *type) {
+  if (type_size(type) == 8)
+    printf("  mov rax,[rax]\n");
+  else if (type_size(type) == 4)
+    printf("  movsxd rax,[rax]\n");
+  else
+    not_implemented();
 }
