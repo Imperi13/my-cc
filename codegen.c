@@ -50,8 +50,12 @@ void codegen_function(Tree *func) {
   Tree *cur = getargs_declarator(func->declarator);
   int count = 0;
   while (cur) {
-    printf("  mov [rbp - %d], %s\n", cur->def_obj->rbp_offset,
-           call_register32[count]);
+    if (type_size(cur->def_obj->type) == 8)
+      printf("  mov [rbp - %d], %s\n", cur->def_obj->rbp_offset,
+             call_register64[count]);
+    else if (type_size(cur->def_obj->type) == 4)
+      printf("  mov [rbp - %d], %s\n", cur->def_obj->rbp_offset,
+             call_register32[count]);
     count++;
     cur = cur->next;
   }
@@ -153,7 +157,10 @@ void codegen_stmt(Tree *stmt) {
     printf("  push rax\n");
     codegen_stmt(stmt->rhs);
     printf("  pop rdi\n");
-    printf("  mov [rdi],eax\n");
+    if (type_size(stmt->type) == 8)
+      printf("  mov [rdi],rax\n");
+    else if (type_size(stmt->type) == 4)
+      printf("  mov [rdi],eax\n");
     return;
   case ADD_ASSIGN:
     codegen_addr(stmt->lhs);
