@@ -442,10 +442,21 @@ void codegen_stmt(Tree *stmt) {
     printf("  sar rax, cl\n");
     break;
   case ADD:
+    if (stmt->lhs->type->kind == PTR)
+      printf("  imul rdi,%d\n", type_size(stmt->lhs->type->ptr_to));
+    else if (stmt->rhs->type->kind == PTR)
+      printf("  imul rax,%d\n", type_size(stmt->rhs->type->ptr_to));
     printf("  add rax,rdi\n");
     break;
   case SUB:
+    if (stmt->lhs->type->kind == PTR && is_integer(stmt->rhs->type))
+      printf("  imul rdi, %d\n", type_size(stmt->lhs->type->ptr_to));
     printf("  sub rax,rdi\n");
+    if (stmt->lhs->type->kind == PTR && stmt->rhs->type->kind == PTR) {
+      printf("  mov rdi, %d\n", type_size(stmt->lhs->type->ptr_to));
+      printf("  cqo\n");
+      printf("  idiv rdi\n");
+    }
     break;
   case MUL:
     printf("  imul rax,rdi\n");

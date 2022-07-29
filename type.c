@@ -92,3 +92,9 @@ int type_alignment(Type *type) {
     error("not defined type_alignment for FUNC");
   return 0;
 }
+
+bool is_integer(Type *type) {
+  if (type->kind == INT)
+    return true;
+  return false;
+}

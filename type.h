@@ -34,3 +34,5 @@ Type *newtype_ptr(Type *type);
 
 int type_size(Type *type);
 int type_alignment(Type *type);
+
+bool is_integer(Type *type);

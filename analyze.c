@@ -305,11 +305,29 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == ADD) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
+
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type))
+      ast->type = type_int;
+    else if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type))
+      ast->type = ast->lhs->type;
+    else if (ast->rhs->type->kind == PTR && is_integer(ast->lhs->type))
+      ast->type = ast->rhs->type;
+    else
+      error("unexpected type pair");
+
   } else if (ast->kind == SUB) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
+
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type))
+      ast->type = type_int;
+    else if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type))
+      ast->type = ast->lhs->type;
+    else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR)
+      ast->type = type_int;
+    else
+      error("unexpected type pair");
+
   } else if (ast->kind == MUL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
