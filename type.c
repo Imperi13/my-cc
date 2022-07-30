@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analyze.h"
 #include "error.h"
 #include "parse.h"
 #include "type.h"
@@ -30,9 +31,18 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
     ty->return_type = base_type;
     base_type = ty;
   } break;
-  case ARRAY_DECLARATOR:
-    not_implemented(__func__);
-    break;
+  case ARRAY_DECLARATOR: {
+    ArrayDeclarator *cur = declarator->arr_decl;
+    while (cur) {
+      Type *ty = calloc(1, sizeof(Type));
+      ty->kind = ARRAY;
+      ty->arr_size = eval_constexpr(cur->size);
+      ty->ptr_to = base_type;
+      base_type = ty;
+
+      cur = cur->next;
+    }
+  } break;
   case NONE:
     break;
   default:
@@ -76,20 +86,28 @@ Type *newtype_ptr(Type *type) {
 int type_size(Type *type) {
   if (type->kind == INT)
     return 4;
-  if (type->kind == PTR)
+  else if (type->kind == PTR)
     return 8;
-  if (type->kind == FUNC)
+  else if (type->kind == ARRAY)
+    return type->arr_size * type_size(type->ptr_to);
+  else if (type->kind == FUNC)
     error("not defined type_size for FUNC");
+  else
+    not_implemented(__func__);
   return 0;
 }
 
 int type_alignment(Type *type) {
   if (type->kind == INT)
     return 4;
-  if (type->kind == PTR)
+  else if (type->kind == PTR)
     return 8;
-  if (type->kind == FUNC)
+  else if (type->kind == ARRAY)
+    return type_alignment(type->ptr_to);
+  else if (type->kind == FUNC)
     error("not defined type_alignment for FUNC");
+  else
+    not_implemented(__func__);
   return 0;
 }
 

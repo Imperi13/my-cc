@@ -4,6 +4,7 @@ typedef enum {
   INT,
   PTR,
   FUNC,
+  ARRAY,
 } TypeKind;
 
 typedef struct Type Type;
@@ -16,8 +17,11 @@ struct Type {
   // for FUNC
   Type *return_type;
 
-  // for PTR
+  // for PTR,ARRAY
   Type *ptr_to;
+
+  // for ARRAY
+  int arr_size;
 
   // for linked-list
   Type *next;

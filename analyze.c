@@ -438,3 +438,11 @@ void pop_label(LabelScope **lscope) { *lscope = (*lscope)->next; }
 int calc_rbp_offset(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;
 }
+
+int eval_constexpr(Tree *expr) {
+  if (expr->kind == NUM)
+    return expr->num;
+  else
+    not_implemented(__func__);
+  return 0;
+}
