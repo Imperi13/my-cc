@@ -23,7 +23,7 @@ void codegen_translation_unit(Tree *head) {
   Tree *cur = head;
   while (cur) {
     if (cur->kind == DECLARATION && cur->def_obj->is_defined) {
-      not_implemented();
+      not_implemented(__func__);
     }
     cur = cur->next;
   }
@@ -80,7 +80,7 @@ void codegen_addr(Tree *stmt) {
   } else if (stmt->kind == DEREF) {
     codegen_stmt(stmt->lhs);
   } else {
-    not_implemented();
+    not_implemented(__func__);
   }
 }
 
@@ -483,5 +483,5 @@ void load2rax_from_raxaddr(Type *type) {
   else if (type_size(type) == 4)
     printf("  movsxd rax,[rax]\n");
   else
-    not_implemented();
+    not_implemented(__func__);
 }

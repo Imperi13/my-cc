@@ -61,6 +61,7 @@ typedef struct Tree Tree;
 typedef struct DeclSpec DeclSpec;
 typedef struct Declarator Declarator;
 typedef struct Pointer Pointer;
+typedef struct ArrayDeclarator ArrayDeclarator;
 
 #include "analyze.h"
 #include "tokenize.h"
@@ -134,10 +135,20 @@ struct Declarator {
 
   // for FUNC_DECLARATOR
   Tree *args;
+
+  // for ARRAY_DECLARATOR
+  ArrayDeclarator *arr_decl;
 };
 
 struct Pointer {
   Pointer *nest;
+};
+
+struct ArrayDeclarator {
+  Tree *size;
+
+  // for linked-list
+  ArrayDeclarator *next;
 };
 
 Tree *parse_translation_unit(Token *tok);

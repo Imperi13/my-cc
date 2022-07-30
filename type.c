@@ -31,7 +31,7 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
     base_type = ty;
   } break;
   case ARRAY_DECLARATOR:
-    not_implemented();
+    not_implemented(__func__);
     break;
   case NONE:
     break;
@@ -40,7 +40,7 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
   }
 
   if (declarator->nest) {
-    not_implemented();
+    not_implemented(__func__);
   }
 
   return base_type;

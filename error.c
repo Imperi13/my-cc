@@ -43,6 +43,6 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-void not_implemented() { error("not implemented"); }
+void not_implemented(const char *msg) { error("not implemented: %s", msg); }
 
 void not_implemented_at(char *loc) { error_at(loc, "not implemented"); }

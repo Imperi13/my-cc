@@ -65,7 +65,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == DECLARATION) {
     if (!ast->declarator) {
-      not_implemented();
+      not_implemented(__func__);
     }
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs);
@@ -105,7 +105,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_lvar_scope(&state->current_func->locals);
   } else if (ast->kind == DECLARATION) {
     if (!ast->declarator) {
-      not_implemented();
+      not_implemented(__func__);
     }
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs);
@@ -393,7 +393,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = var->type;
 
   } else {
-    not_implemented();
+    not_implemented(__func__);
   }
 }
 

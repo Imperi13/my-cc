@@ -142,13 +142,21 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
   declarator->type_suffix_kind = NONE;
   if (equal(tok, "(")) {
     expect(&tok, tok, "(");
+    declarator->type_suffix_kind = FUNC_DECLARATOR;
     if (!consume(&tok, tok, ")")) {
       declarator->args = parse_parameter_type_list(&tok, tok, state);
       consume(&tok, tok, ")");
     }
-    declarator->type_suffix_kind = FUNC_DECLARATOR;
   } else if (equal(tok, "[")) {
-    not_implemented_at(tok->str);
+    declarator->type_suffix_kind = ARRAY_DECLARATOR;
+    while (consume(&tok, tok, "[")) {
+      ArrayDeclarator *arr_decl = calloc(1, sizeof(ArrayDeclarator));
+      arr_decl->size = parse_expr(&tok, tok, state);
+      consume(&tok, tok, "]");
+
+      arr_decl->next = declarator->arr_decl;
+      declarator->arr_decl = arr_decl;
+    }
   }
 
   *rest = tok;
