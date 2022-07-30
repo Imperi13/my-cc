@@ -101,7 +101,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state) {
 }
 
 bool is_declaration_specs(Token *tok, TypedefScope *state) {
-  return equal_kind(tok, TK_INT);
+  return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
@@ -110,6 +110,11 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
     DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
     decl_spec->has_int = true;
     consume_kind(rest, tok, TK_INT);
+    return decl_spec;
+  } else if (equal_kind(tok, TK_CHAR)) {
+    DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
+    decl_spec->has_char = true;
+    consume_kind(rest, tok, TK_CHAR);
     return decl_spec;
   }
   not_implemented_at(tok->str);
@@ -795,7 +800,10 @@ Tree *parse_primary(Token **rest, Token *tok, TypedefScope *state) {
     primary->kind = NUM;
     primary->num = num_tok->val;
   } else if (equal_kind(tok, TK_STR)) {
-    not_implemented_at(tok->str);
+    StrLiteral *str_literal = consume_kind(&tok, tok, TK_STR)->str_literal;
+
+    primary->kind = STR;
+    primary->str_literal = str_literal;
   } else if (equal_kind(tok, TK_IDENT)) {
     Token *ident_tok = consume_kind(&tok, tok, TK_IDENT);
     primary->kind = VAR;

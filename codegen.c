@@ -6,6 +6,7 @@
 #include "parse.h"
 #include "type.h"
 
+static void codegen_str_literal(StrLiteral *sl);
 static void codegen_var_definition(Tree *var);
 static void codegen_function(Tree *func);
 static void codegen_stmt(Tree *stmt);
@@ -20,6 +21,10 @@ char call_register8[][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 void codegen_translation_unit(Tree *head) {
 
   printf(".intel_syntax noprefix\n");
+
+  for (StrLiteral *now = str_literals; now; now = now->next) {
+    codegen_str_literal(now);
+  }
 
   Tree *cur = head;
   while (cur) {
@@ -36,6 +41,13 @@ void codegen_translation_unit(Tree *head) {
     }
     cur = cur->next;
   }
+}
+
+void codegen_str_literal(StrLiteral *sl) {
+  printf("  .local .LC%d\n", sl->id);
+  printf("  .data\n");
+  printf(".LC%d:\n", sl->id);
+  printf("  .string \"%.*s\"\n", sl->len, sl->str);
 }
 
 void codegen_var_definition(Tree *var) {
@@ -66,6 +78,11 @@ void codegen_function(Tree *func) {
     else if (type_size(cur->def_obj->type) == 4)
       printf("  mov [rbp - %d], %s\n", cur->def_obj->rbp_offset,
              call_register32[count]);
+    else if (type_size(cur->def_obj->type) == 1)
+      printf("  mov [rbp - %d], %s\n", cur->def_obj->rbp_offset,
+             call_register8[count]);
+    else
+      not_implemented(__func__);
     count++;
     cur = cur->next;
   }
@@ -171,6 +188,10 @@ void codegen_stmt(Tree *stmt) {
       printf("  mov [rdi],rax\n");
     else if (type_size(stmt->type) == 4)
       printf("  mov [rdi],eax\n");
+    else if (type_size(stmt->type) == 1)
+      printf("  mov [rdi],al\n");
+    else
+      not_implemented(__func__);
     return;
   case ADD_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -387,6 +408,9 @@ void codegen_stmt(Tree *stmt) {
   case NUM:
     printf("  mov rax, %ld\n", stmt->num);
     return;
+  case STR:
+    printf("  lea rax, [rip + .LC%d]\n", stmt->str_literal->id);
+    return;
   case VAR:
     codegen_addr(stmt);
     if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY)
@@ -494,6 +518,8 @@ void load2rax_from_raxaddr(Type *type) {
     printf("  mov rax,[rax]\n");
   else if (type_size(type) == 4)
     printf("  movsxd rax,[rax]\n");
+  else if (type_size(type) == 1)
+    printf("movsx rax, BYTE PTR [rax]\n");
   else
     not_implemented(__func__);
 }

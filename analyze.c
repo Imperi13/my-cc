@@ -423,6 +423,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = ast->lhs->type;
   } else if (ast->kind == NUM) {
     ast->type = type_int;
+  } else if (ast->kind == STR) {
+    ast->type = newtype_ptr(type_char);
   } else if (ast->kind == VAR) {
     Obj *var =
         find_lvar(state->current_func->locals, ast->var_name, ast->var_len);

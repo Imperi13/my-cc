@@ -54,6 +54,7 @@ typedef enum {
   POST_INCREMENT,
   POST_DECREMENT,
   NUM,
+  STR,
   VAR,
 } TreeKind;
 
@@ -107,6 +108,7 @@ struct Tree {
 
   // for const-val
   unsigned long num;
+  StrLiteral *str_literal;
 
   // for var
   char *var_name;
@@ -120,6 +122,7 @@ struct Tree {
 
 struct DeclSpec {
   bool has_int;
+  bool has_char;
 };
 
 struct Declarator {

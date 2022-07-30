@@ -8,12 +8,15 @@
 #include "type.h"
 
 Type *type_int = &(Type){.kind = INT};
+Type *type_char = &(Type){.kind = CHAR};
 
 Type *gettype_decl_spec(DeclSpec *decl_spec) {
   if (decl_spec->has_int) {
     return type_int;
-  }
-  error("empty type");
+  } else if (decl_spec->has_char) {
+    return type_char;
+  } else
+    error("empty type");
   return NULL;
 }
 
@@ -86,6 +89,8 @@ Type *newtype_ptr(Type *type) {
 int type_size(Type *type) {
   if (type->kind == INT)
     return 4;
+  else if (type->kind == CHAR)
+    return 1;
   else if (type->kind == PTR)
     return 8;
   else if (type->kind == ARRAY)
@@ -100,6 +105,8 @@ int type_size(Type *type) {
 int type_alignment(Type *type) {
   if (type->kind == INT)
     return 4;
+  else if (type->kind == CHAR)
+    return 1;
   else if (type->kind == PTR)
     return 8;
   else if (type->kind == ARRAY)
@@ -112,7 +119,7 @@ int type_alignment(Type *type) {
 }
 
 bool is_integer(Type *type) {
-  if (type->kind == INT)
+  if (type->kind == INT || type->kind == CHAR)
     return true;
   return false;
 }

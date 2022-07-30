@@ -2,6 +2,7 @@
 
 typedef enum {
   INT,
+  CHAR,
   PTR,
   FUNC,
   ARRAY,
@@ -28,6 +29,7 @@ struct Type {
 };
 
 extern Type *type_int;
+extern Type *type_char;
 
 Type *gettype_decl_spec(DeclSpec *decl_spec);
 Type *gettype_declarator(Declarator *declarator, Type *base_type);
