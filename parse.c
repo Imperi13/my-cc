@@ -750,7 +750,12 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
 
   for (;;) {
     if (equal(tok, "[")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "[");
+      Tree *rhs = parse_expr(&tok, tok, state);
+      consume(&tok, tok, "]");
+
+      Tree *add_node = new_binary_node(ADD, lhs, rhs);
+      lhs = new_binary_node(DEREF, add_node, NULL);
     } else if (equal(tok, "(")) {
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = FUNC_CALL;

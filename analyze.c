@@ -8,6 +8,7 @@
 #include "type.h"
 
 static void analyze_external_decl(Tree *ast, Analyze *state);
+static void analyze_parameter(Tree *arg, Analyze *state);
 static void analyze_stmt(Tree *ast, Analyze *state);
 
 static void push_lvar_scope(ObjScope **lscope);
@@ -57,7 +58,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     Tree *cur = args;
     while (cur) {
-      analyze_stmt(cur, state);
+      analyze_parameter(cur, state);
       cur = cur->next;
     }
 
@@ -90,6 +91,36 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
   } else {
     error("not external_decl");
   }
+}
+
+void analyze_parameter(Tree *ast, Analyze *state) {
+  if (ast->kind == DECLARATION) {
+    if (!ast->declarator) {
+      not_implemented(__func__);
+    }
+
+    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    obj_type = gettype_declarator(ast->declarator, obj_type);
+
+    if (obj_type->kind == ARRAY)
+      obj_type->kind = PTR;
+
+    char *obj_name = getname_declarator(ast->declarator);
+
+    Obj *lvar = calloc(1, sizeof(Obj));
+    lvar->obj_name = obj_name;
+    lvar->obj_len = strlen(obj_name);
+    lvar->type = obj_type;
+    lvar->rbp_offset =
+        calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
+                        type_alignment(obj_type));
+    state->current_func->stack_size = lvar->rbp_offset;
+
+    ast->def_obj = lvar;
+
+    push_lvar(state->current_func->locals, lvar);
+  } else
+    error("cannot analyze parameter");
 }
 
 void analyze_stmt(Tree *ast, Analyze *state) {
@@ -306,12 +337,19 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
-    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type))
+    Type *ltype = ast->lhs->type;
+    if (ltype->kind == ARRAY)
+      ltype = newtype_ptr(ltype->ptr_to);
+    Type *rtype = ast->rhs->type;
+    if (rtype->kind == ARRAY)
+      rtype = newtype_ptr(rtype->ptr_to);
+
+    if (is_integer(ltype) && is_integer(rtype))
       ast->type = type_int;
-    else if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type))
-      ast->type = ast->lhs->type;
-    else if (ast->rhs->type->kind == PTR && is_integer(ast->lhs->type))
-      ast->type = ast->rhs->type;
+    else if (ltype->kind == PTR && is_integer(rtype))
+      ast->type = ltype;
+    else if (rtype->kind == PTR && is_integer(ltype))
+      ast->type = rtype;
     else
       error("unexpected type pair");
 
@@ -351,9 +389,15 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = newtype_ptr(ast->lhs->type);
   } else if (ast->kind == DEREF) {
     analyze_stmt(ast->lhs, state);
-    if (ast->lhs->type->kind != PTR)
+
+    Type *ltype = ast->lhs->type;
+    if (ltype->kind == ARRAY)
+      ltype = newtype_ptr(ltype->ptr_to);
+
+    if (ltype->kind != PTR)
       error("cannot deref");
-    ast->type = ast->lhs->type->ptr_to;
+    ast->type = ltype->ptr_to;
+
   } else if (ast->kind == LOGICAL_NOT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;

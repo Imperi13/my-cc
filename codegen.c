@@ -6,6 +6,7 @@
 #include "parse.h"
 #include "type.h"
 
+static void codegen_var_definition(Tree *var);
 static void codegen_function(Tree *func);
 static void codegen_stmt(Tree *stmt);
 static void codegen_addr(Tree *stmt);
@@ -23,7 +24,7 @@ void codegen_translation_unit(Tree *head) {
   Tree *cur = head;
   while (cur) {
     if (cur->kind == DECLARATION && cur->def_obj->is_defined) {
-      not_implemented(__func__);
+      codegen_var_definition(cur);
     }
     cur = cur->next;
   }
@@ -35,6 +36,15 @@ void codegen_translation_unit(Tree *head) {
     }
     cur = cur->next;
   }
+}
+
+void codegen_var_definition(Tree *var) {
+  Obj *obj = var->def_obj;
+  printf("  .globl %.*s\n", obj->obj_len, obj->obj_name);
+  printf("  .bss\n");
+  printf("  .align %d\n", type_alignment(obj->type));
+  printf("%.*s:\n", obj->obj_len, obj->obj_name);
+  printf("  .zero %d\n", type_size(obj->type));
 }
 
 void codegen_function(Tree *func) {
@@ -331,6 +341,8 @@ void codegen_stmt(Tree *stmt) {
     return;
   case DEREF:
     codegen_stmt(stmt->lhs);
+    if (stmt->type->kind == ARRAY)
+      return;
     load2rax_from_raxaddr(stmt->type);
     return;
   case FUNC_CALL: {
@@ -377,7 +389,7 @@ void codegen_stmt(Tree *stmt) {
     return;
   case VAR:
     codegen_addr(stmt);
-    if (stmt->type->kind == FUNC)
+    if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
@@ -442,9 +454,9 @@ void codegen_stmt(Tree *stmt) {
     printf("  sar rax, cl\n");
     break;
   case ADD:
-    if (stmt->lhs->type->kind == PTR)
+    if (stmt->lhs->type->kind == PTR || stmt->lhs->type->kind == ARRAY)
       printf("  imul rdi,%d\n", type_size(stmt->lhs->type->ptr_to));
-    else if (stmt->rhs->type->kind == PTR)
+    else if (stmt->rhs->type->kind == PTR || stmt->rhs->type->kind == ARRAY)
       printf("  imul rax,%d\n", type_size(stmt->rhs->type->ptr_to));
     printf("  add rax,rdi\n");
     break;
