@@ -77,8 +77,9 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state) {
   ex_decl->decl_specs = parse_declaration_specs(&tok, tok, state);
 
   if (equal(tok, ";")) {
+    consume(rest, tok, ";");
     ex_decl->kind = DECLARATION;
-    not_implemented_at(tok->str);
+    return ex_decl;
   }
 
   ex_decl->declarator = parse_declarator(&tok, tok, state);

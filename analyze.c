@@ -8,6 +8,8 @@
 #include "type.h"
 
 static void analyze_external_decl(Tree *ast, Analyze *state);
+static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
+                              bool is_global);
 static void analyze_parameter(Tree *arg, Analyze *state);
 static void analyze_stmt(Tree *ast, Analyze *state);
 
@@ -34,6 +36,8 @@ void analyze_translation_unit(Tree *ast) {
 
 void analyze_external_decl(Tree *ast, Analyze *state) {
   if (ast->kind == FUNC_DEF) {
+
+    analyze_decl_spec(ast->decl_specs, state, true);
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs);
     obj_type = gettype_declarator(ast->declarator, obj_type);
@@ -65,8 +69,11 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     analyze_stmt(ast->func_body, state);
 
   } else if (ast->kind == DECLARATION) {
+
+    analyze_decl_spec(ast->decl_specs, state, true);
+
     if (!ast->declarator) {
-      not_implemented(__func__);
+      return;
     }
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs);
@@ -93,10 +100,15 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
   }
 }
 
+void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {}
+
 void analyze_parameter(Tree *ast, Analyze *state) {
   if (ast->kind == DECLARATION) {
+
+    analyze_decl_spec(ast->decl_specs, state, false);
+
     if (!ast->declarator) {
-      not_implemented(__func__);
+      return;
     }
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs);
@@ -135,8 +147,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     pop_lvar_scope(&state->current_func->locals);
   } else if (ast->kind == DECLARATION) {
+
+    analyze_decl_spec(ast->decl_specs, state, false);
+
     if (!ast->declarator) {
-      not_implemented(__func__);
+      return;
     }
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs);
