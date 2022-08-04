@@ -4,6 +4,7 @@ typedef enum {
   INT,
   CHAR,
   PTR,
+  STRUCT,
   FUNC,
   ARRAY,
 } TypeKind;
@@ -11,6 +12,7 @@ typedef enum {
 typedef struct Type Type;
 
 #include "parse.h"
+#include "analyze.h"
 
 struct Type {
   TypeKind kind;
@@ -23,6 +25,9 @@ struct Type {
 
   // for ARRAY
   int arr_size;
+
+  // for STRUCT
+  StructDef *st_def;
 
   // for linked-list
   Type *next;
@@ -37,6 +42,7 @@ char *getname_declarator(Declarator *declarator);
 Tree *getargs_declarator(Declarator *declarator);
 
 Type *newtype_ptr(Type *type);
+Type *newtype_struct(StructDef *st_def);
 
 int type_size(Type *type);
 int type_alignment(Type *type);

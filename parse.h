@@ -60,6 +60,7 @@ typedef enum {
 
 typedef struct Tree Tree;
 typedef struct DeclSpec DeclSpec;
+typedef struct StructSpec StructSpec;
 typedef struct Declarator Declarator;
 typedef struct Pointer Pointer;
 typedef struct ArrayDeclarator ArrayDeclarator;
@@ -123,6 +124,17 @@ struct Tree {
 struct DeclSpec {
   bool has_int;
   bool has_char;
+  StructSpec *st_spec;
+  StructDef *st_def;
+};
+
+struct StructSpec {
+  char *st_name;
+  int st_len;
+
+  bool has_decl;
+
+  Tree *members;
 };
 
 struct Declarator {

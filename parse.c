@@ -7,7 +7,8 @@
 #include "parse.h"
 #include "tokenize.h"
 
-static Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
+                                 bool allow_function);
 static DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
                                          TypedefScope *state);
 static Declarator *parse_declarator(Token **rest, Token *tok,
@@ -64,7 +65,7 @@ Tree *parse_translation_unit(Token *tok) {
   TypedefScope *state = calloc(1, sizeof(TypedefScope));
 
   while (!at_eof(tok)) {
-    Tree *ex_decl = parse_external_decl(&tok, tok, state);
+    Tree *ex_decl = parse_external_decl(&tok, tok, state, true);
     cur->next = ex_decl;
     cur = ex_decl;
   }
@@ -72,7 +73,8 @@ Tree *parse_translation_unit(Token *tok) {
   return head->next;
 }
 
-Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
+                          bool allow_function) {
   Tree *ex_decl = calloc(1, sizeof(Tree));
   ex_decl->decl_specs = parse_declaration_specs(&tok, tok, state);
 
@@ -85,6 +87,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state) {
   ex_decl->declarator = parse_declarator(&tok, tok, state);
 
   if (equal(tok, "{")) {
+    if (!allow_function)
+      error("not allow func-def");
     ex_decl->kind = FUNC_DEF;
     ex_decl->func_body = parse_compound_stmt(&tok, tok, state);
     *rest = tok;
@@ -102,23 +106,62 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state) {
 }
 
 bool is_declaration_specs(Token *tok, TypedefScope *state) {
-  return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR);
+  return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
+         equal_kind(tok, TK_STRUCT);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
                                   TypedefScope *state) {
+  DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
   if (equal_kind(tok, TK_INT)) {
-    DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
     decl_spec->has_int = true;
     consume_kind(rest, tok, TK_INT);
     return decl_spec;
   } else if (equal_kind(tok, TK_CHAR)) {
-    DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
     decl_spec->has_char = true;
     consume_kind(rest, tok, TK_CHAR);
     return decl_spec;
-  }
-  not_implemented_at(tok->str);
+  } else if (equal_kind(tok, TK_STRUCT)) {
+    consume_kind(&tok, tok, TK_STRUCT);
+    StructSpec *st_spec = calloc(1, sizeof(StructSpec));
+    decl_spec->st_spec = st_spec;
+    if (equal_kind(tok, TK_IDENT)) {
+      Token *st_ident = consume_kind(&tok, tok, TK_IDENT);
+      st_spec->st_name = st_ident->str;
+      st_spec->st_len = st_ident->len;
+
+      if (consume(&tok, tok, "{")) {
+        st_spec->has_decl = true;
+        Tree *head = calloc(1, sizeof(Tree));
+        Tree *cur = head;
+        while (!consume(&tok, tok, "}")) {
+          cur->next = parse_external_decl(&tok, tok, state, false);
+          cur = cur->next;
+          consume(&tok, tok, ",");
+        }
+
+        st_spec->members = head->next;
+      }
+    } else {
+      if (consume(&tok, tok, "{")) {
+        st_spec->has_decl = true;
+        Tree *head = calloc(1, sizeof(Tree));
+        Tree *cur = head;
+        while (!consume(&tok, tok, "}")) {
+          cur->next = parse_external_decl(&tok, tok, state, false);
+          cur = cur->next;
+          consume(&tok, tok, ",");
+        }
+
+        st_spec->members = head->next;
+      }
+    }
+
+    *rest = tok;
+    return decl_spec;
+
+  } else
+    not_implemented_at(tok->str);
   return NULL;
 }
 
@@ -233,7 +276,7 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *cur = head;
   while (!consume(&tok, tok, "}")) {
     if (is_declaration_specs(tok, state)) {
-      cur->next = parse_external_decl(&tok, tok, state);
+      cur->next = parse_external_decl(&tok, tok, state, false);
       cur = cur->next;
     } else {
       cur->next = parse_stmt(&tok, tok, state);

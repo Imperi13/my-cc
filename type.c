@@ -15,6 +15,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
     return type_int;
   } else if (decl_spec->has_char) {
     return type_char;
+  } else if (decl_spec->st_def) {
+    return newtype_struct(decl_spec->st_def);
   } else
     error("empty type");
   return NULL;
@@ -86,6 +88,13 @@ Type *newtype_ptr(Type *type) {
   return nt;
 }
 
+Type *newtype_struct(StructDef *st_def) {
+  Type *nt = calloc(1, sizeof(Type));
+  nt->kind = STRUCT;
+  nt->st_def = st_def;
+  return nt;
+}
+
 int type_size(Type *type) {
   if (type->kind == INT)
     return 4;
@@ -95,6 +104,8 @@ int type_size(Type *type) {
     return 8;
   else if (type->kind == ARRAY)
     return type->arr_size * type_size(type->ptr_to);
+  else if (type->kind == STRUCT)
+    return type->st_def->size;
   else if (type->kind == FUNC)
     error("not defined type_size for FUNC");
   else
@@ -111,6 +122,8 @@ int type_alignment(Type *type) {
     return 8;
   else if (type->kind == ARRAY)
     return type_alignment(type->ptr_to);
+  else if (type->kind == STRUCT)
+    return type->st_def->alignment;
   else if (type->kind == FUNC)
     error("not defined type_alignment for FUNC");
   else

@@ -22,9 +22,11 @@ static Obj *find_global(Obj *globals, char *var_name, int var_len);
 static void push_label(LabelScope **lscope, int label_number);
 static void pop_label(LabelScope **lscope);
 
+static StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len);
+
 void analyze_translation_unit(Tree *ast) {
   Analyze *state = calloc(1, sizeof(Analyze));
-  state->globals = calloc(1, sizeof(Obj));
+  state->glb_objs = calloc(1, sizeof(Obj));
   state->label_cnt = 0;
 
   Tree *cur = ast;
@@ -55,8 +57,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     func->is_global = true;
 
     state->current_func = func;
-    func->next = state->globals;
-    state->globals = func;
+    func->next = state->glb_objs;
+    state->glb_objs = func;
 
     ast->def_obj = func;
 
@@ -90,8 +92,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     if (obj_type->kind != FUNC)
       obj->is_defined = true;
 
-    obj->next = state->globals;
-    state->globals = obj;
+    obj->next = state->glb_objs;
+    state->glb_objs = obj;
 
     ast->def_obj = obj;
 
@@ -100,7 +102,73 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
   }
 }
 
-void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {}
+void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
+  if (decl_spec->st_spec) {
+
+    if (!decl_spec->st_spec->st_name) {
+      not_implemented(__func__);
+    }
+
+    StructDef *st_defs =
+        find_struct(state->glb_stdefs, decl_spec->st_spec->st_name,
+                    decl_spec->st_spec->st_len);
+
+    if (!st_defs) {
+      st_defs = calloc(1, sizeof(StructDef));
+      st_defs->st_name = decl_spec->st_spec->st_name;
+      st_defs->st_len = decl_spec->st_spec->st_len;
+
+      st_defs->next = state->glb_stdefs;
+      state->glb_stdefs = st_defs;
+    }
+
+    if (st_defs->is_defined && decl_spec->st_spec->has_decl)
+      error("redifine struct");
+
+    if (decl_spec->st_spec->has_decl) {
+      st_defs->is_defined = true;
+      st_defs->size = 0;
+      st_defs->alignment = 1;
+
+      Tree *cur = decl_spec->st_spec->members;
+      Member *head = calloc(1, sizeof(Member));
+      Member *mem_cur = head;
+      while (cur) {
+        Member *mem = calloc(1, sizeof(Member));
+
+        analyze_decl_spec(cur->decl_specs, state, false);
+        Type *obj_type = gettype_decl_spec(cur->decl_specs);
+        obj_type = gettype_declarator(cur->declarator, obj_type);
+
+        char *obj_name = getname_declarator(cur->declarator);
+
+        mem->member_name = obj_name;
+        mem->member_len = strlen(obj_name);
+        mem->type = obj_type;
+        mem->offset = (st_defs->size % type_alignment(obj_type) == 0)
+                          ? st_defs->size
+                          : st_defs->size + type_alignment(obj_type) -
+                                st_defs->size % type_alignment(obj_type);
+
+        st_defs->size = mem->offset + type_size(obj_type);
+        if (type_alignment(obj_type) > st_defs->alignment)
+          st_defs->alignment = type_alignment(obj_type);
+
+        mem->next = mem_cur;
+        mem_cur = mem;
+
+        cur = cur->next;
+      }
+
+      st_defs->size = (st_defs->size % st_defs->alignment == 0)
+                          ? st_defs->size
+                          : st_defs->size + st_defs->alignment -
+                                st_defs->size % st_defs->alignment;
+    }
+
+    decl_spec->st_def = st_defs;
+  }
+}
 
 void analyze_parameter(Tree *ast, Analyze *state) {
   if (ast->kind == DECLARATION) {
@@ -445,7 +513,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
         find_lvar(state->current_func->locals, ast->var_name, ast->var_len);
 
     if (!var) {
-      var = find_global(state->globals, ast->var_name, ast->var_len);
+      var = find_global(state->glb_objs, ast->var_name, ast->var_len);
       if (!var)
         error("cannot find var");
     }
@@ -498,6 +566,13 @@ void pop_label(LabelScope **lscope) { *lscope = (*lscope)->next; }
 
 int calc_rbp_offset(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;
+}
+
+StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len) {
+  for (StructDef *cur = st_defs; cur; cur = cur->next)
+    if (cur->st_len == st_len && !memcmp(st_name, cur->st_name, st_len))
+      return cur;
+  return NULL;
 }
 
 int eval_constexpr(Tree *expr) {

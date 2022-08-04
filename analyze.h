@@ -6,16 +6,19 @@ typedef struct ObjScope ObjScope;
 typedef struct TypedefScope TypedefScope;
 typedef struct Typedef Typedef;
 typedef struct LabelScope LabelScope;
+typedef struct StructDef StructDef;
+typedef struct Member Member;
 
 #include "parse.h"
 #include "type.h"
 
 struct Analyze {
-  Obj *globals;
+  Obj *glb_objs;
   Obj *current_func;
   LabelScope *break_labels;
   LabelScope *continue_labels;
   int label_cnt;
+  StructDef *glb_stdefs;
 };
 
 struct Obj {
@@ -48,6 +51,31 @@ struct ObjScope {
 
   // for linked-list
   ObjScope *next;
+};
+
+struct StructDef {
+  char *st_name;
+  int st_len;
+
+  bool is_defined;
+  int size;
+  int alignment;
+
+  Member *members;
+
+  // for linked-list
+  StructDef *next;
+};
+
+struct Member {
+  char *member_name;
+  int member_len;
+
+  Type *type;
+  int offset;
+
+  // for linked-list
+  Member *next;
 };
 
 struct TypedefScope {
