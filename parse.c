@@ -112,7 +112,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
 
 bool is_declaration_specs(Token *tok, TypedefScope *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
-         equal_kind(tok, TK_STRUCT);
+         equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
@@ -125,6 +125,10 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
   } else if (equal_kind(tok, TK_CHAR)) {
     decl_spec->has_char = true;
     consume_kind(rest, tok, TK_CHAR);
+    return decl_spec;
+  } else if (equal_kind(tok, TK_VOID)) {
+    decl_spec->has_void = true;
+    consume_kind(rest, tok, TK_VOID);
     return decl_spec;
   } else if (equal_kind(tok, TK_STRUCT)) {
     consume_kind(&tok, tok, TK_STRUCT);
@@ -197,10 +201,11 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
   if (equal(tok, "(")) {
     expect(&tok, tok, "(");
     declarator->type_suffix_kind = FUNC_DECLARATOR;
-    if (!consume(&tok, tok, ")")) {
+    if (!equal(tok, ")") && !equal_kind(tok, TK_VOID))
       declarator->args = parse_parameter_type_list(&tok, tok, state);
-      consume(&tok, tok, ")");
-    }
+
+    consume_kind(&tok, tok, TK_VOID);
+    consume(&tok, tok, ")");
   } else if (equal(tok, "[")) {
     declarator->type_suffix_kind = ARRAY_DECLARATOR;
     while (consume(&tok, tok, "[")) {

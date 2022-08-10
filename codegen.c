@@ -124,7 +124,8 @@ void codegen_stmt(Tree *stmt) {
   case DECLARATION:
     return;
   case RETURN:
-    codegen_stmt(stmt->lhs);
+    if (stmt->lhs)
+      codegen_stmt(stmt->lhs);
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");

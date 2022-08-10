@@ -132,6 +132,7 @@ struct Tree {
 };
 
 struct DeclSpec {
+  bool has_void;
   bool has_int;
   bool has_char;
   StructSpec *st_spec;

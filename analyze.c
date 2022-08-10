@@ -243,7 +243,15 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     push_lvar(state->current_func->locals, lvar);
   } else if (ast->kind == RETURN) {
-    analyze_stmt(ast->lhs, state);
+    if (ast->lhs) {
+      analyze_stmt(ast->lhs, state);
+      if (!is_compatible(state->current_func->type->return_type,
+                         ast->lhs->type))
+        error("invalid return type");
+    } else {
+      if (state->current_func->type->return_type->kind != VOID)
+        error("must return value");
+    }
   } else if (ast->kind == BREAK) {
     if (!state->break_labels)
       error("invalid break stmt");

@@ -1,6 +1,7 @@
 #pragma once
 
 typedef enum {
+  VOID,
   INT,
   CHAR,
   PTR,
@@ -33,6 +34,7 @@ struct Type {
   Type *next;
 };
 
+extern Type *type_void;
 extern Type *type_int;
 extern Type *type_char;
 
@@ -48,3 +50,5 @@ int type_size(Type *type);
 int type_alignment(Type *type);
 
 bool is_integer(Type *type);
+bool is_same_type(Type *a,Type *b);
+bool is_compatible(Type *a,Type *b);

@@ -7,6 +7,7 @@
 #include "parse.h"
 #include "type.h"
 
+Type *type_void = &(Type){.kind = VOID};
 Type *type_int = &(Type){.kind = INT};
 Type *type_char = &(Type){.kind = CHAR};
 
@@ -15,6 +16,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
     return type_int;
   } else if (decl_spec->has_char) {
     return type_char;
+  } else if (decl_spec->has_void) {
+    return type_void;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else
@@ -134,5 +137,37 @@ int type_alignment(Type *type) {
 bool is_integer(Type *type) {
   if (type->kind == INT || type->kind == CHAR)
     return true;
+  return false;
+}
+
+bool is_primitive_type(Type *a) {
+  if (a->kind == VOID || a->kind == CHAR || a->kind == INT)
+    return true;
+  else
+    return false;
+}
+
+bool is_same_type(Type *a, Type *b) {
+  if (a->kind != b->kind)
+    return false;
+  else if (is_primitive_type(a))
+    return true;
+  else if (a->kind == PTR)
+    return is_same_type(a->ptr_to, b->ptr_to);
+  else if (a->kind == ARRAY)
+    return a->arr_size == b->arr_size && is_same_type(a->ptr_to, b->ptr_to);
+  else if (a->kind == STRUCT)
+    return a->st_def == b->st_def;
+  else if (a->kind == FUNC || b->kind == FUNC)
+    error("type comp FUNC");
+  return false;
+}
+
+bool is_compatible(Type *a, Type *b) {
+  if (is_same_type(a, b))
+    return true;
+  else if (is_integer(a) && is_integer(b))
+    return true;
+
   return false;
 }
