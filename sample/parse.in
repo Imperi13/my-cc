@@ -1,25 +1,780 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
+# 1 "./parse.c"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "./parse.c"
+# 1 "/usr/local/musl/include/stdbool.h" 1 3 4
+# 2 "./parse.c" 2
+# 1 "/usr/local/musl/include/stdio.h" 1 3 4
 
-#include "analyze.h"
-#include "error.h"
-#include "parse.h"
-#include "tokenize.h"
+
+
+
+
+
+
+# 1 "/usr/local/musl/include/features.h" 1 3 4
+# 9 "/usr/local/musl/include/stdio.h" 2 3 4
+# 26 "/usr/local/musl/include/stdio.h" 3 4
+# 1 "/usr/local/musl/include/bits/alltypes.h" 1 3 4
+# 50 "/usr/local/musl/include/bits/alltypes.h" 3 4
+
+# 50 "/usr/local/musl/include/bits/alltypes.h" 3 4
+typedef unsigned long size_t;
+# 65 "/usr/local/musl/include/bits/alltypes.h" 3 4
+typedef long ssize_t;
+# 162 "/usr/local/musl/include/bits/alltypes.h" 3 4
+typedef long off_t;
+# 320 "/usr/local/musl/include/bits/alltypes.h" 3 4
+typedef struct _IO_FILE FILE;
+
+
+
+
+
+typedef __builtin_va_list va_list;
+
+
+
+
+typedef __builtin_va_list __isoc_va_list;
+# 27 "/usr/local/musl/include/stdio.h" 2 3 4
+# 56 "/usr/local/musl/include/stdio.h" 3 4
+typedef union _G_fpos64_t {
+ char __opaque[16];
+ long long __lldata;
+ double __align;
+} fpos_t;
+
+extern FILE *const stdin;
+extern FILE *const stdout;
+extern FILE *const stderr;
+
+
+
+
+
+FILE *fopen(const char *restrict, const char *restrict);
+FILE *freopen(const char *restrict, const char *restrict, FILE *restrict);
+int fclose(FILE *);
+
+int remove(const char *);
+int rename(const char *, const char *);
+
+int feof(FILE *);
+int ferror(FILE *);
+int fflush(FILE *);
+void clearerr(FILE *);
+
+int fseek(FILE *, long, int);
+long ftell(FILE *);
+void rewind(FILE *);
+
+int fgetpos(FILE *restrict, fpos_t *restrict);
+int fsetpos(FILE *, const fpos_t *);
+
+size_t fread(void *restrict, size_t, size_t, FILE *restrict);
+size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);
+
+int fgetc(FILE *);
+int getc(FILE *);
+int getchar(void);
+int ungetc(int, FILE *);
+
+int fputc(int, FILE *);
+int putc(int, FILE *);
+int putchar(int);
+
+char *fgets(char *restrict, int, FILE *restrict);
+
+
+
+
+int fputs(const char *restrict, FILE *restrict);
+int puts(const char *);
+
+int printf(const char *restrict, ...);
+int fprintf(FILE *restrict, const char *restrict, ...);
+int sprintf(char *restrict, const char *restrict, ...);
+int snprintf(char *restrict, size_t, const char *restrict, ...);
+
+int vprintf(const char *restrict, __isoc_va_list);
+int vfprintf(FILE *restrict, const char *restrict, __isoc_va_list);
+int vsprintf(char *restrict, const char *restrict, __isoc_va_list);
+int vsnprintf(char *restrict, size_t, const char *restrict, __isoc_va_list);
+
+int scanf(const char *restrict, ...);
+int fscanf(FILE *restrict, const char *restrict, ...);
+int sscanf(const char *restrict, const char *restrict, ...);
+int vscanf(const char *restrict, __isoc_va_list);
+int vfscanf(FILE *restrict, const char *restrict, __isoc_va_list);
+int vsscanf(const char *restrict, const char *restrict, __isoc_va_list);
+
+void perror(const char *);
+
+int setvbuf(FILE *restrict, char *restrict, int, size_t);
+void setbuf(FILE *restrict, char *restrict);
+
+char *tmpnam(char *);
+FILE *tmpfile(void);
+
+
+
+
+FILE *fmemopen(void *restrict, size_t, const char *restrict);
+FILE *open_memstream(char **, size_t *);
+FILE *fdopen(int, const char *);
+FILE *popen(const char *, const char *);
+int pclose(FILE *);
+int fileno(FILE *);
+int fseeko(FILE *, off_t, int);
+off_t ftello(FILE *);
+int dprintf(int, const char *restrict, ...);
+int vdprintf(int, const char *restrict, __isoc_va_list);
+void flockfile(FILE *);
+int ftrylockfile(FILE *);
+void funlockfile(FILE *);
+int getc_unlocked(FILE *);
+int getchar_unlocked(void);
+int putc_unlocked(int, FILE *);
+int putchar_unlocked(int);
+ssize_t getdelim(char **restrict, size_t *restrict, int, FILE *restrict);
+ssize_t getline(char **restrict, size_t *restrict, FILE *restrict);
+int renameat(int, const char *, int, const char *);
+char *ctermid(char *);
+
+
+
+
+
+
+
+char *tempnam(const char *, const char *);
+
+
+
+
+char *cuserid(char *);
+void setlinebuf(FILE *);
+void setbuffer(FILE *, char *, size_t);
+int fgetc_unlocked(FILE *);
+int fputc_unlocked(int, FILE *);
+int fflush_unlocked(FILE *);
+size_t fread_unlocked(void *, size_t, size_t, FILE *);
+size_t fwrite_unlocked(const void *, size_t, size_t, FILE *);
+void clearerr_unlocked(FILE *);
+int feof_unlocked(FILE *);
+int ferror_unlocked(FILE *);
+int fileno_unlocked(FILE *);
+int getw(FILE *);
+int putw(int, FILE *);
+char *fgetln(FILE *, size_t *);
+int asprintf(char **, const char *, ...);
+int vasprintf(char **, const char *, __isoc_va_list);
+# 3 "./parse.c" 2
+# 1 "/usr/local/musl/include/stdlib.h" 1 3 4
+# 21 "/usr/local/musl/include/stdlib.h" 3 4
+# 1 "/usr/local/musl/include/bits/alltypes.h" 1 3 4
+# 10 "/usr/local/musl/include/bits/alltypes.h" 3 4
+typedef int wchar_t;
+# 22 "/usr/local/musl/include/stdlib.h" 2 3 4
+
+int atoi (const char *);
+long atol (const char *);
+long long atoll (const char *);
+double atof (const char *);
+
+float strtof (const char *restrict, char **restrict);
+double strtod (const char *restrict, char **restrict);
+long double strtold (const char *restrict, char **restrict);
+
+long strtol (const char *restrict, char **restrict, int);
+unsigned long strtoul (const char *restrict, char **restrict, int);
+long long strtoll (const char *restrict, char **restrict, int);
+unsigned long long strtoull (const char *restrict, char **restrict, int);
+
+int rand (void);
+void srand (unsigned);
+
+void *malloc (size_t);
+void *calloc (size_t, size_t);
+void *realloc (void *, size_t);
+void free (void *);
+void *aligned_alloc(size_t, size_t);
+
+_Noreturn void abort (void);
+int atexit (void (*) (void));
+_Noreturn void exit (int);
+_Noreturn void _Exit (int);
+int at_quick_exit (void (*) (void));
+_Noreturn void quick_exit (int);
+
+char *getenv (const char *);
+
+int system (const char *);
+
+void *bsearch (const void *, const void *, size_t, size_t, int (*)(const void *, const void *));
+void qsort (void *, size_t, size_t, int (*)(const void *, const void *));
+
+int abs (int);
+long labs (long);
+long long llabs (long long);
+
+typedef struct { int quot, rem; } div_t;
+typedef struct { long quot, rem; } ldiv_t;
+typedef struct { long long quot, rem; } lldiv_t;
+
+div_t div (int, int);
+ldiv_t ldiv (long, long);
+lldiv_t lldiv (long long, long long);
+
+int mblen (const char *, size_t);
+int mbtowc (wchar_t *restrict, const char *restrict, size_t);
+int wctomb (char *, wchar_t);
+size_t mbstowcs (wchar_t *restrict, const char *restrict, size_t);
+size_t wcstombs (char *restrict, const wchar_t *restrict, size_t);
+
+
+
+
+size_t __ctype_get_mb_cur_max(void);
+# 101 "/usr/local/musl/include/stdlib.h" 3 4
+int posix_memalign (void **, size_t, size_t);
+int setenv (const char *, const char *, int);
+int unsetenv (const char *);
+int mkstemp (char *);
+int mkostemp (char *, int);
+char *mkdtemp (char *);
+int getsubopt (char **, char *const *, char **);
+int rand_r (unsigned *);
+
+
+
+
+
+
+char *realpath (const char *restrict, char *restrict);
+long int random (void);
+void srandom (unsigned int);
+char *initstate (unsigned int, char *, size_t);
+char *setstate (char *);
+int putenv (char *);
+int posix_openpt (int);
+int grantpt (int);
+int unlockpt (int);
+char *ptsname (int);
+char *l64a (long);
+long a64l (const char *);
+void setkey (const char *);
+double drand48 (void);
+double erand48 (unsigned short [3]);
+long int lrand48 (void);
+long int nrand48 (unsigned short [3]);
+long mrand48 (void);
+long jrand48 (unsigned short [3]);
+void srand48 (long);
+unsigned short *seed48 (unsigned short [3]);
+void lcong48 (unsigned short [7]);
+
+
+
+# 1 "/usr/local/musl/include/alloca.h" 1 3 4
+# 9 "/usr/local/musl/include/alloca.h" 3 4
+# 1 "/usr/local/musl/include/bits/alltypes.h" 1 3 4
+# 10 "/usr/local/musl/include/alloca.h" 2 3 4
+
+void *alloca(size_t);
+# 141 "/usr/local/musl/include/stdlib.h" 2 3 4
+char *mktemp (char *);
+int mkstemps (char *, int);
+int mkostemps (char *, int, int);
+void *valloc (size_t);
+void *memalign(size_t, size_t);
+int getloadavg(double *, int);
+int clearenv(void);
+
+
+void *reallocarray (void *, size_t, size_t);
+void qsort_r (void *, size_t, size_t, int (*)(const void *, const void *, void *), void *);
+# 4 "./parse.c" 2
+
+# 1 "./analyze.h" 1
+       
+
+
+# 3 "./analyze.h"
+typedef struct Analyze Analyze;
+typedef struct Obj Obj;
+typedef struct ObjScope ObjScope;
+typedef struct TypedefScope TypedefScope;
+typedef struct Typedef Typedef;
+typedef struct LabelScope LabelScope;
+typedef struct StructDef StructDef;
+typedef struct Member Member;
+
+# 1 "./parse.h" 1
+       
+
+
+
+typedef enum {
+  FUNC_DEF,
+  DECLARATION,
+  COMPOUND_STMT,
+  RETURN,
+  BREAK,
+  CONTINUE,
+  DO_WHILE,
+  WHILE,
+  FOR,
+  IF,
+  COMMA,
+  ASSIGN,
+  ADD_ASSIGN,
+  SUB_ASSIGN,
+  MUL_ASSIGN,
+  DIV_ASSIGN,
+  MOD_ASSIGN,
+  AND_ASSIGN,
+  OR_ASSIGN,
+  XOR_ASSIGN,
+  LSHIFT_ASSIGN,
+  RSHIFT_ASSIGN,
+  CONDITIONAL,
+  LOGICAL_OR,
+  LOGICAL_AND,
+  BIT_OR,
+  BIT_XOR,
+  BIT_AND,
+  EQUAL,
+  NOT_EQUAL,
+  SMALLER,
+  SMALLER_EQUAL,
+  GREATER,
+  GREATER_EQUAL,
+  LSHIFT,
+  RSHIFT,
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  MOD,
+  PLUS,
+  MINUS,
+  ADDR,
+  DEREF,
+  LOGICAL_NOT,
+  BIT_NOT,
+  FUNC_CALL,
+  POST_INCREMENT,
+  POST_DECREMENT,
+  NUM,
+  STR,
+  VAR,
+} TreeKind;
+
+typedef struct Tree Tree;
+typedef struct DeclSpec DeclSpec;
+typedef struct StructSpec StructSpec;
+typedef struct Declarator Declarator;
+typedef struct Pointer Pointer;
+typedef struct ArrayDeclarator ArrayDeclarator;
+
+
+# 1 "./tokenize.h" 1
+       
+
+
+
+typedef enum {
+  TK_RESERVED,
+  TK_RETURN,
+  TK_SIZEOF,
+  TK_ALIGNOF,
+  TK_STRUCT,
+  TK_ENUM,
+  TK_IF,
+  TK_ELSE,
+  TK_SWITCH,
+  TK_DEFAULT,
+  TK_CASE,
+  TK_DO,
+  TK_WHILE,
+  TK_FOR,
+  TK_BREAK,
+  TK_CONTINUE,
+  TK_IDENT,
+  TK_VOID,
+  TK_INT,
+  TK_CHAR,
+  TK_CONST,
+  TK_EXTERN,
+  TK_STATIC,
+  TK_NUM,
+  TK_STR,
+  TK_EOF,
+} TokenKind;
+
+typedef struct Token Token;
+typedef struct StrLiteral StrLiteral;
+
+struct Token {
+  TokenKind kind;
+  Token *next;
+  int val;
+  char *str;
+  int len;
+
+
+  StrLiteral *str_literal;
+};
+
+struct StrLiteral {
+  char *str;
+  int len;
+  int id;
+
+
+  StrLiteral *next;
+};
+
+extern const char variable_letters[];
+extern Token *dummy_token;
+
+extern StrLiteral *str_literals;
+
+
+# 62 "./tokenize.h" 3 4
+_Bool 
+# 62 "./tokenize.h"
+    equal(Token *token, char *op);
+
+# 63 "./tokenize.h" 3 4
+_Bool 
+# 63 "./tokenize.h"
+    equal_kind(Token *token, TokenKind kind);
+
+# 64 "./tokenize.h" 3 4
+_Bool 
+# 64 "./tokenize.h"
+    consume(Token **rest, Token *token, char *op);
+Token *consume_kind(Token **rest, Token *token, TokenKind kind);
+void expect(Token **rest, Token *token, char *op);
+Token *expect_kind(Token **rest, Token *token, TokenKind kind);
+int expect_number(Token **rest, Token *token);
+
+# 69 "./tokenize.h" 3 4
+_Bool 
+# 69 "./tokenize.h"
+    at_eof(Token *token);
+
+
+# 71 "./tokenize.h" 3 4
+_Bool 
+# 71 "./tokenize.h"
+    is_alnum(char c);
+
+Token *tokenize(char *p);
+
+void debug_token(Token *token);
+# 70 "./parse.h" 2
+# 1 "./type.h" 1
+       
+
+typedef enum {
+  INT,
+  CHAR,
+  PTR,
+  STRUCT,
+  FUNC,
+  ARRAY,
+} TypeKind;
+
+typedef struct Type Type;
+
+
+
+
+struct Type {
+  TypeKind kind;
+
+
+  Type *return_type;
+
+
+  Type *ptr_to;
+
+
+  int arr_size;
+
+
+  StructDef *st_def;
+
+
+  Type *next;
+};
+
+extern Type *type_int;
+extern Type *type_char;
+
+Type *gettype_decl_spec(DeclSpec *decl_spec);
+Type *gettype_declarator(Declarator *declarator, Type *base_type);
+char *getname_declarator(Declarator *declarator);
+Tree *getargs_declarator(Declarator *declarator);
+
+Type *newtype_ptr(Type *type);
+Type *newtype_struct(StructDef *st_def);
+
+int type_size(Type *type);
+int type_alignment(Type *type);
+
+
+# 50 "./type.h" 3 4
+_Bool 
+# 50 "./type.h"
+    is_integer(Type *type);
+# 71 "./parse.h" 2
+
+typedef enum {
+  NONE,
+  ARRAY_DECLARATOR,
+  FUNC_DECLARATOR,
+} TypeSuffixKind;
+
+struct Tree {
+  TreeKind kind;
+
+
+  DeclSpec *decl_specs;
+  Declarator *declarator;
+
+  Obj *def_obj;
+
+
+  Tree *func_body;
+
+  Type *type;
+
+
+  Tree *cond;
+  int label_number;
+
+
+  Tree *for_init;
+  Tree *for_update;
+
+
+  Tree *lhs;
+  Tree *rhs;
+
+
+  Tree *stmts;
+
+
+  Tree *call_args;
+
+
+  unsigned long num;
+  StrLiteral *str_literal;
+
+
+  char *var_name;
+  int var_len;
+
+  Obj *var_obj;
+
+
+  Tree *next;
+};
+
+struct DeclSpec {
+  
+# 125 "./parse.h" 3 4
+ _Bool 
+# 125 "./parse.h"
+      has_int;
+  
+# 126 "./parse.h" 3 4
+ _Bool 
+# 126 "./parse.h"
+      has_char;
+  StructSpec *st_spec;
+  StructDef *st_def;
+};
+
+struct StructSpec {
+  char *st_name;
+  int st_len;
+
+  
+# 135 "./parse.h" 3 4
+ _Bool 
+# 135 "./parse.h"
+      has_decl;
+
+  Tree *members;
+};
+
+struct Declarator {
+  Pointer *pointer;
+  char *name;
+  int len;
+
+
+  Declarator *nest;
+
+
+  TypeSuffixKind type_suffix_kind;
+
+
+  Tree *args;
+
+
+  ArrayDeclarator *arr_decl;
+};
+
+struct Pointer {
+  Pointer *nest;
+};
+
+struct ArrayDeclarator {
+  Tree *size;
+
+
+  ArrayDeclarator *next;
+};
+
+Tree *parse_translation_unit(Token *tok);
+# 13 "./analyze.h" 2
+
+
+struct Analyze {
+  Obj *glb_objs;
+  Obj *current_func;
+  LabelScope *break_labels;
+  LabelScope *continue_labels;
+  int label_cnt;
+  StructDef *glb_stdefs;
+};
+
+struct Obj {
+
+  char *obj_name;
+  int obj_len;
+
+  Type *type;
+
+
+  ObjScope *locals;
+  int stack_size;
+
+  Obj *args;
+
+
+  
+# 38 "./analyze.h" 3 4
+ _Bool 
+# 38 "./analyze.h"
+      is_defined;
+  
+# 39 "./analyze.h" 3 4
+ _Bool 
+# 39 "./analyze.h"
+      is_global;
+
+
+  int rbp_offset;
+
+
+  Obj *next;
+  Obj *arg_next;
+};
+
+struct ObjScope {
+  Obj *obj;
+
+
+  ObjScope *next;
+};
+
+struct StructDef {
+  char *st_name;
+  int st_len;
+
+  
+# 60 "./analyze.h" 3 4
+ _Bool 
+# 60 "./analyze.h"
+      is_defined;
+  int size;
+  int alignment;
+
+  Member *members;
+
+
+  StructDef *next;
+};
+
+struct Member {
+  char *member_name;
+  int member_len;
+
+  Type *type;
+  int offset;
+
+
+  Member *next;
+};
+
+struct TypedefScope {
+  Typedef *typedefs;
+
+
+  TypedefScope *next;
+};
+
+struct Typedef {
+  char *name;
+  int len;
+
+
+  Typedef *next;
+};
+
+struct LabelScope {
+  int label_number;
+  LabelScope *next;
+};
+
+void analyze_translation_unit(Tree *ast);
+int eval_constexpr(Tree *expr);
+int calc_rbp_offset(int start, int data_size, int alignment);
+# 6 "./parse.c" 2
+# 1 "./error.h" 1
+       
+
+
+
+void error(char *fmt, ...);
+void error_at(char *loc, char *fmt, ...);
+
+void not_implemented(const char *msg);
+void not_implemented_at(char *loc);
+# 7 "./parse.c" 2
+
+
 
 static Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
-                                 bool allow_function);
+                                 
+# 11 "./parse.c" 3 4
+                                _Bool 
+# 11 "./parse.c"
+                                     allow_function);
 static DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
                                          TypedefScope *state);
 static Declarator *parse_declarator(Token **rest, Token *tok,
                                     TypedefScope *state);
 static Tree *parse_parameter_type_list(Token **rest, Token *tok,
                                        TypedefScope *state);
-static bool is_type_name(Token *tok, TypedefScope *state);
-static bool is_abstract_declarator(Token *tok, TypedefScope *state);
-static Tree *parse_type_name(Token **rest, Token *tok, TypedefScope *state);
-static Declarator *parse_abstract_declarator(Token **rest, Token *tok,
-                                             TypedefScope *state);
 
 static Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state);
 static Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state);
@@ -48,12 +803,32 @@ static Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state);
 static Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state);
 static Tree *parse_primary(Token **rest, Token *tok, TypedefScope *state);
 
-static bool is_label_stmt(Token *tok);
-static bool is_selection_stmt(Token *tok);
-static bool is_iteration_stmt(Token *tok);
-static bool is_jump_stmt(Token *tok);
+static 
+# 46 "./parse.c" 3 4
+      _Bool 
+# 46 "./parse.c"
+           is_label_stmt(Token *tok);
+static 
+# 47 "./parse.c" 3 4
+      _Bool 
+# 47 "./parse.c"
+           is_selection_stmt(Token *tok);
+static 
+# 48 "./parse.c" 3 4
+      _Bool 
+# 48 "./parse.c"
+           is_iteration_stmt(Token *tok);
+static 
+# 49 "./parse.c" 3 4
+      _Bool 
+# 49 "./parse.c"
+           is_jump_stmt(Token *tok);
 
-static bool is_declaration_specs(Token *tok, TypedefScope *state);
+static 
+# 51 "./parse.c" 3 4
+      _Bool 
+# 51 "./parse.c"
+           is_declaration_specs(Token *tok, TypedefScope *state);
 
 Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs) {
   Tree *node = calloc(1, sizeof(Tree));
@@ -70,7 +845,11 @@ Tree *parse_translation_unit(Token *tok) {
   TypedefScope *state = calloc(1, sizeof(TypedefScope));
 
   while (!at_eof(tok)) {
-    Tree *ex_decl = parse_external_decl(&tok, tok, state, true);
+    Tree *ex_decl = parse_external_decl(&tok, tok, state, 
+# 68 "./parse.c" 3 4
+                                                         1
+# 68 "./parse.c"
+                                                             );
     cur->next = ex_decl;
     cur = ex_decl;
   }
@@ -79,7 +858,11 @@ Tree *parse_translation_unit(Token *tok) {
 }
 
 Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
-                          bool allow_function) {
+                          
+# 77 "./parse.c" 3 4
+                         _Bool 
+# 77 "./parse.c"
+                              allow_function) {
   Tree *ex_decl = calloc(1, sizeof(Tree));
   ex_decl->decl_specs = parse_declaration_specs(&tok, tok, state);
 
@@ -100,8 +883,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
     return ex_decl;
   }
 
-  // TODO initialize
-  // TODO multiple declarator
+
+
 
   ex_decl->kind = DECLARATION;
 
@@ -110,7 +893,11 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
   return ex_decl;
 }
 
-bool is_declaration_specs(Token *tok, TypedefScope *state) {
+
+# 108 "./parse.c" 3 4
+_Bool 
+# 108 "./parse.c"
+    is_declaration_specs(Token *tok, TypedefScope *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
          equal_kind(tok, TK_STRUCT);
 }
@@ -119,11 +906,19 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
                                   TypedefScope *state) {
   DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
   if (equal_kind(tok, TK_INT)) {
-    decl_spec->has_int = true;
+    decl_spec->has_int = 
+# 117 "./parse.c" 3 4
+                        1
+# 117 "./parse.c"
+                            ;
     consume_kind(rest, tok, TK_INT);
     return decl_spec;
   } else if (equal_kind(tok, TK_CHAR)) {
-    decl_spec->has_char = true;
+    decl_spec->has_char = 
+# 121 "./parse.c" 3 4
+                         1
+# 121 "./parse.c"
+                             ;
     consume_kind(rest, tok, TK_CHAR);
     return decl_spec;
   } else if (equal_kind(tok, TK_STRUCT)) {
@@ -136,11 +931,19 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
       st_spec->st_len = st_ident->len;
 
       if (consume(&tok, tok, "{")) {
-        st_spec->has_decl = true;
+        st_spec->has_decl = 
+# 134 "./parse.c" 3 4
+                           1
+# 134 "./parse.c"
+                               ;
         Tree *head = calloc(1, sizeof(Tree));
         Tree *cur = head;
         while (!consume(&tok, tok, "}")) {
-          cur->next = parse_external_decl(&tok, tok, state, false);
+          cur->next = parse_external_decl(&tok, tok, state, 
+# 138 "./parse.c" 3 4
+                                                           0
+# 138 "./parse.c"
+                                                                );
           cur = cur->next;
           consume(&tok, tok, ",");
         }
@@ -149,11 +952,19 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
       }
     } else {
       if (consume(&tok, tok, "{")) {
-        st_spec->has_decl = true;
+        st_spec->has_decl = 
+# 147 "./parse.c" 3 4
+                           1
+# 147 "./parse.c"
+                               ;
         Tree *head = calloc(1, sizeof(Tree));
         Tree *cur = head;
         while (!consume(&tok, tok, "}")) {
-          cur->next = parse_external_decl(&tok, tok, state, false);
+          cur->next = parse_external_decl(&tok, tok, state, 
+# 151 "./parse.c" 3 4
+                                                           0
+# 151 "./parse.c"
+                                                                );
           cur = cur->next;
           consume(&tok, tok, ",");
         }
@@ -167,7 +978,11 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
 
   } else
     not_implemented_at(tok->str);
-  return NULL;
+  return 
+# 165 "./parse.c" 3 4
+        ((void*)0)
+# 165 "./parse.c"
+            ;
 }
 
 Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
@@ -181,7 +996,7 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
     cur = &(*cur)->nest;
   }
 
-  // parse ident or nest-declarator
+
   if (equal_kind(tok, TK_IDENT)) {
     Token *decl_name = consume_kind(&tok, tok, TK_IDENT);
     declarator->name = decl_name->str;
@@ -192,7 +1007,7 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
     error("cannot parse declarator");
   }
 
-  // parse type-suffix
+
   declarator->type_suffix_kind = NONE;
   if (equal(tok, "(")) {
     expect(&tok, tok, "(");
@@ -238,88 +1053,6 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, TypedefScope *state) {
   return head;
 }
 
-bool is_type_name(Token *tok, TypedefScope *state) {
-  if (!is_declaration_specs(tok, state))
-    return false;
-  parse_declaration_specs(&tok, tok, state);
-
-  return is_abstract_declarator(tok, state);
-}
-
-bool is_abstract_declarator(Token *tok, TypedefScope *state) {
-  while (equal(tok, "*"))
-    consume(&tok, tok, "*");
-
-  if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
-  }
-
-  if (equal(tok, "[")) {
-    while (consume(&tok, tok, "[")) {
-      if (!equal_kind(tok, TK_NUM))
-        return false;
-
-      consume_kind(&tok, tok, TK_NUM);
-      if (!equal(tok, "]"))
-        return false;
-      consume(&tok, tok, "]");
-    }
-  } else if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
-  }
-
-  return true;
-}
-
-Tree *parse_type_name(Token **rest, Token *tok, TypedefScope *state) {
-  DeclSpec *decl_spec = parse_declaration_specs(&tok, tok, state);
-  Declarator *declarator = parse_abstract_declarator(&tok, tok, state);
-
-  Tree *ret = calloc(1, sizeof(Tree));
-  ret->kind = TYPE_NAME;
-  ret->decl_specs = decl_spec;
-  ret->declarator = declarator;
-
-  *rest = tok;
-  return ret;
-}
-
-Declarator *parse_abstract_declarator(Token **rest, Token *tok,
-                                      TypedefScope *state) {
-  Declarator *declarator = calloc(1, sizeof(Declarator));
-
-  Pointer **cur = &declarator->pointer;
-  while (equal(tok, "*")) {
-    consume(&tok, tok, "*");
-
-    *cur = calloc(1, sizeof(Pointer));
-    cur = &(*cur)->nest;
-  }
-
-  if (equal(tok, "(") && is_abstract_declarator(tok->next, state)) {
-    not_implemented_at(tok->str);
-  }
-
-  // parse type-suffix
-  declarator->type_suffix_kind = NONE;
-  if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
-  } else if (equal(tok, "[")) {
-    declarator->type_suffix_kind = ARRAY_DECLARATOR;
-    while (consume(&tok, tok, "[")) {
-      ArrayDeclarator *arr_decl = calloc(1, sizeof(ArrayDeclarator));
-      arr_decl->size = parse_expr(&tok, tok, state);
-      consume(&tok, tok, "]");
-
-      arr_decl->next = declarator->arr_decl;
-      declarator->arr_decl = arr_decl;
-    }
-  }
-
-  *rest = tok;
-  return declarator;
-}
-
 Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node;
 
@@ -340,13 +1073,21 @@ Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state) {
   return node;
 }
 
-bool is_label_stmt(Token *tok) {
+
+# 256 "./parse.c" 3 4
+_Bool 
+# 256 "./parse.c"
+    is_label_stmt(Token *tok) {
   return (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) ||
          equal_kind(tok, TK_DEFAULT) || equal_kind(tok, TK_CASE);
 }
 
 Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state) {
-  Tree *node = NULL;
+  Tree *node = 
+# 262 "./parse.c" 3 4
+              ((void*)0)
+# 262 "./parse.c"
+                  ;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
     not_implemented_at(tok->str);
   } else if (equal_kind(tok, TK_CASE)) {
@@ -363,7 +1104,11 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *cur = head;
   while (!consume(&tok, tok, "}")) {
     if (is_declaration_specs(tok, state)) {
-      cur->next = parse_external_decl(&tok, tok, state, false);
+      cur->next = parse_external_decl(&tok, tok, state, 
+# 279 "./parse.c" 3 4
+                                                       0
+# 279 "./parse.c"
+                                                            );
       cur = cur->next;
     } else {
       cur->next = parse_stmt(&tok, tok, state);
@@ -378,7 +1123,11 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, TypedefScope *state) {
   return node;
 }
 
-bool is_jump_stmt(Token *tok) {
+
+# 294 "./parse.c" 3 4
+_Bool 
+# 294 "./parse.c"
+    is_jump_stmt(Token *tok) {
   return equal_kind(tok, TK_RETURN) || equal_kind(tok, TK_BREAK) ||
          equal_kind(tok, TK_CONTINUE);
 }
@@ -412,13 +1161,21 @@ Tree *parse_jump_stmt(Token **rest, Token *tok, TypedefScope *state) {
   return node;
 }
 
-bool is_iteration_stmt(Token *tok) {
+
+# 328 "./parse.c" 3 4
+_Bool 
+# 328 "./parse.c"
+    is_iteration_stmt(Token *tok) {
   return equal_kind(tok, TK_WHILE) || equal_kind(tok, TK_DO) ||
          equal_kind(tok, TK_FOR);
 }
 
 Tree *parse_iteration_stmt(Token **rest, Token *tok, TypedefScope *state) {
-  Tree *node = NULL;
+  Tree *node = 
+# 334 "./parse.c" 3 4
+              ((void*)0)
+# 334 "./parse.c"
+                  ;
   if (equal_kind(tok, TK_WHILE)) {
     consume_kind(&tok, tok, TK_WHILE);
 
@@ -482,12 +1239,20 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, TypedefScope *state) {
   return node;
 }
 
-bool is_selection_stmt(Token *tok) {
+
+# 398 "./parse.c" 3 4
+_Bool 
+# 398 "./parse.c"
+    is_selection_stmt(Token *tok) {
   return equal_kind(tok, TK_IF) || equal_kind(tok, TK_SWITCH);
 }
 
 Tree *parse_selection_stmt(Token **rest, Token *tok, TypedefScope *state) {
-  Tree *node = NULL;
+  Tree *node = 
+# 403 "./parse.c" 3 4
+              ((void*)0)
+# 403 "./parse.c"
+                  ;
   if (equal_kind(tok, TK_IF)) {
     consume_kind(&tok, tok, TK_IF);
     expect(&tok, tok, "(");
@@ -793,24 +1558,22 @@ Tree *parse_cast(Token **rest, Token *tok, TypedefScope *state) {
 
 Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state) {
   if (equal_kind(tok, TK_SIZEOF)) {
-    consume_kind(&tok, tok, TK_SIZEOF);
-
-    if (equal(tok, "(") && is_type_name(tok->next, state)) {
-      expect(&tok, tok, "(");
-      Tree *typename = parse_type_name(&tok, tok, state);
-      expect(&tok, tok, ")");
-      *rest = tok;
-      return new_binary_node(SIZEOF, typename, NULL);
-    } else {
-      not_implemented_at(tok->str);
-    }
+    not_implemented_at(tok->str);
+    return 
+# 710 "./parse.c" 3 4
+          ((void*)0)
+# 710 "./parse.c"
+              ;
   }
 
   if (equal_kind(tok, TK_ALIGNOF)) {
     not_implemented_at(tok->str);
-    return NULL;
+    return 
+# 715 "./parse.c" 3 4
+          ((void*)0)
+# 715 "./parse.c"
+              ;
   }
-
   if (equal(tok, "++")) {
     consume(&tok, tok, "++");
     Tree *lhs = parse_cast(&tok, tok, state);
@@ -901,7 +1664,11 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
       consume(&tok, tok, "]");
 
       Tree *add_node = new_binary_node(ADD, lhs, rhs);
-      lhs = new_binary_node(DEREF, add_node, NULL);
+      lhs = new_binary_node(DEREF, add_node, 
+# 807 "./parse.c" 3 4
+                                            ((void*)0)
+# 807 "./parse.c"
+                                                );
     } else if (equal(tok, "(")) {
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = FUNC_CALL;
@@ -922,10 +1689,18 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
       not_implemented_at(tok->str);
     } else if (equal(tok, "++")) {
       consume(&tok, tok, "++");
-      lhs = new_binary_node(POST_INCREMENT, lhs, NULL);
+      lhs = new_binary_node(POST_INCREMENT, lhs, 
+# 828 "./parse.c" 3 4
+                                                ((void*)0)
+# 828 "./parse.c"
+                                                    );
     } else if (equal(tok, "--")) {
       consume(&tok, tok, "--");
-      lhs = new_binary_node(POST_DECREMENT, lhs, NULL);
+      lhs = new_binary_node(POST_DECREMENT, lhs, 
+# 831 "./parse.c" 3 4
+                                                ((void*)0)
+# 831 "./parse.c"
+                                                    );
     } else {
       *rest = tok;
       return lhs;

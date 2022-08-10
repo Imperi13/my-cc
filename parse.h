@@ -5,6 +5,7 @@
 typedef enum {
   FUNC_DEF,
   DECLARATION,
+  TYPE_NAME,
   COMPOUND_STMT,
   RETURN,
   BREAK,
@@ -50,6 +51,7 @@ typedef enum {
   DEREF,
   LOGICAL_NOT,
   BIT_NOT,
+  SIZEOF,
   FUNC_CALL,
   POST_INCREMENT,
   POST_DECREMENT,

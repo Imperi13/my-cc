@@ -487,6 +487,19 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == BIT_NOT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
+  } else if (ast->kind == SIZEOF) {
+    if (ast->lhs->kind == TYPE_NAME) {
+      analyze_decl_spec(ast->lhs->decl_specs,state,false);
+      Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
+      base_type = gettype_declarator(ast->lhs->declarator, base_type);
+
+      // replace "sizeof" -> num
+      ast->kind = NUM;
+      ast->num = type_size(base_type);
+      ast->type = type_int;
+    } else {
+      not_implemented("sizeof expr");
+    }
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
     Tree *cur = ast->call_args;
