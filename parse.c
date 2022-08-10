@@ -917,10 +917,10 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
 
       lhs = node;
     } else if (equal(tok, ".")) {
-      consume(&tok,tok,".");
-      Token *mem_tok = consume_kind(&tok,tok,TK_IDENT);
-      
-      Tree *node = calloc(1,sizeof(Tree));
+      consume(&tok, tok, ".");
+      Token *mem_tok = consume_kind(&tok, tok, TK_IDENT);
+
+      Tree *node = calloc(1, sizeof(Tree));
       node->kind = DOT;
       node->lhs = lhs;
       node->member_name = mem_tok->str;
@@ -928,7 +928,16 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
 
       lhs = node;
     } else if (equal(tok, "->")) {
-      not_implemented_at(tok->str);
+      consume(&tok, tok, "->");
+      Token *mem_tok = consume_kind(&tok, tok, TK_IDENT);
+
+      Tree *node = calloc(1, sizeof(Tree));
+      node->kind = ARROW;
+      node->lhs = lhs;
+      node->member_name = mem_tok->str;
+      node->member_len = mem_tok->len;
+
+      lhs = node;
     } else if (equal(tok, "++")) {
       consume(&tok, tok, "++");
       lhs = new_binary_node(POST_INCREMENT, lhs, NULL);

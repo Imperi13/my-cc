@@ -110,6 +110,9 @@ void codegen_addr(Tree *stmt) {
   } else if (stmt->kind == DOT) {
     codegen_addr(stmt->lhs);
     printf("  add rax, %d\n", stmt->member->offset);
+  } else if (stmt->kind == ARROW) {
+    codegen_stmt(stmt->lhs);
+    printf("  add rax, %d\n", stmt->member->offset);
   } else {
     not_implemented(__func__);
   }
@@ -410,6 +413,10 @@ void codegen_stmt(Tree *stmt) {
     printf("  mov [rdi],esi\n");
     return;
   case DOT:
+    codegen_addr(stmt);
+    load2rax_from_raxaddr(stmt->type);
+    return;
+  case ARROW:
     codegen_addr(stmt);
     load2rax_from_raxaddr(stmt->type);
     return;

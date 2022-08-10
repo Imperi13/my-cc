@@ -56,6 +56,7 @@ typedef enum {
   POST_INCREMENT,
   POST_DECREMENT,
   DOT,
+  ARROW,
   NUM,
   STR,
   VAR,

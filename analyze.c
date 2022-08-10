@@ -533,6 +533,19 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->member = member;
     ast->type = member->type;
 
+  } else if (ast->kind == ARROW) {
+    analyze_stmt(ast->lhs, state);
+    if (ast->lhs->type->kind != PTR || ast->lhs->type->ptr_to->kind != STRUCT)
+      error("lhs is not ptr to struct");
+
+    Member *member = find_member(ast->lhs->type->ptr_to->st_def,
+                                 ast->member_name, ast->member_len);
+    if (!member)
+      error("not find member");
+
+    ast->member = member;
+    ast->type = member->type;
+
   } else if (ast->kind == NUM) {
     ast->type = type_int;
   } else if (ast->kind == STR) {
