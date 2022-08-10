@@ -107,6 +107,9 @@ void codegen_addr(Tree *stmt) {
              stmt->var_obj->obj_name);
   } else if (stmt->kind == DEREF) {
     codegen_stmt(stmt->lhs);
+  } else if (stmt->kind == DOT) {
+    codegen_addr(stmt->lhs);
+    printf("  add rax, %d\n", stmt->member->offset);
   } else {
     not_implemented(__func__);
   }
@@ -405,6 +408,10 @@ void codegen_stmt(Tree *stmt) {
     printf("  mov rsi,rax\n");
     printf("  sub rsi, 1\n");
     printf("  mov [rdi],esi\n");
+    return;
+  case DOT:
+    codegen_addr(stmt);
+    load2rax_from_raxaddr(stmt->type);
     return;
   case NUM:
     printf("  mov rax, %ld\n", stmt->num);

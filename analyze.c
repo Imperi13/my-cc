@@ -23,6 +23,7 @@ static void push_label(LabelScope **lscope, int label_number);
 static void pop_label(LabelScope **lscope);
 
 static StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len);
+static Member *find_member(StructDef *st_def, char *mem_name, int mem_len);
 
 void analyze_translation_unit(Tree *ast) {
   Analyze *state = calloc(1, sizeof(Analyze));
@@ -154,11 +155,13 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         if (type_alignment(obj_type) > st_defs->alignment)
           st_defs->alignment = type_alignment(obj_type);
 
-        mem->next = mem_cur;
+        mem_cur->next = mem;
         mem_cur = mem;
 
         cur = cur->next;
       }
+
+      st_defs->members = head->next;
 
       st_defs->size = (st_defs->size % st_defs->alignment == 0)
                           ? st_defs->size
@@ -489,7 +492,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = ast->lhs->type;
   } else if (ast->kind == SIZEOF) {
     if (ast->lhs->kind == TYPE_NAME) {
-      analyze_decl_spec(ast->lhs->decl_specs,state,false);
+      analyze_decl_spec(ast->lhs->decl_specs, state, false);
       Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
       base_type = gettype_declarator(ast->lhs->declarator, base_type);
 
@@ -517,6 +520,19 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == POST_DECREMENT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
+  } else if (ast->kind == DOT) {
+    analyze_stmt(ast->lhs, state);
+    if (ast->lhs->type->kind != STRUCT)
+      error("lhs is not struct");
+
+    Member *member =
+        find_member(ast->lhs->type->st_def, ast->member_name, ast->member_len);
+    if (!member)
+      error("not find member");
+
+    ast->member = member;
+    ast->type = member->type;
+
   } else if (ast->kind == NUM) {
     ast->type = type_int;
   } else if (ast->kind == STR) {
@@ -584,6 +600,14 @@ int calc_rbp_offset(int start, int data_size, int alignment) {
 StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len) {
   for (StructDef *cur = st_defs; cur; cur = cur->next)
     if (cur->st_len == st_len && !memcmp(st_name, cur->st_name, st_len))
+      return cur;
+  return NULL;
+}
+
+Member *find_member(StructDef *st_def, char *mem_name, int mem_len) {
+  for (Member *cur = st_def->members; cur; cur = cur->next)
+    if (cur->member_len == mem_len &&
+        !memcmp(mem_name, cur->member_name, mem_len))
       return cur;
   return NULL;
 }

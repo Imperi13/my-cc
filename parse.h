@@ -55,6 +55,7 @@ typedef enum {
   FUNC_CALL,
   POST_INCREMENT,
   POST_DECREMENT,
+  DOT,
   NUM,
   STR,
   VAR,
@@ -112,6 +113,12 @@ struct Tree {
   // for const-val
   unsigned long num;
   StrLiteral *str_literal;
+
+  // for member
+  char *member_name;
+  int member_len;
+
+  Member *member;
 
   // for var
   char *var_name;
