@@ -53,5 +53,7 @@ dkms.conf
 
 *.s
 tmp*
+donuts
+donuts.s
 .gdb_history
 mycc

@@ -1,4 +1,11 @@
-#include "mycc.h"
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "error.h"
+#include "tokenize.h"
 
 bool equal(Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
@@ -140,6 +147,30 @@ unsigned long num_literal(char *p, char **rest) {
   return num;
 }
 
+char consume_char(char **rest, char *p) {
+  if (*p == '\\') {
+    char ret;
+    p++;
+    if (*p == 'e') {
+      ret = '\e';
+    } else if (*p == 'n') {
+      ret = '\n';
+    } else {
+      not_implemented(__func__);
+    }
+    p++;
+
+    *rest = p;
+    return ret;
+  } else {
+    char ret = *p;
+    p++;
+
+    *rest = p;
+    return ret;
+  }
+}
+
 StrLiteral *str_literals = NULL;
 
 Token *tokenize(char *p) {
@@ -155,18 +186,11 @@ Token *tokenize(char *p) {
 
     if (*p == '"') {
       char *tok_start = p;
-      char *tok_end = strchr(tok_start + 1, '"');
-      if (!tok_end)
-        error_at(tok_start, "not found end \"");
-
-      int len = tok_end - tok_start - 1;
-      while (skip_space(tok_end + 1, '"')) {
-        char *start = skip_space(tok_end + 1, '"');
-        tok_end = strchr(start + 1, '"');
-        if (!tok_end)
-          error_at(start, "not found end \"");
-
-        len += tok_end - start - 1;
+      char *str_cur = tok_start + 1;
+      int len = 0;
+      while (*str_cur != '\"') {
+        len++;
+        consume_char(&str_cur, str_cur);
       }
 
       StrLiteral *push_literal = calloc(1, sizeof(StrLiteral));
@@ -174,14 +198,11 @@ Token *tokenize(char *p) {
       push_literal->str = str;
       push_literal->len = len;
 
-      tok_end = strchr(tok_start + 1, '"');
-      strncpy(str, tok_start + 1, tok_end - tok_start - 1);
-      str += tok_end - tok_start - 1;
-      while (skip_space(tok_end + 1, '"')) {
-        char *start = skip_space(tok_end + 1, '"');
-        tok_end = strchr(start + 1, '"');
-        strncpy(str, start + 1, tok_end - start - 1);
-        str += tok_end - start - 1;
+      str_cur = tok_start + 1;
+      int i = 0;
+      while (*str_cur != '\"') {
+        str[i] = consume_char(&str_cur, str_cur);
+        i++;
       }
 
       if (!str_literals) {
@@ -193,10 +214,10 @@ Token *tokenize(char *p) {
         str_literals = push_literal;
       }
 
-      Token *tmp = new_token(TK_STR, cur, tok_start, tok_end - tok_start + 1);
+      Token *tmp = new_token(TK_STR, cur, tok_start, str_cur - tok_start + 1);
       tmp->str_literal = push_literal;
 
-      p = tok_end + 1;
+      p = str_cur + 1;
       cur = tmp;
       continue;
     }
