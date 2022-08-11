@@ -113,34 +113,59 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
 bool is_declaration_specs(Token *tok, TypedefScope *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
          equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT) ||
-         equal_kind(tok, TK_ENUM);
+         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
                                   TypedefScope *state) {
   DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
-  if (equal_kind(tok, TK_INT)) {
-    decl_spec->has_int = true;
-    consume_kind(rest, tok, TK_INT);
-    return decl_spec;
-  } else if (equal_kind(tok, TK_CHAR)) {
-    decl_spec->has_char = true;
-    consume_kind(rest, tok, TK_CHAR);
-    return decl_spec;
-  } else if (equal_kind(tok, TK_VOID)) {
-    decl_spec->has_void = true;
-    consume_kind(rest, tok, TK_VOID);
-    return decl_spec;
-  } else if (equal_kind(tok, TK_STRUCT)) {
-    consume_kind(&tok, tok, TK_STRUCT);
-    StructSpec *st_spec = calloc(1, sizeof(StructSpec));
-    decl_spec->st_spec = st_spec;
-    if (equal_kind(tok, TK_IDENT)) {
-      Token *st_ident = consume_kind(&tok, tok, TK_IDENT);
-      st_spec->st_name = st_ident->str;
-      st_spec->st_len = st_ident->len;
+  bool parsed_type = false;
+  while (1) {
+    if (equal_kind(tok, TK_CONST)) {
+      consume_kind(&tok, tok, TK_CONST);
+    } else if (equal_kind(tok, TK_INT)) {
+      if (parsed_type)
+        error("dup type");
+      decl_spec->has_int = true;
+      consume_kind(&tok, tok, TK_INT);
+      parsed_type = true;
+    } else if (equal_kind(tok, TK_CHAR)) {
+      if (parsed_type)
+        error("dup type");
+      decl_spec->has_char = true;
+      consume_kind(&tok, tok, TK_CHAR);
+      parsed_type = true;
+    } else if (equal_kind(tok, TK_VOID)) {
+      if (parsed_type)
+        error("dup type");
+      decl_spec->has_void = true;
+      consume_kind(&tok, tok, TK_VOID);
+      parsed_type = true;
+    } else if (equal_kind(tok, TK_STRUCT)) {
+      if (parsed_type)
+        error("dup type");
+      consume_kind(&tok, tok, TK_STRUCT);
+      StructSpec *st_spec = calloc(1, sizeof(StructSpec));
+      decl_spec->st_spec = st_spec;
+      if (equal_kind(tok, TK_IDENT)) {
+        Token *st_ident = consume_kind(&tok, tok, TK_IDENT);
+        st_spec->st_name = st_ident->str;
+        st_spec->st_len = st_ident->len;
 
-      if (consume(&tok, tok, "{")) {
+        if (consume(&tok, tok, "{")) {
+          st_spec->has_decl = true;
+          Tree *head = calloc(1, sizeof(Tree));
+          Tree *cur = head;
+          while (!consume(&tok, tok, "}")) {
+            cur->next = parse_external_decl(&tok, tok, state, false);
+            cur = cur->next;
+            consume(&tok, tok, ",");
+          }
+
+          st_spec->members = head->next;
+        }
+      } else {
+        expect(&tok, tok, "{");
         st_spec->has_decl = true;
         Tree *head = calloc(1, sizeof(Tree));
         Tree *cur = head;
@@ -152,64 +177,54 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
 
         st_spec->members = head->next;
       }
-    } else {
-      expect(&tok, tok, "{");
-      st_spec->has_decl = true;
-      Tree *head = calloc(1, sizeof(Tree));
-      Tree *cur = head;
-      while (!consume(&tok, tok, "}")) {
-        cur->next = parse_external_decl(&tok, tok, state, false);
-        cur = cur->next;
-        consume(&tok, tok, ",");
-      }
 
-      st_spec->members = head->next;
-    }
+      parsed_type = true;
 
-    *rest = tok;
-    return decl_spec;
+    } else if (equal_kind(tok, TK_ENUM)) {
+      if (parsed_type)
+        error("dup type");
+      consume_kind(&tok, tok, TK_ENUM);
 
-  } else if (equal_kind(tok, TK_ENUM)) {
-    consume_kind(&tok, tok, TK_ENUM);
+      EnumSpec *en_spec = calloc(1, sizeof(EnumSpec));
+      decl_spec->en_spec = en_spec;
 
-    EnumSpec *en_spec = calloc(1, sizeof(EnumSpec));
-    decl_spec->en_spec = en_spec;
+      if (equal_kind(tok, TK_IDENT)) {
+        Token *enum_tok = consume_kind(&tok, tok, TK_IDENT);
 
-    if (equal_kind(tok, TK_IDENT)) {
-      Token *enum_tok = consume_kind(&tok, tok, TK_IDENT);
+        en_spec->en_name = enum_tok->str;
+        en_spec->en_len = enum_tok->len;
 
-      en_spec->en_name = enum_tok->str;
-      en_spec->en_len = enum_tok->len;
+        if (equal(tok, "{")) {
+          consume(&tok, tok, "{");
+          en_spec->has_decl = true;
 
-      if (equal(tok, "{")) {
-        consume(&tok, tok, "{");
-        en_spec->has_decl = true;
+          EnumVal *head = calloc(1, sizeof(EnumVal));
+          EnumVal *cur = head;
+          while (!consume(&tok, tok, "}")) {
+            EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
-        EnumVal *head = calloc(1, sizeof(EnumVal));
-        EnumVal *cur = head;
-        while (!consume(&tok, tok, "}")) {
-          EnumVal *en_val = calloc(1, sizeof(EnumVal));
+            Token *val_tok = consume_kind(&tok, tok, TK_IDENT);
+            en_val->name = val_tok->str;
+            en_val->len = val_tok->len;
 
-          Token *val_tok = consume_kind(&tok, tok, TK_IDENT);
-          en_val->name = val_tok->str;
-          en_val->len = val_tok->len;
+            cur->next = en_val;
+            cur = cur->next;
+            consume(&tok, tok, ",");
+          }
 
-          cur->next = en_val;
-          cur = cur->next;
-          consume(&tok, tok, ",");
+          en_spec->members = head->next;
         }
-
-        en_spec->members = head->next;
+      } else {
+        not_implemented_at(tok->str);
       }
-    } else {
-      not_implemented_at(tok->str);
-    }
 
-    *rest = tok;
-    return decl_spec;
-  } else
-    not_implemented_at(tok->str);
-  return NULL;
+      parsed_type = true;
+    } else {
+      break;
+    }
+  }
+  *rest = tok;
+  return decl_spec;
 }
 
 Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
@@ -218,6 +233,7 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
   Pointer **cur = &declarator->pointer;
   while (equal(tok, "*")) {
     consume(&tok, tok, "*");
+    consume_kind(&tok, tok, TK_CONST);
 
     *cur = calloc(1, sizeof(Pointer));
     cur = &(*cur)->nest;
