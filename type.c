@@ -20,6 +20,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
     return type_void;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
+  } else if (decl_spec->en_def) {
+    return type_int;
   } else
     error("empty type");
   return NULL;

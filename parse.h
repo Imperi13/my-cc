@@ -71,6 +71,8 @@ typedef struct Tree Tree;
 typedef struct Case Case;
 typedef struct DeclSpec DeclSpec;
 typedef struct StructSpec StructSpec;
+typedef struct EnumSpec EnumSpec;
+typedef struct EnumVal EnumVal;
 typedef struct Declarator Declarator;
 typedef struct Pointer Pointer;
 typedef struct ArrayDeclarator ArrayDeclarator;
@@ -160,6 +162,8 @@ struct DeclSpec {
   bool has_char;
   StructSpec *st_spec;
   StructDef *st_def;
+  EnumSpec *en_spec;
+  EnumDef *en_def;
 };
 
 struct StructSpec {
@@ -169,6 +173,23 @@ struct StructSpec {
   bool has_decl;
 
   Tree *members;
+};
+
+struct EnumSpec {
+  char *en_name;
+  int en_len;
+
+  bool has_decl;
+  EnumVal *members;
+};
+
+struct EnumVal {
+  char *name;
+  int len;
+
+  int val;
+  // for linked-list
+  EnumVal *next;
 };
 
 struct Declarator {

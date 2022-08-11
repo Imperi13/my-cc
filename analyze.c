@@ -27,6 +27,9 @@ static void pop_switch(SwitchScope **switch_scope);
 
 static StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len);
 static Member *find_member(StructDef *st_def, char *mem_name, int mem_len);
+static EnumDef *find_enum(EnumDef *en_defs, char *en_name, int en_len);
+
+static EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len);
 
 void analyze_translation_unit(Tree *ast) {
   Analyze *state = calloc(1, sizeof(Analyze));
@@ -173,6 +176,37 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     }
 
     decl_spec->st_def = st_defs;
+  } else if (decl_spec->en_spec) {
+    if (!decl_spec->en_spec->en_name)
+      not_implemented(__func__);
+
+    EnumDef *en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name,
+                                decl_spec->en_spec->en_len);
+
+    if (!en_def) {
+      en_def = calloc(1, sizeof(EnumDef));
+      en_def->en_name = decl_spec->en_spec->en_name;
+      en_def->en_len = decl_spec->en_spec->en_len;
+
+      en_def->next = state->glb_endefs;
+      state->glb_endefs = en_def;
+    }
+
+    if (en_def->is_defined && decl_spec->en_spec->has_decl)
+      error("redifine enum");
+
+    if (decl_spec->en_spec->has_decl) {
+      en_def->is_defined = true;
+
+      en_def->members = decl_spec->en_spec->members;
+      int val = 0;
+      for (EnumVal *cur = en_def->members; cur; cur = cur->next) {
+        cur->val = val;
+        val++;
+      }
+    }
+
+    decl_spec->en_def = en_def;
   }
 }
 
@@ -615,6 +649,16 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == STR) {
     ast->type = newtype_ptr(type_char);
   } else if (ast->kind == VAR) {
+
+    EnumVal *en_val =
+        find_enum_val(state->glb_endefs, ast->var_name, ast->var_len);
+    if (en_val) {
+      ast->kind = NUM;
+      ast->num = en_val->val;
+      ast->type = type_int;
+      return;
+    }
+
     Obj *var =
         find_lvar(state->current_func->locals, ast->var_name, ast->var_len);
 
@@ -697,6 +741,21 @@ Member *find_member(StructDef *st_def, char *mem_name, int mem_len) {
     if (cur->member_len == mem_len &&
         !memcmp(mem_name, cur->member_name, mem_len))
       return cur;
+  return NULL;
+}
+
+EnumDef *find_enum(EnumDef *en_defs, char *en_name, int en_len) {
+  for (EnumDef *cur = en_defs; cur; cur = cur->next)
+    if (cur->en_len == en_len && !memcmp(en_name, cur->en_name, en_len))
+      return cur;
+  return NULL;
+}
+
+EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
+  for (EnumDef *cur_def = en_defs; cur_def; cur_def = cur_def->next)
+    for (EnumVal *cur = cur_def->members; cur; cur = cur->next)
+      if (cur->len == len && !memcmp(name, cur->name, len))
+        return cur;
   return NULL;
 }
 

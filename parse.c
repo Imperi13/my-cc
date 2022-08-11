@@ -112,7 +112,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
 
 bool is_declaration_specs(Token *tok, TypedefScope *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
-         equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT);
+         equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT) ||
+         equal_kind(tok, TK_ENUM);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
@@ -152,23 +153,60 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
         st_spec->members = head->next;
       }
     } else {
-      if (consume(&tok, tok, "{")) {
-        st_spec->has_decl = true;
-        Tree *head = calloc(1, sizeof(Tree));
-        Tree *cur = head;
-        while (!consume(&tok, tok, "}")) {
-          cur->next = parse_external_decl(&tok, tok, state, false);
-          cur = cur->next;
-          consume(&tok, tok, ",");
-        }
-
-        st_spec->members = head->next;
+      expect(&tok, tok, "{");
+      st_spec->has_decl = true;
+      Tree *head = calloc(1, sizeof(Tree));
+      Tree *cur = head;
+      while (!consume(&tok, tok, "}")) {
+        cur->next = parse_external_decl(&tok, tok, state, false);
+        cur = cur->next;
+        consume(&tok, tok, ",");
       }
+
+      st_spec->members = head->next;
     }
 
     *rest = tok;
     return decl_spec;
 
+  } else if (equal_kind(tok, TK_ENUM)) {
+    consume_kind(&tok, tok, TK_ENUM);
+
+    EnumSpec *en_spec = calloc(1, sizeof(EnumSpec));
+    decl_spec->en_spec = en_spec;
+
+    if (equal_kind(tok, TK_IDENT)) {
+      Token *enum_tok = consume_kind(&tok, tok, TK_IDENT);
+
+      en_spec->en_name = enum_tok->str;
+      en_spec->en_len = enum_tok->len;
+
+      if (equal(tok, "{")) {
+        consume(&tok, tok, "{");
+        en_spec->has_decl = true;
+
+        EnumVal *head = calloc(1, sizeof(EnumVal));
+        EnumVal *cur = head;
+        while (!consume(&tok, tok, "}")) {
+          EnumVal *en_val = calloc(1, sizeof(EnumVal));
+
+          Token *val_tok = consume_kind(&tok, tok, TK_IDENT);
+          en_val->name = val_tok->str;
+          en_val->len = val_tok->len;
+
+          cur->next = en_val;
+          cur = cur->next;
+          consume(&tok, tok, ",");
+        }
+
+        en_spec->members = head->next;
+      }
+    } else {
+      not_implemented_at(tok->str);
+    }
+
+    *rest = tok;
+    return decl_spec;
   } else
     not_implemented_at(tok->str);
   return NULL;

@@ -9,6 +9,7 @@ typedef struct LabelScope LabelScope;
 typedef struct SwitchScope SwitchScope;
 typedef struct StructDef StructDef;
 typedef struct Member Member;
+typedef struct EnumDef EnumDef;
 
 #include "parse.h"
 #include "type.h"
@@ -21,6 +22,7 @@ struct Analyze {
   SwitchScope *switch_stmts;
   int label_cnt;
   StructDef *glb_stdefs;
+  EnumDef *glb_endefs;
 };
 
 struct Obj {
@@ -78,6 +80,16 @@ struct Member {
 
   // for linked-list
   Member *next;
+};
+
+struct EnumDef {
+  char *en_name;
+  int en_len;
+
+  bool is_defined;
+  EnumVal *members;
+  // for linked-list
+  EnumDef *next;
 };
 
 struct TypedefScope {

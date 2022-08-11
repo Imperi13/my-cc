@@ -21,7 +21,7 @@ f)-m(l,r);int x;x=40                     +30*m(g,m(m(e,u),f
     ;}}}printf("\e[H");int k;for(k=0;k<1761;k++)putchar
      (k%80?b[k]:10);printf("Author: @a1k0n. Rewritt"
       "en by @hsjoihs so that it works without flo"
-        );//https://github.com/hsjoihs/c-compiler/
+        );https://github.com/hsjoihs/c-compiler/
           printf("ating types.\nNote that roun"
             "ding errors gradually reduce th"
                "e donut's size.\n");usleep
