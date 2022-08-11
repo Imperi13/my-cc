@@ -13,6 +13,10 @@ external-test: mycc
 	./external/test_cases.sh
 
 clean:
-	rm -f mycc *.o *~ tmp* supplement*
+	rm -f mycc *.o *~ tmp* supplement* donuts*
+
+donuts: mycc
+	./mycc ./sample/donuts.c > ./donuts.s
+	gcc -o donuts ./donuts.s
 
 .PHONY: test external-test clean

@@ -48,7 +48,18 @@ void codegen_str_literal(StrLiteral *sl) {
   printf("  .local .LC%d\n", sl->id);
   printf("  .data\n");
   printf(".LC%d:\n", sl->id);
-  printf("  .string \"%.*s\"\n", sl->len, sl->str);
+  //  printf("  .string \"%.*s\"\n", sl->len, sl->str);
+  printf("  .string \"");
+  for (int i = 0; i < sl->len; i++) {
+    if (sl->str[i] == '\e') {
+      printf("\\033");
+    } else if (sl->str[i] == '\n') {
+      printf("\\n");
+    } else {
+      printf("%c", sl->str[i]);
+    }
+  }
+  printf("\"\n");
 }
 
 void codegen_var_definition(Tree *var) {
