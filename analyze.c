@@ -247,6 +247,24 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     push_lvar(state->current_func->locals, lvar);
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
+  } else if (ast->kind == CASE) {
+    analyze_stmt(ast->case_num_node, state);
+    int case_num = eval_constexpr(ast->case_num_node);
+
+    ast->case_num = case_num;
+
+    if (!state->switch_stmts)
+      error("not in switch-stmt");
+
+    Case *new_case = calloc(1, sizeof(Case));
+    new_case->case_num = case_num;
+    new_case->next = state->switch_stmts->switch_node->cases;
+    state->switch_stmts->switch_node->cases = new_case;
+
+    ast->label_number = state->switch_stmts->switch_node->label_number;
+
+    analyze_stmt(ast->lhs, state);
+
   } else if (ast->kind == DEFAULT) {
     if (!state->switch_stmts)
       error("not in switch-stmt");
@@ -540,6 +558,15 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     } else {
       not_implemented("sizeof expr");
     }
+  } else if (ast->kind == ALIGNOF) {
+    analyze_decl_spec(ast->lhs->decl_specs, state, false);
+    Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
+    base_type = gettype_declarator(ast->lhs->declarator, base_type);
+
+    // replace "sizeof" -> num
+    ast->kind = NUM;
+    ast->num = type_alignment(base_type);
+    ast->type = type_int;
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
     Tree *cur = ast->call_args;

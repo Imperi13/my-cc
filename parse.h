@@ -8,6 +8,7 @@ typedef enum {
   TYPE_NAME,
   COMPOUND_STMT,
   LABEL,
+  CASE,
   DEFAULT,
   RETURN,
   BREAK,
@@ -55,6 +56,7 @@ typedef enum {
   LOGICAL_NOT,
   BIT_NOT,
   SIZEOF,
+  ALIGNOF,
   FUNC_CALL,
   POST_INCREMENT,
   POST_DECREMENT,
@@ -66,6 +68,7 @@ typedef enum {
 } TreeKind;
 
 typedef struct Tree Tree;
+typedef struct Case Case;
 typedef struct DeclSpec DeclSpec;
 typedef struct StructSpec StructSpec;
 typedef struct Declarator Declarator;
@@ -100,11 +103,16 @@ struct Tree {
   char *label_name;
   int label_len;
 
+  // for CASE
+  Tree *case_num_node;
+  int case_num;
+
   // for selection_stmt
   Tree *cond;
   int label_number;
-  
+
   // for switch-stmt
+  Case *cases;
   bool has_default;
 
   // for for-stmt
@@ -139,6 +147,11 @@ struct Tree {
 
   // for linked-list
   Tree *next;
+};
+
+struct Case {
+  int case_num;
+  Case *next;
 };
 
 struct DeclSpec {

@@ -364,7 +364,17 @@ Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state) {
     *rest = tok;
     return node;
   } else if (equal_kind(tok, TK_CASE)) {
-    not_implemented_at(tok->str);
+    consume_kind(&tok, tok, TK_CASE);
+    Tree *expr = parse_expr(&tok, tok, state);
+    consume(&tok, tok, ":");
+    Tree *lhs = parse_stmt(&tok, tok, state);
+
+    *rest = tok;
+    Tree *node = new_binary_node(CASE, lhs, NULL);
+    node->case_num_node = expr;
+
+    return node;
+
   } else if (equal_kind(tok, TK_DEFAULT)) {
     consume_kind(&tok, tok, TK_DEFAULT);
     consume(&tok, tok, ":");
@@ -839,8 +849,12 @@ Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state) {
   }
 
   if (equal_kind(tok, TK_ALIGNOF)) {
-    not_implemented_at(tok->str);
-    return NULL;
+    consume_kind(&tok, tok, TK_ALIGNOF);
+    expect(&tok, tok, "(");
+    Tree *typename = parse_type_name(&tok, tok, state);
+    expect(&tok, tok, ")");
+    *rest = tok;
+    return new_binary_node(ALIGNOF, typename, NULL);
   }
 
   if (equal(tok, "++")) {
