@@ -8,6 +8,7 @@ typedef enum {
   TYPE_NAME,
   COMPOUND_STMT,
   LABEL,
+  DEFAULT,
   RETURN,
   BREAK,
   CONTINUE,
@@ -15,6 +16,7 @@ typedef enum {
   WHILE,
   FOR,
   IF,
+  SWITCH,
   COMMA,
   ASSIGN,
   ADD_ASSIGN,
@@ -101,6 +103,9 @@ struct Tree {
   // for selection_stmt
   Tree *cond;
   int label_number;
+  
+  // for switch-stmt
+  bool has_default;
 
   // for for-stmt
   Tree *for_init;

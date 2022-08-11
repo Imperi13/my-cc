@@ -366,7 +366,12 @@ Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state) {
   } else if (equal_kind(tok, TK_CASE)) {
     not_implemented_at(tok->str);
   } else if (equal_kind(tok, TK_DEFAULT)) {
-    not_implemented_at(tok->str);
+    consume_kind(&tok, tok, TK_DEFAULT);
+    consume(&tok, tok, ":");
+    Tree *lhs = parse_stmt(&tok, tok, state);
+
+    *rest = tok;
+    return new_binary_node(DEFAULT, lhs, NULL);
   }
   return node;
 }
@@ -516,7 +521,20 @@ Tree *parse_selection_stmt(Token **rest, Token *tok, TypedefScope *state) {
       node->rhs = parse_stmt(&tok, tok, state);
 
   } else if (equal_kind(tok, TK_SWITCH)) {
-    not_implemented_at(tok->str);
+    consume_kind(&tok, tok, TK_SWITCH);
+    expect(&tok, tok, "(");
+    Tree *cond = parse_expr(&tok, tok, state);
+    expect(&tok, tok, ")");
+
+    Tree *lhs = parse_stmt(&tok, tok, state);
+    *rest = tok;
+
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = SWITCH;
+    node->cond = cond;
+    node->lhs = lhs;
+
+    return node;
   } else {
     error("cannot parse selection_stmt");
   }

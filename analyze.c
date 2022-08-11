@@ -22,6 +22,9 @@ static Obj *find_global(Obj *globals, char *var_name, int var_len);
 static void push_label(LabelScope **lscope, int label_number);
 static void pop_label(LabelScope **lscope);
 
+static void push_switch(SwitchScope **switch_scope, Tree *switch_node);
+static void pop_switch(SwitchScope **switch_scope);
+
 static StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len);
 static Member *find_member(StructDef *st_def, char *mem_name, int mem_len);
 
@@ -244,6 +247,17 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     push_lvar(state->current_func->locals, lvar);
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
+  } else if (ast->kind == DEFAULT) {
+    if (!state->switch_stmts)
+      error("not in switch-stmt");
+
+    if (state->switch_stmts->switch_node->has_default)
+      error("already exist default");
+
+    state->switch_stmts->switch_node->has_default = true;
+    ast->label_number = state->switch_stmts->switch_node->label_number;
+
+    analyze_stmt(ast->lhs, state);
   } else if (ast->kind == RETURN) {
     if (ast->lhs) {
       analyze_stmt(ast->lhs, state);
@@ -317,6 +331,19 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     if (ast->rhs)
       analyze_stmt(ast->rhs, state);
+  } else if (ast->kind == SWITCH) {
+    ast->label_number = state->label_cnt;
+    state->label_cnt++;
+    analyze_stmt(ast->cond, state);
+
+    push_label(&state->break_labels, ast->label_number);
+    push_switch(&state->switch_stmts, ast);
+
+    analyze_stmt(ast->lhs, state);
+
+    pop_label(&state->break_labels);
+    pop_switch(&state->switch_stmts);
+
   } else if (ast->kind == COMMA) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
@@ -615,6 +642,17 @@ void push_label(LabelScope **lscope, int label_number) {
 }
 
 void pop_label(LabelScope **lscope) { *lscope = (*lscope)->next; }
+
+void push_switch(SwitchScope **switch_scope, Tree *switch_node) {
+  SwitchScope *tmp = calloc(1, sizeof(SwitchScope));
+  tmp->switch_node = switch_node;
+  tmp->next = *switch_scope;
+  *switch_scope = tmp;
+}
+
+void pop_switch(SwitchScope **switch_scope) {
+  *switch_scope = (*switch_scope)->next;
+}
 
 int calc_rbp_offset(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;

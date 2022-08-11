@@ -138,6 +138,10 @@ void codegen_stmt(Tree *stmt) {
     printf(".Llabel%.*s:\n", stmt->label_len, stmt->label_name);
     codegen_stmt(stmt->lhs);
     return;
+  case DEFAULT:
+    printf(".Lswitch%d_default:\n", stmt->label_number);
+    codegen_stmt(stmt->lhs);
+    return;
   case RETURN:
     if (stmt->lhs)
       codegen_stmt(stmt->lhs);
@@ -200,6 +204,14 @@ void codegen_stmt(Tree *stmt) {
     printf(".Lelse%d:\n", stmt->label_number);
     if (stmt->rhs)
       codegen_stmt(stmt->rhs);
+    printf(".Lend%d:\n", stmt->label_number);
+    return;
+  case SWITCH:
+    codegen_stmt(stmt->cond);
+    if (stmt->has_default)
+      printf("  jmp .Lswitch%d_default\n", stmt->label_number);
+    printf("  jmp .Lend%d\n", stmt->label_number);
+    codegen_stmt(stmt->lhs);
     printf(".Lend%d:\n", stmt->label_number);
     return;
   case ASSIGN:

@@ -6,6 +6,7 @@ typedef struct ObjScope ObjScope;
 typedef struct TypedefScope TypedefScope;
 typedef struct Typedef Typedef;
 typedef struct LabelScope LabelScope;
+typedef struct SwitchScope SwitchScope;
 typedef struct StructDef StructDef;
 typedef struct Member Member;
 
@@ -17,6 +18,7 @@ struct Analyze {
   Obj *current_func;
   LabelScope *break_labels;
   LabelScope *continue_labels;
+  SwitchScope *switch_stmts;
   int label_cnt;
   StructDef *glb_stdefs;
 };
@@ -96,6 +98,11 @@ struct Typedef {
 struct LabelScope {
   int label_number;
   LabelScope *next;
+};
+
+struct SwitchScope {
+  Tree *switch_node;
+  SwitchScope *next;
 };
 
 void analyze_translation_unit(Tree *ast);
