@@ -242,6 +242,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->def_obj = lvar;
 
     push_lvar(state->current_func->locals, lvar);
+  } else if (ast->kind == LABEL) {
+    analyze_stmt(ast->lhs, state);
   } else if (ast->kind == RETURN) {
     if (ast->lhs) {
       analyze_stmt(ast->lhs, state);

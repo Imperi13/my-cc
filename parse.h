@@ -7,6 +7,7 @@ typedef enum {
   DECLARATION,
   TYPE_NAME,
   COMPOUND_STMT,
+  LABEL,
   RETURN,
   BREAK,
   CONTINUE,
@@ -92,6 +93,10 @@ struct Tree {
   Tree *func_body;
 
   Type *type;
+
+  // for LABEL
+  char *label_name;
+  int label_len;
 
   // for selection_stmt
   Tree *cond;

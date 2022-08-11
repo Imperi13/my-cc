@@ -353,7 +353,16 @@ bool is_label_stmt(Token *tok) {
 Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
-    not_implemented_at(tok->str);
+    Token *label_tok = consume_kind(&tok, tok, TK_IDENT);
+    consume(&tok, tok, ":");
+
+    Tree *lhs = parse_stmt(&tok, tok, state);
+    Tree *node = new_binary_node(LABEL, lhs, NULL);
+    node->label_name = label_tok->str;
+    node->label_len = label_tok->len;
+
+    *rest = tok;
+    return node;
   } else if (equal_kind(tok, TK_CASE)) {
     not_implemented_at(tok->str);
   } else if (equal_kind(tok, TK_DEFAULT)) {

@@ -134,6 +134,10 @@ void codegen_stmt(Tree *stmt) {
   switch (stmt->kind) {
   case DECLARATION:
     return;
+  case LABEL:
+    printf(".Llabel%.*s:\n", stmt->label_len, stmt->label_name);
+    codegen_stmt(stmt->lhs);
+    return;
   case RETURN:
     if (stmt->lhs)
       codegen_stmt(stmt->lhs);
