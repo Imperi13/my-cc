@@ -60,7 +60,7 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
   }
 
   if (declarator->nest) {
-    not_implemented(__func__);
+    base_type = gettype_declarator(declarator->nest, base_type);
   }
 
   return base_type;

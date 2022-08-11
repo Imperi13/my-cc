@@ -74,8 +74,8 @@ void codegen_var_definition(Tree *var) {
 void codegen_function(Tree *func) {
 
   printf("  .text\n");
-  printf(".globl %.*s\n", func->declarator->len, func->declarator->name);
-  printf("%.*s:\n", func->declarator->len, func->declarator->name);
+  printf(".globl %.*s\n", func->def_obj->obj_len, func->def_obj->obj_name);
+  printf("%.*s:\n", func->def_obj->obj_len, func->def_obj->obj_name);
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");

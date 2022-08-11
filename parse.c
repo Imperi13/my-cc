@@ -229,7 +229,9 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
     declarator->name = decl_name->str;
     declarator->len = decl_name->len;
   } else if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "(");
+    declarator->nest = parse_declarator(&tok, tok, state);
+    expect(&tok, tok, ")");
   } else {
     error("cannot parse declarator");
   }
