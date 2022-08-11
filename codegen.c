@@ -13,6 +13,7 @@ static void codegen_stmt(Tree *stmt);
 static void codegen_addr(Tree *stmt);
 
 static void load2rax_from_raxaddr(Type *type);
+static void store2rdiaddr_from_rax(Type *type);
 
 char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 char call_register32[][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
@@ -133,6 +134,11 @@ void codegen_stmt(Tree *stmt) {
   Tree *cur;
   switch (stmt->kind) {
   case DECLARATION:
+    if (stmt->declarator && stmt->declarator->init_expr) {
+      printf("  lea rdi, [rbp - %d]\n", stmt->def_obj->rbp_offset);
+      codegen_stmt(stmt->declarator->init_expr);
+      store2rdiaddr_from_rax(stmt->def_obj->type);
+    }
     return;
   case LABEL:
     printf(".Llabel%.*s:\n", stmt->label_len, stmt->label_name);
@@ -227,14 +233,7 @@ void codegen_stmt(Tree *stmt) {
     printf("  push rax\n");
     codegen_stmt(stmt->rhs);
     printf("  pop rdi\n");
-    if (type_size(stmt->type) == 8)
-      printf("  mov [rdi],rax\n");
-    else if (type_size(stmt->type) == 4)
-      printf("  mov [rdi],eax\n");
-    else if (type_size(stmt->type) == 1)
-      printf("  mov [rdi],al\n");
-    else
-      not_implemented(__func__);
+    store2rdiaddr_from_rax(stmt->type);
     return;
   case ADD_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -571,6 +570,17 @@ void load2rax_from_raxaddr(Type *type) {
     printf("  movsxd rax,[rax]\n");
   else if (type_size(type) == 1)
     printf("movsx rax, BYTE PTR [rax]\n");
+  else
+    not_implemented(__func__);
+}
+
+void store2rdiaddr_from_rax(Type *type) {
+  if (type_size(type) == 8)
+    printf("  mov [rdi],rax\n");
+  else if (type_size(type) == 4)
+    printf("  mov [rdi],eax\n");
+  else if (type_size(type) == 1)
+    printf("  mov [rdi],al\n");
   else
     not_implemented(__func__);
 }

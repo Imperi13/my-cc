@@ -208,6 +208,9 @@ struct Declarator {
 
   // for ARRAY_DECLARATOR
   ArrayDeclarator *arr_decl;
+
+  // for init-expr
+  Tree *init_expr;
 };
 
 struct Pointer {

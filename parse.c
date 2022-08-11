@@ -100,7 +100,10 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
     return ex_decl;
   }
 
-  // TODO initialize
+  if (equal(tok, "=")) {
+    consume(&tok, tok, "=");
+    ex_decl->declarator->init_expr = parse_assign(&tok, tok, state);
+  }
   // TODO multiple declarator
 
   ex_decl->kind = DECLARATION;

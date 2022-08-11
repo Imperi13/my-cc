@@ -12,7 +12,7 @@ run_test_with_supplement0() {
 	gcc tmp.s supplement0.s -o tmp
 	./tmp
 	res=$?
-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: $2; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
+	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
 }
 
 run_test() {
@@ -22,7 +22,7 @@ run_test() {
   gcc -o tmp tmp.s util/ten.o util/add.o util/many_arg.o util/alloc4.o
 	./tmp
 	res=$?
-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: $2; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
+	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
 }
 
 run_test_with_supplement1() {
@@ -33,16 +33,16 @@ run_test_with_supplement1() {
 	gcc tmp.s supplement1.s -o tmp
 	./tmp
 	res=$?
-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (mixed)" $1: $2; exit 1; }; else echo -e "\033[32mPASS (mixed)\033[m"; fi
+	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (mixed)" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS (mixed)\033[m"; fi
 
   rm -f ./tmp
-  echo -e $2 > ./external/tmp.in
+  echo -e "$2" > ./external/tmp.in
   ./mycc ./external/tmp.in > tmp.s
   ./mycc ./external/misc/supplement1.c > supplement1.s
 	gcc tmp.s supplement1.s -o tmp
 	./tmp
 	res=$?
-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (pure)" $1: $2; }; else echo -e "\033[32mPASS (pure)\033[m"; fi
+	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (pure)" $1: "$2"; }; else echo -e "\033[32mPASS (pure)\033[m"; fi
 }
 
 run_test 001 'int main(){return 123;}' 123

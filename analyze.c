@@ -85,6 +85,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       return;
     }
 
+    if (ast->declarator->init_expr)
+      not_implemented("initialize global variable");
+
     Type *obj_type = gettype_decl_spec(ast->decl_specs);
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
@@ -239,6 +242,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
     ast->def_obj = lvar;
 
     push_lvar(state->current_func->locals, lvar);
+
   } else
     error("cannot analyze parameter");
 }
@@ -279,6 +283,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->def_obj = lvar;
 
     push_lvar(state->current_func->locals, lvar);
+
+    if (ast->declarator->init_expr) {
+      analyze_stmt(ast->declarator->init_expr, state);
+    }
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
   } else if (ast->kind == CASE) {
