@@ -75,7 +75,10 @@ void codegen_var_definition(Tree *var) {
 void codegen_function(Tree *func) {
 
   printf("  .text\n");
-  printf(".globl %.*s\n", func->def_obj->obj_len, func->def_obj->obj_name);
+  if (func->decl_specs->has_static)
+    printf(".local %.*s\n", func->def_obj->obj_len, func->def_obj->obj_name);
+  else
+    printf(".globl %.*s\n", func->def_obj->obj_len, func->def_obj->obj_name);
   printf("%.*s:\n", func->def_obj->obj_len, func->def_obj->obj_name);
 
   printf("  push rbp\n");

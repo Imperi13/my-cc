@@ -117,7 +117,7 @@ bool is_declaration_specs(Token *tok, TypedefScope *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
          equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT) ||
          equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
-         equal_kind(tok, TK_EXTERN);
+         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
@@ -131,6 +131,9 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
     } else if (equal_kind(tok, TK_EXTERN)) {
       consume_kind(&tok, tok, TK_EXTERN);
       decl_spec->has_extern = true;
+    } else if (equal_kind(tok, TK_STATIC)) {
+      consume_kind(&tok, tok, TK_STATIC);
+      decl_spec->has_static = true;
     } else if (equal_kind(tok, TK_INT)) {
       if (parsed_type)
         error("dup type");

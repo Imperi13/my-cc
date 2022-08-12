@@ -160,6 +160,7 @@ struct DeclSpec {
   // type_qual
   bool has_const; // unused;
   bool has_extern;
+  bool has_static;
 
   // type_spec
   bool has_void;
