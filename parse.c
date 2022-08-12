@@ -116,7 +116,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
 bool is_declaration_specs(Token *tok, TypedefScope *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
          equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT) ||
-         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST);
+         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
+         equal_kind(tok, TK_EXTERN);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
@@ -126,6 +127,10 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
   while (1) {
     if (equal_kind(tok, TK_CONST)) {
       consume_kind(&tok, tok, TK_CONST);
+      decl_spec->has_const = true;
+    } else if (equal_kind(tok, TK_EXTERN)) {
+      consume_kind(&tok, tok, TK_EXTERN);
+      decl_spec->has_extern = true;
     } else if (equal_kind(tok, TK_INT)) {
       if (parsed_type)
         error("dup type");

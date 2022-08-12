@@ -99,7 +99,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     obj->type = obj_type;
     obj->is_global = true;
 
-    if (obj_type->kind != FUNC)
+    if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
       obj->is_defined = true;
 
     obj->next = state->glb_objs;
