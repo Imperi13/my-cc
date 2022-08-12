@@ -321,8 +321,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == RETURN) {
     if (ast->lhs) {
       analyze_stmt(ast->lhs, state);
-      if (!is_compatible(state->current_func->type->return_type,
-                         ast->lhs->type))
+      if (!is_compatible(state->current_func->type->return_type, ast->lhs))
         error("invalid return type");
     } else {
       if (state->current_func->type->return_type->kind != VOID)
@@ -769,6 +768,13 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
       if (cur->len == len && !memcmp(name, cur->name, len))
         return cur;
   return NULL;
+}
+
+bool is_constexpr(Tree *expr) {
+  if (expr->kind == NUM)
+    return true;
+  else
+    return false;
 }
 
 int eval_constexpr(Tree *expr) {

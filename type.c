@@ -165,10 +165,13 @@ bool is_same_type(Type *a, Type *b) {
   return false;
 }
 
-bool is_compatible(Type *a, Type *b) {
-  if (is_same_type(a, b))
+// Check if node b can be converted to type a
+bool is_compatible(Type *a, Tree *b) {
+  if (is_same_type(a, b->type))
     return true;
-  else if (is_integer(a) && is_integer(b))
+  else if (is_integer(a) && is_integer(b->type))
+    return true;
+  else if (a->kind == PTR && is_constexpr(b) && eval_constexpr(b) == 0)
     return true;
 
   return false;

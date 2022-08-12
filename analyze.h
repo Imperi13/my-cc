@@ -118,5 +118,6 @@ struct SwitchScope {
 };
 
 void analyze_translation_unit(Tree *ast);
+bool is_constexpr(Tree *expr);
 int eval_constexpr(Tree *expr);
 int calc_rbp_offset(int start, int data_size, int alignment);

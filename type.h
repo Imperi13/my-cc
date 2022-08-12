@@ -51,4 +51,4 @@ int type_alignment(Type *type);
 
 bool is_integer(Type *type);
 bool is_same_type(Type *a,Type *b);
-bool is_compatible(Type *a,Type *b);
+bool is_compatible(Type *a,Tree *b);
