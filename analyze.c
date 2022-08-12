@@ -586,7 +586,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == LOGICAL_NOT) {
     analyze_stmt(ast->lhs, state);
-    ast->type = ast->lhs->type;
+    ast->type = type_int;
   } else if (ast->kind == BIT_NOT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
