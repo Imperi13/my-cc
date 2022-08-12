@@ -18,9 +18,11 @@ int main(int argc, char **argv) {
   user_input = read_file(argv[1]);
   Token *token = tokenize(user_input);
 
+  //debug_token(token);
+
   token = preprocess(token);
 
-  // debug_token(token);
+  //debug_token(token);
 
   Tree *ast = parse_translation_unit(token);
 

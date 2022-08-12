@@ -179,7 +179,13 @@ Token *tokenize(char *p) {
   Token *cur = &head;
 
   while (*p) {
-    if (isspace(*p) || *p == '\n') {
+    if (isblank(*p)) {
+      p++;
+      continue;
+    }
+
+    if (*p == '\n') {
+      cur = new_token(TK_NEWLINE, cur, p, 1);
       p++;
       continue;
     }
@@ -252,13 +258,13 @@ Token *tokenize(char *p) {
         strncmp(p, "++", 2) == 0 || strncmp(p, "--", 2) == 0 ||
         strncmp(p, "<<", 2) == 0 || strncmp(p, ">>", 2) == 0 ||
         strncmp(p, "&&", 2) == 0 || strncmp(p, "||", 2) == 0 ||
-        strncmp(p, "->", 2) == 0) {
+        strncmp(p, "->", 2) == 0 || strncmp(p, "##", 2) == 0) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
     }
 
-    if (strchr("+-*/|&!~^%:?.,;=(){}[]<>", *p)) {
+    if (strchr("+-*/|&!~^%:?.,;=(){}[]<>#", *p)) {
       cur = new_token(TK_RESERVED, cur, p, 1);
       p++;
       continue;
