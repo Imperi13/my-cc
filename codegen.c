@@ -135,11 +135,19 @@ void codegen_stmt(Tree *stmt) {
   switch (stmt->kind) {
   case DECLARATION:
     if (stmt->declarator && stmt->declarator->init_expr) {
+      printf("  nop\n");
       printf("  lea rdi, [rbp - %d]\n", stmt->def_obj->rbp_offset);
       printf("  push rdi\n");
       codegen_stmt(stmt->declarator->init_expr);
-      printf("  pop rdi\n");
-      store2rdiaddr_from_rax(stmt->def_obj->type);
+      if (stmt->def_obj->type->kind == STRUCT) {
+        printf("  pop rdi\n");
+        printf("  mov rsi, rax\n");
+        printf("  mov rcx, %d\n", type_size(stmt->def_obj->type));
+        printf("  rep movsb\n");
+      } else {
+        printf("  pop rdi\n");
+        store2rdiaddr_from_rax(stmt->def_obj->type);
+      }
     }
     return;
   case LABEL:
@@ -234,8 +242,15 @@ void codegen_stmt(Tree *stmt) {
     codegen_addr(stmt->lhs);
     printf("  push rax\n");
     codegen_stmt(stmt->rhs);
-    printf("  pop rdi\n");
-    store2rdiaddr_from_rax(stmt->type);
+    if (stmt->lhs->type->kind == STRUCT) {
+      printf("  pop rdi\n");
+      printf("  mov rsi, rax\n");
+      printf("  mov rcx, %d\n", type_size(stmt->lhs->type));
+      printf("  rep movsb\n");
+    } else {
+      printf("  pop rdi\n");
+      store2rdiaddr_from_rax(stmt->type);
+    }
     return;
   case ADD_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -422,7 +437,7 @@ void codegen_stmt(Tree *stmt) {
     return;
   case DEREF:
     codegen_stmt(stmt->lhs);
-    if (stmt->type->kind == ARRAY)
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
@@ -489,7 +504,8 @@ void codegen_stmt(Tree *stmt) {
     return;
   case VAR:
     codegen_addr(stmt);
-    if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY)
+    if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY ||
+        stmt->type->kind == STRUCT)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
