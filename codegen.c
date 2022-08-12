@@ -493,10 +493,14 @@ void codegen_stmt(Tree *stmt) {
     return;
   case DOT:
     codegen_addr(stmt);
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+      return;
     load2rax_from_raxaddr(stmt->type);
     return;
   case ARROW:
     codegen_addr(stmt);
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+      return;
     load2rax_from_raxaddr(stmt->type);
     return;
   case NUM:
