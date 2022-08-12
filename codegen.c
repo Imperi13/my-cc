@@ -136,7 +136,9 @@ void codegen_stmt(Tree *stmt) {
   case DECLARATION:
     if (stmt->declarator && stmt->declarator->init_expr) {
       printf("  lea rdi, [rbp - %d]\n", stmt->def_obj->rbp_offset);
+      printf("  push rdi\n");
       codegen_stmt(stmt->declarator->init_expr);
+      printf("  pop rdi\n");
       store2rdiaddr_from_rax(stmt->def_obj->type);
     }
     return;
@@ -249,7 +251,10 @@ void codegen_stmt(Tree *stmt) {
     else if (stmt->rhs->type->kind == PTR || stmt->rhs->type->kind == ARRAY)
       printf("  imul rax,%d\n", type_size(stmt->rhs->type->ptr_to));
     printf("  add rax,rdi\n");
-    printf("  mov [rsi], eax\n");
+
+    // store
+    printf("  mov rdi,rsi\n");
+    store2rdiaddr_from_rax(stmt->lhs->type);
     return;
   case SUB_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -257,9 +262,16 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->rhs);
     printf("  mov rdi,rax\n");
     printf("  pop rsi\n");
-    printf("  movsxd rax,[rsi]\n");
+    printf("  mov rax,rsi\n");
+    load2rax_from_raxaddr(stmt->lhs->type);
+    // sub
+    if (stmt->lhs->type->kind == PTR && is_integer(stmt->rhs->type))
+      printf("  imul rdi, %d\n", type_size(stmt->lhs->type->ptr_to));
     printf("  sub rax, rdi\n");
-    printf("  mov [rsi], eax\n");
+
+    // store
+    printf("  mov rdi,rsi\n");
+    store2rdiaddr_from_rax(stmt->lhs->type);
     return;
   case MUL_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -442,7 +454,11 @@ void codegen_stmt(Tree *stmt) {
     printf("  mov rdi,rax\n");
     load2rax_from_raxaddr(stmt->lhs->type);
     printf("  mov rsi,rax\n");
-    printf("  add rsi, 1\n");
+    if (stmt->lhs->type->kind == PTR)
+      printf("  mov rdx, %d\n", type_size(stmt->lhs->type->ptr_to));
+    else
+      printf("  mov rdx, 1\n");
+    printf("  add rsi, rdx\n");
     printf("  mov [rdi],esi\n");
     return;
   case POST_DECREMENT:
@@ -450,7 +466,11 @@ void codegen_stmt(Tree *stmt) {
     printf("  mov rdi,rax\n");
     load2rax_from_raxaddr(stmt->lhs->type);
     printf("  mov rsi,rax\n");
-    printf("  sub rsi, 1\n");
+    if (stmt->lhs->type->kind == PTR)
+      printf("  mov rdx, %d\n", type_size(stmt->lhs->type->ptr_to));
+    else
+      printf("  mov rdx, 1\n");
+    printf("  sub rsi, rdx\n");
     printf("  mov [rdi],esi\n");
     return;
   case DOT:
