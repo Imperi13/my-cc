@@ -241,8 +241,14 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->rhs);
     printf("  mov rdi,rax\n");
     printf("  pop rsi\n");
-    printf("  movsxd rax,[rsi]\n");
-    printf("  add rax, rdi\n");
+    printf("  mov rax,rsi\n");
+    load2rax_from_raxaddr(stmt->lhs->type);
+    // lhs:rax, rhs:rdi
+    if (stmt->lhs->type->kind == PTR || stmt->lhs->type->kind == ARRAY)
+      printf("  imul rdi,%d\n", type_size(stmt->lhs->type->ptr_to));
+    else if (stmt->rhs->type->kind == PTR || stmt->rhs->type->kind == ARRAY)
+      printf("  imul rax,%d\n", type_size(stmt->rhs->type->ptr_to));
+    printf("  add rax,rdi\n");
     printf("  mov [rsi], eax\n");
     return;
   case SUB_ASSIGN:

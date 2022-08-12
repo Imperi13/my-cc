@@ -541,11 +541,19 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, TypedefScope *state) {
 
     consume(&tok, tok, "(");
 
-    if (!equal(tok, ";"))
-      node->for_init = parse_expr(&tok, tok, state);
+    // parse init
+    if (!equal(tok, ";")) {
+      if (is_declaration_specs(tok, state))
+        node->for_init = parse_external_decl(&tok, tok, state, false);
+      else {
+        node->for_init = parse_expr(&tok, tok, state);
+        consume(&tok, tok, ";");
+      }
+    } else {
+      consume(&tok, tok, ";");
+    }
 
-    consume(&tok, tok, ";");
-
+    // parse cond
     if (!equal(tok, ";")) {
       node->cond = parse_expr(&tok, tok, state);
     } else {

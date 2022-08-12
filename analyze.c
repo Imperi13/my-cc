@@ -370,6 +370,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
+    push_lvar_scope(&state->current_func->locals);
+
     if (ast->for_init)
       analyze_stmt(ast->for_init, state);
     analyze_stmt(ast->cond, state);
@@ -383,6 +385,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
+
+    pop_lvar_scope(&state->current_func->locals);
 
   } else if (ast->kind == IF) {
     ast->label_number = state->label_cnt;

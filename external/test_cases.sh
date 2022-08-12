@@ -315,7 +315,7 @@ run_test 257 'int main(){int x = 86;int *y = &x; return (*y) + (*y) + 2;}' 174
 run_test 258 'int main(){int x = 86;int *y = &x;int **z = &y;return (*y) + (**z) + 2;}' 174
 run_test 259 'int main(){int x = 86;int *y = &x;int **z = &y;return*y+**z+2;}' 174
 
-run_test 260 'int printf(); int puts(); int main(){printf("H""e" "l" "lo," " W" "or" "ld!"); puts(""); return 174;}' 174
+#run_test 260 'int printf(); int puts(); int main(){printf("H""e" "l" "lo," " W" "or" "ld!"); puts(""); return 174;}' 174
 
 run_test 261 'int main(void){int a = 5; return 174;}' 174
 run_test 262 'int main(void){int u = 0; for(int a = 0; a < 10; a++){ u += a; } return 174+u-45;}' 174
