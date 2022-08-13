@@ -19,11 +19,7 @@ donuts: mycc
 	./mycc ./sample/donuts.c > ./donuts.s
 	gcc -o donuts ./donuts.s
 
-franken: mycc
-	./mycc file.c > file.s
-	rm file.o
-	gcc -c file.s
-	rm file.s
-	gcc -o mycc *.o
+franken:
+	./franken_test.sh
 
-.PHONY: test external-test clean
+.PHONY: franken test external-test clean
