@@ -26,6 +26,7 @@ typedef enum {
   TK_CONST,
   TK_EXTERN,
   TK_STATIC,
+  TK_TYPEDEF,
   TK_NUM,
   TK_STR,
   TK_NEWLINE,

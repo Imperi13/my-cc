@@ -161,6 +161,7 @@ struct DeclSpec {
   bool has_const; // unused;
   bool has_extern;
   bool has_static;
+  bool has_typedef;
 
   // type_spec
   bool has_void;
@@ -170,6 +171,10 @@ struct DeclSpec {
   StructDef *st_def;
   EnumSpec *en_spec;
   EnumDef *en_def;
+
+  // for defined_type
+  char *def_name;
+  int def_len;
 };
 
 struct StructSpec {

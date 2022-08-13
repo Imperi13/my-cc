@@ -30,7 +30,7 @@ void codegen_translation_unit(Tree *head) {
   Tree *cur = head;
   while (cur) {
     if (cur->kind == DECLARATION && cur->declarator &&
-        cur->def_obj->is_defined) {
+        !cur->decl_specs->has_typedef && cur->def_obj->is_defined) {
       codegen_var_definition(cur);
     }
     cur = cur->next;

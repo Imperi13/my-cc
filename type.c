@@ -11,7 +11,7 @@ Type *type_void = &(Type){.kind = VOID};
 Type *type_int = &(Type){.kind = INT};
 Type *type_char = &(Type){.kind = CHAR};
 
-Type *gettype_decl_spec(DeclSpec *decl_spec) {
+Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
   if (decl_spec->has_int) {
     return type_int;
   } else if (decl_spec->has_char) {
@@ -22,6 +22,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->en_def) {
     return type_int;
+  } else if (decl_spec->def_name) {
+    return find_typedef(state, decl_spec->def_name, decl_spec->def_len)->type;
   } else
     error("empty type");
   return NULL;

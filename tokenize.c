@@ -280,6 +280,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "typedef", 7) == 0 && !is_alnum(p[7])) {
+      cur = new_token(TK_TYPEDEF, cur, p, 7);
+      p += 7;
+      continue;
+    }
+
     if (strncmp(p, "return", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_RETURN, cur, p, 6);
       p += 6;
