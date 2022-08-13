@@ -192,6 +192,19 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (*p == '\'') {
+      char *tok_start = p;
+      p++;
+      char val = consume_char(&p, p);
+      if (*p != '\'')
+        error_at(p, "not find '");
+      p++;
+
+      cur = new_token(TK_NUM, cur, tok_start, p - tok_start);
+      cur->val = val;
+      continue;
+    }
+
     if (*p == '"') {
       char *tok_start = p;
       char *str_cur = tok_start + 1;

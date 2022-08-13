@@ -6,8 +6,9 @@
 #include "preprocess.h"
 #include "tokenize.h"
 
+static void process_macro_group(Token **post, Token **pre, Token *tok);
+static void process_if_group(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
-static void consume_text_line(Token **pre, Token *tok);
 
 Define *define_list;
 
@@ -26,6 +27,18 @@ bool is_if_group(Token *tok) {
   return cmp_ident(tok->next, "ifdef") || cmp_ident(tok->next, "ifndef");
 }
 
+void process_macro_group(Token **post, Token **pre, Token *tok) {
+  if (is_if_group(tok)) {
+    process_if_group(post, pre, tok);
+  } else if (cmp_ident(tok->next, "include")) {
+    // ignore include
+    warn_at(tok->str, "ignore include");
+    process_text_line(NULL, pre, tok);
+  } else {
+    not_implemented_at(tok->str);
+  }
+}
+
 void process_if_group(Token **post, Token **pre, Token *tok) {
   consume(&tok, tok, "#");
   if (cmp_ident(tok, "ifdef")) {
@@ -36,16 +49,14 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_NEWLINE);
 
     Token *dummy = NULL;
-    while (!equal(tok, "#")) {
-      if (cond)
-        process_text_line(post, &tok, tok);
+    while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+      if (equal(tok, "#"))
+        process_macro_group((cond ? post : NULL), &tok, tok);
       else
-        consume_text_line(&tok, tok);
+        process_text_line((cond ? post : NULL), &tok, tok);
     }
 
     expect(&tok, tok, "#");
-    if (!cmp_ident(tok, "endif"))
-      not_implemented_at("only ifdef~endif");
     consume_kind(&tok, tok, TK_IDENT);
     expect_kind(&tok, tok, TK_NEWLINE);
 
@@ -59,10 +70,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
 
     Token *dummy;
     while (!equal(tok, "#")) {
-      if (cond)
-        process_text_line(post, &tok, tok);
-      else
-        consume_text_line(&tok, tok);
+      process_text_line((cond ? post : NULL), &tok, tok);
     }
 
     expect(&tok, tok, "#");
@@ -79,17 +87,10 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
 
 void process_text_line(Token **post, Token **pre, Token *tok) {
   while (tok->kind != TK_NEWLINE) {
-    (*post)->next = tok;
-    (*post) = (*post)->next;
-    tok = tok->next;
-  }
-
-  // skip TK_NEWLINE
-  *pre = tok->next;
-}
-
-void consume_text_line(Token **pre, Token *tok) {
-  while (tok->kind != TK_NEWLINE) {
+    if (post) {
+      (*post)->next = tok;
+      (*post) = (*post)->next;
+    }
     tok = tok->next;
   }
 
@@ -103,9 +104,7 @@ Token *preprocess(Token *tok) {
 
   while (!at_eof(tok)) {
     if (equal(tok, "#")) {
-      if (is_if_group(tok)) {
-        process_if_group(&cur, &tok, tok);
-      }
+      process_macro_group(&cur, &tok, tok);
     } else {
       process_text_line(&cur, &tok, tok);
     }
