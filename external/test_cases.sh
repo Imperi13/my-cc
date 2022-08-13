@@ -384,6 +384,9 @@ run_test 313 'int main(void){int p = 0; return (!p)*174; }' 174
 run_test 314 'int main(void){int *p = 0; return (!p)*174; }' 174
 run_test 315 'int main(void){int q; int *p = &q; return (1+!p)*174;}' 174
 
+run_test pp_1 'int main(){\n#ifdef TEST\nreturn 170;\n#endif\nreturn 174;}' 174
+run_test pp_1 'int main(){\n#ifndef TEST\nreturn 174;\n#endif\n}' 174
+
 run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
