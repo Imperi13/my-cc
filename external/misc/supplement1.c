@@ -45,12 +45,18 @@ int add6(int a, int b, int c, int d, int e, int f)
 
 struct Q{int a; int b; int *p;};
 
-struct Q q(void) {struct Q u; u.a = 100; u.b = 74; u.p = 0; return u;}
 
 int r(struct Q *p) {return p->a + p->b;}
 
+int add_3(int a){return 3 + a;}
+
+void *return_fp(void){return add_3;}
 
 struct Test{int a; int b; int *p; int *q; int *r; int *s;};
+
+#ifdef __STDC__
+
+struct Q q(void) {struct Q u; u.a = 100; u.b = 74; u.p = 0; return u;}
 
 struct Test test_(int *s)
 {
@@ -60,8 +66,6 @@ struct Test test_(int *s)
 	return u;
 }
 
-int add_3(int a){return 3 + a;}
-
-void *return_fp(void){return add_3;}
-
 int call_fp(void* q){int (*p)(int) = q;return (*p)(171);}
+
+#endif
