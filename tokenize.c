@@ -155,6 +155,8 @@ char consume_char(char **rest, char *p) {
       ret = '\e';
     } else if (*p == 'n') {
       ret = '\n';
+    } else if (*p == '0') {
+      ret = '\0';
     } else {
       not_implemented(__func__);
     }
