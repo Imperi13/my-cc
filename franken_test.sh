@@ -16,10 +16,12 @@ done
 gcc -o ./build/mycc2 *.o
 rm *.o
 
-./build/mycc1 file.c > ./build/file1.s
-./build/mycc2 file.c > ./build/file2.s
 
-diff ./build/file1.s ./build/file2.s
+for filepath in ${compile}; do
+  ./build/mycc1 ${filepath} > ./build/${filepath%.c}1.s;
+  ./build/mycc2 ${filepath} > ./build/${filepath%.c}2.s;
+  diff ./build/${filepath%.c}1.s ./build/${filepath%.c}2.s;
+  if [ $? -ne 0 ]; then { echo "FAIL";exit 1; }; else echo "PASS"; fi
+done
 
-if [ $? -ne 0 ]; then { echo "FAIL";exit 1; }; else echo "PASS"; fi
 
