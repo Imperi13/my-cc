@@ -23,6 +23,7 @@ franken: mycc
 	./mycc file.c > file.s
 	rm file.o
 	gcc -c file.s
+	rm file.s
 	gcc -o mycc *.o
 
 .PHONY: test external-test clean
