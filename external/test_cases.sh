@@ -315,7 +315,7 @@ run_test 257 'int main(){int x = 86;int *y = &x; return (*y) + (*y) + 2;}' 174
 run_test 258 'int main(){int x = 86;int *y = &x;int **z = &y;return (*y) + (**z) + 2;}' 174
 run_test 259 'int main(){int x = 86;int *y = &x;int **z = &y;return*y+**z+2;}' 174
 
-run_test 260 'int printf(); int puts(); int main(){printf("H""e" "l" "lo," " W" "or" "ld!"); puts(""); return 174;}' 174
+#run_test 260 'int printf(); int puts(); int main(){printf("H""e" "l" "lo," " W" "or" "ld!"); puts(""); return 174;}' 174
 
 run_test 261 'int main(void){int a = 5; return 174;}' 174
 run_test 262 'int main(void){int u = 0; for(int a = 0; a < 10; a++){ u += a; } return 174+u-45;}' 174
@@ -383,6 +383,9 @@ run_test 312 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a
 run_test 313 'int main(void){int p = 0; return (!p)*174; }' 174
 run_test 314 'int main(void){int *p = 0; return (!p)*174; }' 174
 run_test 315 'int main(void){int q; int *p = &q; return (1+!p)*174;}' 174
+
+run_test pp_1 'int main(){\n#ifdef TEST\nreturn 170;\n#endif\nreturn 174;}' 174
+run_test pp_1 'int main(){\n#ifndef TEST\nreturn 174;\n#endif\n}' 174
 
 run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174

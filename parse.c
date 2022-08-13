@@ -116,7 +116,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
 bool is_declaration_specs(Token *tok, TypedefScope *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
          equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT) ||
-         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST);
+         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
+         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC);
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
@@ -126,6 +127,13 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
   while (1) {
     if (equal_kind(tok, TK_CONST)) {
       consume_kind(&tok, tok, TK_CONST);
+      decl_spec->has_const = true;
+    } else if (equal_kind(tok, TK_EXTERN)) {
+      consume_kind(&tok, tok, TK_EXTERN);
+      decl_spec->has_extern = true;
+    } else if (equal_kind(tok, TK_STATIC)) {
+      consume_kind(&tok, tok, TK_STATIC);
+      decl_spec->has_static = true;
     } else if (equal_kind(tok, TK_INT)) {
       if (parsed_type)
         error("dup type");
@@ -541,11 +549,19 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, TypedefScope *state) {
 
     consume(&tok, tok, "(");
 
-    if (!equal(tok, ";"))
-      node->for_init = parse_expr(&tok, tok, state);
+    // parse init
+    if (!equal(tok, ";")) {
+      if (is_declaration_specs(tok, state))
+        node->for_init = parse_external_decl(&tok, tok, state, false);
+      else {
+        node->for_init = parse_expr(&tok, tok, state);
+        consume(&tok, tok, ";");
+      }
+    } else {
+      consume(&tok, tok, ";");
+    }
 
-    consume(&tok, tok, ";");
-
+    // parse cond
     if (!equal(tok, ";")) {
       node->cond = parse_expr(&tok, tok, state);
     } else {

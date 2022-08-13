@@ -4,6 +4,7 @@
 #include "error.h"
 #include "file.h"
 #include "parse.h"
+#include "preprocess.h"
 #include "tokenize.h"
 
 char *filename;
@@ -16,6 +17,10 @@ int main(int argc, char **argv) {
   filename = argv[1];
   user_input = read_file(argv[1]);
   Token *token = tokenize(user_input);
+
+  // debug_token(token);
+
+  token = preprocess(token);
 
   // debug_token(token);
 

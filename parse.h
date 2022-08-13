@@ -157,6 +157,12 @@ struct Case {
 };
 
 struct DeclSpec {
+  // type_qual
+  bool has_const; // unused;
+  bool has_extern;
+  bool has_static;
+
+  // type_spec
   bool has_void;
   bool has_int;
   bool has_char;
@@ -214,6 +220,7 @@ struct Declarator {
 };
 
 struct Pointer {
+  bool has_const; // unused
   Pointer *nest;
 };
 

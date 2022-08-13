@@ -155,6 +155,8 @@ char consume_char(char **rest, char *p) {
       ret = '\e';
     } else if (*p == 'n') {
       ret = '\n';
+    } else if (*p == '0') {
+      ret = '\0';
     } else {
       not_implemented(__func__);
     }
@@ -179,7 +181,13 @@ Token *tokenize(char *p) {
   Token *cur = &head;
 
   while (*p) {
-    if (isspace(*p) || *p == '\n') {
+    if (isblank(*p)) {
+      p++;
+      continue;
+    }
+
+    if (*p == '\n') {
+      cur = new_token(TK_NEWLINE, cur, p, 1);
       p++;
       continue;
     }
@@ -252,13 +260,13 @@ Token *tokenize(char *p) {
         strncmp(p, "++", 2) == 0 || strncmp(p, "--", 2) == 0 ||
         strncmp(p, "<<", 2) == 0 || strncmp(p, ">>", 2) == 0 ||
         strncmp(p, "&&", 2) == 0 || strncmp(p, "||", 2) == 0 ||
-        strncmp(p, "->", 2) == 0) {
+        strncmp(p, "->", 2) == 0 || strncmp(p, "##", 2) == 0) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
     }
 
-    if (strchr("+-*/|&!~^%:?.,;=(){}[]<>", *p)) {
+    if (strchr("+-*/|&!~^%:?.,;=(){}[]<>#", *p)) {
       cur = new_token(TK_RESERVED, cur, p, 1);
       p++;
       continue;

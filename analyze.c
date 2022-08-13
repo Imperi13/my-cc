@@ -99,7 +99,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     obj->type = obj_type;
     obj->is_global = true;
 
-    if (obj_type->kind != FUNC)
+    if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
       obj->is_defined = true;
 
     obj->next = state->glb_objs;
@@ -321,8 +321,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == RETURN) {
     if (ast->lhs) {
       analyze_stmt(ast->lhs, state);
-      if (!is_compatible(state->current_func->type->return_type,
-                         ast->lhs->type))
+      if (!is_compatible(state->current_func->type->return_type, ast->lhs))
         error("invalid return type");
     } else {
       if (state->current_func->type->return_type->kind != VOID)
@@ -370,6 +369,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
+    push_lvar_scope(&state->current_func->locals);
+
     if (ast->for_init)
       analyze_stmt(ast->for_init, state);
     analyze_stmt(ast->cond, state);
@@ -383,6 +384,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
+
+    pop_lvar_scope(&state->current_func->locals);
 
   } else if (ast->kind == IF) {
     ast->label_number = state->label_cnt;
@@ -583,7 +586,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == LOGICAL_NOT) {
     analyze_stmt(ast->lhs, state);
-    ast->type = ast->lhs->type;
+    ast->type = type_int;
   } else if (ast->kind == BIT_NOT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
@@ -765,6 +768,13 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
       if (cur->len == len && !memcmp(name, cur->name, len))
         return cur;
   return NULL;
+}
+
+bool is_constexpr(Tree *expr) {
+  if (expr->kind == NUM)
+    return true;
+  else
+    return false;
 }
 
 int eval_constexpr(Tree *expr) {

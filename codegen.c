@@ -75,7 +75,10 @@ void codegen_var_definition(Tree *var) {
 void codegen_function(Tree *func) {
 
   printf("  .text\n");
-  printf(".globl %.*s\n", func->def_obj->obj_len, func->def_obj->obj_name);
+  if (func->decl_specs->has_static)
+    printf(".local %.*s\n", func->def_obj->obj_len, func->def_obj->obj_name);
+  else
+    printf(".globl %.*s\n", func->def_obj->obj_len, func->def_obj->obj_name);
   printf("%.*s:\n", func->def_obj->obj_len, func->def_obj->obj_name);
 
   printf("  push rbp\n");
@@ -135,9 +138,19 @@ void codegen_stmt(Tree *stmt) {
   switch (stmt->kind) {
   case DECLARATION:
     if (stmt->declarator && stmt->declarator->init_expr) {
+      printf("  nop\n");
       printf("  lea rdi, [rbp - %d]\n", stmt->def_obj->rbp_offset);
+      printf("  push rdi\n");
       codegen_stmt(stmt->declarator->init_expr);
-      store2rdiaddr_from_rax(stmt->def_obj->type);
+      if (stmt->def_obj->type->kind == STRUCT) {
+        printf("  pop rdi\n");
+        printf("  mov rsi, rax\n");
+        printf("  mov rcx, %d\n", type_size(stmt->def_obj->type));
+        printf("  rep movsb\n");
+      } else {
+        printf("  pop rdi\n");
+        store2rdiaddr_from_rax(stmt->def_obj->type);
+      }
     }
     return;
   case LABEL:
@@ -232,8 +245,15 @@ void codegen_stmt(Tree *stmt) {
     codegen_addr(stmt->lhs);
     printf("  push rax\n");
     codegen_stmt(stmt->rhs);
-    printf("  pop rdi\n");
-    store2rdiaddr_from_rax(stmt->type);
+    if (stmt->lhs->type->kind == STRUCT) {
+      printf("  pop rdi\n");
+      printf("  mov rsi, rax\n");
+      printf("  mov rcx, %d\n", type_size(stmt->lhs->type));
+      printf("  rep movsb\n");
+    } else {
+      printf("  pop rdi\n");
+      store2rdiaddr_from_rax(stmt->type);
+    }
     return;
   case ADD_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -241,9 +261,18 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->rhs);
     printf("  mov rdi,rax\n");
     printf("  pop rsi\n");
-    printf("  movsxd rax,[rsi]\n");
-    printf("  add rax, rdi\n");
-    printf("  mov [rsi], eax\n");
+    printf("  mov rax,rsi\n");
+    load2rax_from_raxaddr(stmt->lhs->type);
+    // lhs:rax, rhs:rdi
+    if (stmt->lhs->type->kind == PTR || stmt->lhs->type->kind == ARRAY)
+      printf("  imul rdi,%d\n", type_size(stmt->lhs->type->ptr_to));
+    else if (stmt->rhs->type->kind == PTR || stmt->rhs->type->kind == ARRAY)
+      printf("  imul rax,%d\n", type_size(stmt->rhs->type->ptr_to));
+    printf("  add rax,rdi\n");
+
+    // store
+    printf("  mov rdi,rsi\n");
+    store2rdiaddr_from_rax(stmt->lhs->type);
     return;
   case SUB_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -251,9 +280,16 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->rhs);
     printf("  mov rdi,rax\n");
     printf("  pop rsi\n");
-    printf("  movsxd rax,[rsi]\n");
+    printf("  mov rax,rsi\n");
+    load2rax_from_raxaddr(stmt->lhs->type);
+    // sub
+    if (stmt->lhs->type->kind == PTR && is_integer(stmt->rhs->type))
+      printf("  imul rdi, %d\n", type_size(stmt->lhs->type->ptr_to));
     printf("  sub rax, rdi\n");
-    printf("  mov [rsi], eax\n");
+
+    // store
+    printf("  mov rdi,rsi\n");
+    store2rdiaddr_from_rax(stmt->lhs->type);
     return;
   case MUL_ASSIGN:
     codegen_addr(stmt->lhs);
@@ -404,7 +440,7 @@ void codegen_stmt(Tree *stmt) {
     return;
   case DEREF:
     codegen_stmt(stmt->lhs);
-    if (stmt->type->kind == ARRAY)
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
@@ -436,7 +472,11 @@ void codegen_stmt(Tree *stmt) {
     printf("  mov rdi,rax\n");
     load2rax_from_raxaddr(stmt->lhs->type);
     printf("  mov rsi,rax\n");
-    printf("  add rsi, 1\n");
+    if (stmt->lhs->type->kind == PTR)
+      printf("  mov rdx, %d\n", type_size(stmt->lhs->type->ptr_to));
+    else
+      printf("  mov rdx, 1\n");
+    printf("  add rsi, rdx\n");
     printf("  mov [rdi],esi\n");
     return;
   case POST_DECREMENT:
@@ -444,15 +484,23 @@ void codegen_stmt(Tree *stmt) {
     printf("  mov rdi,rax\n");
     load2rax_from_raxaddr(stmt->lhs->type);
     printf("  mov rsi,rax\n");
-    printf("  sub rsi, 1\n");
+    if (stmt->lhs->type->kind == PTR)
+      printf("  mov rdx, %d\n", type_size(stmt->lhs->type->ptr_to));
+    else
+      printf("  mov rdx, 1\n");
+    printf("  sub rsi, rdx\n");
     printf("  mov [rdi],esi\n");
     return;
   case DOT:
     codegen_addr(stmt);
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+      return;
     load2rax_from_raxaddr(stmt->type);
     return;
   case ARROW:
     codegen_addr(stmt);
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+      return;
     load2rax_from_raxaddr(stmt->type);
     return;
   case NUM:
@@ -463,7 +511,8 @@ void codegen_stmt(Tree *stmt) {
     return;
   case VAR:
     codegen_addr(stmt);
-    if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY)
+    if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY ||
+        stmt->type->kind == STRUCT)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;

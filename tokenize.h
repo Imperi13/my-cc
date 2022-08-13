@@ -28,6 +28,7 @@ typedef enum {
   TK_STATIC,
   TK_NUM,
   TK_STR,
+  TK_NEWLINE,
   TK_EOF,
 } TokenKind;
 
@@ -71,5 +72,6 @@ bool at_eof(Token *token);
 bool is_alnum(char c);
 
 Token *tokenize(char *p);
+Token *new_token(TokenKind kind,Token *cur,char *str,int len);
 
 void debug_token(Token *token);
