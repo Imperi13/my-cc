@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-typedef enum {
+typedef enum TreeKind {
   FUNC_DEF,
   DECLARATION,
   TYPE_NAME,
@@ -67,6 +67,12 @@ typedef enum {
   VAR,
 } TreeKind;
 
+typedef enum TypeSuffixKind {
+  NONE,
+  ARRAY_DECLARATOR,
+  FUNC_DECLARATOR,
+} TypeSuffixKind;
+
 typedef struct Tree Tree;
 typedef struct Case Case;
 typedef struct DeclSpec DeclSpec;
@@ -81,11 +87,6 @@ typedef struct ArrayDeclarator ArrayDeclarator;
 #include "tokenize.h"
 #include "type.h"
 
-typedef enum {
-  NONE,
-  ARRAY_DECLARATOR,
-  FUNC_DECLARATOR,
-} TypeSuffixKind;
 
 struct Tree {
   TreeKind kind;
@@ -132,7 +133,7 @@ struct Tree {
   Tree *call_args;
 
   // for const-val
-  unsigned long num;
+  int num;
   StrLiteral *str_literal;
 
   // for member

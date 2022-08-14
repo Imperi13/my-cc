@@ -1,6 +1,6 @@
 #!/bin/bash
 
-compile="file.c"
+compile="file.c main.c"
 
 rm -f ./build/*
 

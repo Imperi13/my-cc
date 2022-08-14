@@ -504,7 +504,7 @@ void codegen_stmt(Tree *stmt) {
     load2rax_from_raxaddr(stmt->type);
     return;
   case NUM:
-    printf("  mov rax, %ld\n", stmt->num);
+    printf("  mov rax, %d\n", stmt->num);
     return;
   case STR:
     printf("  lea rax, [rip + .LC%d]\n", stmt->str_literal->id);
