@@ -1,6 +1,6 @@
 #!/bin/bash
 
-compile="file.c main.c tokenize.c preprocess.c parse.c type.c analyze.c"
+compile="file.c main.c tokenize.c preprocess.c parse.c type.c analyze.c codegen.c"
 
 rm -f ./build/*
 

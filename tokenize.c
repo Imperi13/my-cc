@@ -187,6 +187,8 @@ char consume_char(char **rest, char *p) {
       ret = '\\';
     } else if (*p == '\'') {
       ret = '\'';
+    } else if (*p == '\"') {
+      ret = '\"';
     } else if (*p == '0') {
       ret = '\0';
     } else {

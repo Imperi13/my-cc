@@ -5,6 +5,12 @@
 #include "error.h"
 #include "file.h"
 
+// TODO 置き場
+
+char call_register64[6][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+char call_register32[6][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
+char call_register8[6][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);

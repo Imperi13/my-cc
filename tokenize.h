@@ -3,7 +3,9 @@
 #include <stdbool.h>
 
 #ifndef __STDC__
-typedef char bool;
+
+#include "selfhost_util.h"
+
 #endif
 
 typedef enum TokenKind {

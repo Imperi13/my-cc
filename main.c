@@ -31,10 +31,10 @@ void init() {
   type_char->kind = CHAR;
   type_bool = calloc(1,sizeof(Type));
   type_bool->kind = BOOL;
-
   
   variable_letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
   str_literals = 0;
+
 }
 
 int main(int argc, char **argv) {
