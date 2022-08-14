@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 
   //debug_token(token);
 
-  token = preprocess(token);
+  token = preprocess(token,filename);
 
   //debug_token(token);
 
