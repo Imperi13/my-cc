@@ -20,6 +20,7 @@ Type *type_void;
 Type *type_int;
 Type *type_char;
 
+// for avoiding global-var init
 void init() {
   type_void = calloc(1, sizeof(Type));
   type_void->kind = VOID;
