@@ -10,13 +10,23 @@ test: mycc
 	./assert_test.sh
 
 external-test: mycc
-	./external/test_cases.sh
+	MYCC=./mycc ./external/test_cases.sh
 
 clean:
-	rm -f mycc *.o *~ tmp* supplement* donuts*
+	rm -f mycc mycc2 *.o *~ tmp* supplement* donuts*
 
 donuts: mycc
 	./mycc ./sample/donuts.c > ./donuts.s
 	gcc -o donuts ./donuts.s
 
-.PHONY: test external-test clean
+franken:
+	./franken_test.sh
+
+mycc2: franken
+	cp ./build/mycc2 ./mycc2
+
+external-test-stage2: mycc2
+	MYCC=./mycc2 ./external/test_cases.sh	
+
+
+.PHONY: franken test external-test clean

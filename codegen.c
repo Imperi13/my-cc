@@ -6,6 +6,12 @@
 #include "parse.h"
 #include "type.h"
 
+#ifndef __STDC__
+
+int printf();
+
+#endif
+
 static void codegen_str_literal(StrLiteral *sl);
 static void codegen_var_definition(Tree *var);
 static void codegen_function(Tree *func);
@@ -15,9 +21,9 @@ static void codegen_addr(Tree *stmt);
 static void load2rax_from_raxaddr(Type *type);
 static void store2rdiaddr_from_rax(Type *type);
 
-char call_register64[][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-char call_register32[][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
-char call_register8[][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+extern const char call_register64[6][4];
+extern const char call_register32[6][4];
+extern const char call_register8[6][4];
 
 void codegen_translation_unit(Tree *head) {
 
@@ -30,7 +36,7 @@ void codegen_translation_unit(Tree *head) {
   Tree *cur = head;
   while (cur) {
     if (cur->kind == DECLARATION && cur->declarator &&
-        cur->def_obj->is_defined) {
+        !cur->decl_specs->has_typedef && cur->def_obj->is_defined) {
       codegen_var_definition(cur);
     }
     cur = cur->next;
@@ -56,6 +62,12 @@ void codegen_str_literal(StrLiteral *sl) {
       printf("\\033");
     } else if (sl->str[i] == '\n') {
       printf("\\n");
+    } else if (sl->str[i] == '\\') {
+      printf("\\\\");
+    } else if (sl->str[i] == '\'') {
+      printf("\\\'");
+    } else if (sl->str[i] == '\"') {
+      printf("\\\"");
     } else {
       printf("%c", sl->str[i]);
     }
@@ -504,7 +516,7 @@ void codegen_stmt(Tree *stmt) {
     load2rax_from_raxaddr(stmt->type);
     return;
   case NUM:
-    printf("  mov rax, %ld\n", stmt->num);
+    printf("  mov rax, %d\n", stmt->num);
     return;
   case STR:
     printf("  lea rax, [rip + .LC%d]\n", stmt->str_literal->id);

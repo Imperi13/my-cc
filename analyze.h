@@ -15,14 +15,18 @@ typedef struct EnumDef EnumDef;
 #include "type.h"
 
 struct Analyze {
+  // global scope
   Obj *glb_objs;
+  StructDef *glb_stdefs;
+  EnumDef *glb_endefs;
+  Typedef *glb_typedefs;
   Obj *current_func;
+
+  // local scope
   LabelScope *break_labels;
   LabelScope *continue_labels;
   SwitchScope *switch_stmts;
   int label_cnt;
-  StructDef *glb_stdefs;
-  EnumDef *glb_endefs;
 };
 
 struct Obj {
@@ -103,6 +107,8 @@ struct Typedef {
   char *name;
   int len;
 
+  Type *type;
+
   // for linked-list
   Typedef *next;
 };
@@ -118,6 +124,9 @@ struct SwitchScope {
 };
 
 void analyze_translation_unit(Tree *ast);
+
+Typedef *find_typedef(Analyze *state, char *def_name, int def_len);
+
 bool is_constexpr(Tree *expr);
 int eval_constexpr(Tree *expr);
 int calc_rbp_offset(int start, int data_size, int alignment);

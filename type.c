@@ -7,21 +7,28 @@
 #include "parse.h"
 #include "type.h"
 
-Type *type_void = &(Type){.kind = VOID};
-Type *type_int = &(Type){.kind = INT};
-Type *type_char = &(Type){.kind = CHAR};
+#ifndef __STDC__
 
-Type *gettype_decl_spec(DeclSpec *decl_spec) {
+void *calloc();
+char *strncpy();
+
+#endif
+
+Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
   if (decl_spec->has_int) {
     return type_int;
   } else if (decl_spec->has_char) {
     return type_char;
   } else if (decl_spec->has_void) {
     return type_void;
+  } else if (decl_spec->has_bool) {
+    return type_bool;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->en_def) {
     return type_int;
+  } else if (decl_spec->def_name) {
+    return find_typedef(state, decl_spec->def_name, decl_spec->def_len)->type;
   } else
     error("empty type");
   return NULL;
@@ -105,6 +112,8 @@ int type_size(Type *type) {
     return 4;
   else if (type->kind == CHAR)
     return 1;
+  else if (type->kind == BOOL)
+    return 1;
   else if (type->kind == PTR)
     return 8;
   else if (type->kind == ARRAY)
@@ -122,6 +131,8 @@ int type_alignment(Type *type) {
   if (type->kind == INT)
     return 4;
   else if (type->kind == CHAR)
+    return 1;
+  else if (type->kind == BOOL)
     return 1;
   else if (type->kind == PTR)
     return 8;
@@ -147,7 +158,7 @@ bool is_void_ptr(Type *type) {
 }
 
 bool is_primitive_type(Type *a) {
-  if (a->kind == VOID || a->kind == CHAR || a->kind == INT)
+  if (a->kind == VOID || a->kind == CHAR || a->kind == INT || a->kind == BOOL)
     return true;
   else
     return false;
@@ -174,6 +185,8 @@ bool is_compatible(Type *a, Tree *b) {
   if (is_same_type(a, b->type))
     return true;
   else if (is_integer(a) && is_integer(b->type))
+    return true;
+  else if(a->kind == BOOL && is_integer(b->type))
     return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))

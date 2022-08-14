@@ -1,59 +1,69 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "analyze.h"
 #include "error.h"
 #include "parse.h"
 #include "tokenize.h"
 
-static Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
+#ifndef __STDC__
+
+#include "selfhost_util.h"
+
+void *calloc();
+
+size_t strlen();
+
+int fprintf();
+
+#endif
+
+static Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
                                  bool allow_function);
 static DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
-                                         TypedefScope *state);
-static Declarator *parse_declarator(Token **rest, Token *tok,
-                                    TypedefScope *state);
+                                         Analyze *state);
+static Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_parameter_type_list(Token **rest, Token *tok,
-                                       TypedefScope *state);
-static bool is_type_name(Token *tok, TypedefScope *state);
-static bool is_abstract_declarator(Token *tok, TypedefScope *state);
-static Tree *parse_type_name(Token **rest, Token *tok, TypedefScope *state);
+                                       Analyze *state);
+static bool is_type_name(Token *tok, Analyze *state);
+static bool is_abstract_declarator(Token *tok, Analyze *state);
+static Tree *parse_type_name(Token **rest, Token *tok, Analyze *state);
 static Declarator *parse_abstract_declarator(Token **rest, Token *tok,
-                                             TypedefScope *state);
+                                             Analyze *state);
 
-static Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_compound_stmt(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_jump_stmt(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_iteration_stmt(Token **rest, Token *tok,
-                                  TypedefScope *state);
-static Tree *parse_selection_stmt(Token **rest, Token *tok,
-                                  TypedefScope *state);
-static Tree *parse_expr_stmt(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_expr(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_assign(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_conditional(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_logical_or(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_logical_and(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_bit_or(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_bit_xor(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_bit_and(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_equality(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_relational(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_shift(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_add(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_mul(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_cast(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state);
-static Tree *parse_primary(Token **rest, Token *tok, TypedefScope *state);
+static Tree *parse_stmt(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_jump_stmt(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_expr_stmt(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_expr(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_assign(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_conditional(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_logical_or(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_logical_and(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_bit_or(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_bit_xor(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_bit_and(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_equality(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_relational(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_shift(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_add(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_mul(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_cast(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_unary(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_postfix(Token **rest, Token *tok, Analyze *state);
+static Tree *parse_primary(Token **rest, Token *tok, Analyze *state);
 
 static bool is_label_stmt(Token *tok);
 static bool is_selection_stmt(Token *tok);
 static bool is_iteration_stmt(Token *tok);
 static bool is_jump_stmt(Token *tok);
 
-static bool is_declaration_specs(Token *tok, TypedefScope *state);
+static bool is_declaration_specs(Token *tok, Analyze *state);
 
 Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs) {
   Tree *node = calloc(1, sizeof(Tree));
@@ -67,7 +77,7 @@ Tree *parse_translation_unit(Token *tok) {
   Tree *head = calloc(1, sizeof(Tree));
   Tree *cur = head;
 
-  TypedefScope *state = calloc(1, sizeof(TypedefScope));
+  Analyze *state = calloc(1, sizeof(Analyze));
 
   while (!at_eof(tok)) {
     Tree *ex_decl = parse_external_decl(&tok, tok, state, true);
@@ -78,13 +88,16 @@ Tree *parse_translation_unit(Token *tok) {
   return head->next;
 }
 
-Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
+Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
                           bool allow_function) {
   Tree *ex_decl = calloc(1, sizeof(Tree));
   ex_decl->decl_specs = parse_declaration_specs(&tok, tok, state);
 
   if (equal(tok, ";")) {
     consume(rest, tok, ";");
+
+    if (ex_decl->decl_specs->has_typedef)
+      error_at(tok->str, "typedef needs def_name");
     ex_decl->kind = DECLARATION;
     return ex_decl;
   }
@@ -94,6 +107,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
   if (equal(tok, "{")) {
     if (!allow_function)
       error("not allow func-def");
+    if (ex_decl->decl_specs->has_typedef)
+      error_at(tok->str, "cannot typedef for FUNC_DEF");
     ex_decl->kind = FUNC_DEF;
     ex_decl->func_body = parse_compound_stmt(&tok, tok, state);
     *rest = tok;
@@ -102,6 +117,9 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
 
   if (equal(tok, "=")) {
     consume(&tok, tok, "=");
+
+    if (ex_decl->decl_specs->has_typedef)
+      error_at(tok->str, "cannot typedef with initialize");
     ex_decl->declarator->init_expr = parse_assign(&tok, tok, state);
   }
   // TODO multiple declarator
@@ -109,19 +127,31 @@ Tree *parse_external_decl(Token **rest, Token *tok, TypedefScope *state,
   ex_decl->kind = DECLARATION;
 
   expect(&tok, tok, ";");
+
+  if (ex_decl->decl_specs->has_typedef) {
+    char *def_name = getname_declarator(ex_decl->declarator);
+    Typedef *new_def = calloc(1, sizeof(Typedef));
+    new_def->name = def_name;
+    new_def->len = strlen(def_name);
+
+    new_def->next = state->glb_typedefs;
+    state->glb_typedefs = new_def;
+  }
+
   *rest = tok;
   return ex_decl;
 }
 
-bool is_declaration_specs(Token *tok, TypedefScope *state) {
+bool is_declaration_specs(Token *tok, Analyze *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
-         equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT) ||
-         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
-         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC);
+         equal_kind(tok, TK_VOID) || equal_kind(tok, TK_BOOL) ||
+         equal_kind(tok, TK_STRUCT) || equal_kind(tok, TK_ENUM) ||
+         equal_kind(tok, TK_CONST) || equal_kind(tok, TK_EXTERN) ||
+         equal_kind(tok, TK_STATIC) || equal_kind(tok, TK_TYPEDEF) ||
+         (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->str, tok->len));
 }
 
-DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
-                                  TypedefScope *state) {
+DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
   DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
   bool parsed_type = false;
   while (1) {
@@ -134,6 +164,9 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
     } else if (equal_kind(tok, TK_STATIC)) {
       consume_kind(&tok, tok, TK_STATIC);
       decl_spec->has_static = true;
+    } else if (equal_kind(tok, TK_TYPEDEF)) {
+      consume_kind(&tok, tok, TK_TYPEDEF);
+      decl_spec->has_typedef = true;
     } else if (equal_kind(tok, TK_INT)) {
       if (parsed_type)
         error("dup type");
@@ -151,6 +184,20 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
         error("dup type");
       decl_spec->has_void = true;
       consume_kind(&tok, tok, TK_VOID);
+      parsed_type = true;
+    } else if (equal_kind(tok, TK_BOOL)) {
+      if (parsed_type)
+        error("dup type");
+      decl_spec->has_bool = true;
+      consume_kind(&tok, tok, TK_BOOL);
+      parsed_type = true;
+    } else if (equal_kind(tok, TK_IDENT) &&
+               find_typedef(state, tok->str, tok->len)) {
+      if (parsed_type)
+        error("dup type");
+      decl_spec->def_name = tok->str;
+      decl_spec->def_len = tok->len;
+      consume_kind(&tok, tok, TK_IDENT);
       parsed_type = true;
     } else if (equal_kind(tok, TK_STRUCT)) {
       if (parsed_type)
@@ -238,7 +285,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
   return decl_spec;
 }
 
-Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
+Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   Declarator *declarator = calloc(1, sizeof(Declarator));
 
   Pointer **cur = &declarator->pointer;
@@ -289,7 +336,7 @@ Declarator *parse_declarator(Token **rest, Token *tok, TypedefScope *state) {
   return declarator;
 }
 
-Tree *parse_parameter_type_list(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
   Tree *head = calloc(1, sizeof(Tree));
   head->kind = DECLARATION;
   head->decl_specs = parse_declaration_specs(&tok, tok, state);
@@ -310,7 +357,7 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, TypedefScope *state) {
   return head;
 }
 
-bool is_type_name(Token *tok, TypedefScope *state) {
+bool is_type_name(Token *tok, Analyze *state) {
   if (!is_declaration_specs(tok, state))
     return false;
   parse_declaration_specs(&tok, tok, state);
@@ -318,7 +365,7 @@ bool is_type_name(Token *tok, TypedefScope *state) {
   return is_abstract_declarator(tok, state);
 }
 
-bool is_abstract_declarator(Token *tok, TypedefScope *state) {
+bool is_abstract_declarator(Token *tok, Analyze *state) {
   while (equal(tok, "*"))
     consume(&tok, tok, "*");
 
@@ -343,7 +390,7 @@ bool is_abstract_declarator(Token *tok, TypedefScope *state) {
   return true;
 }
 
-Tree *parse_type_name(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_type_name(Token **rest, Token *tok, Analyze *state) {
   DeclSpec *decl_spec = parse_declaration_specs(&tok, tok, state);
   Declarator *declarator = parse_abstract_declarator(&tok, tok, state);
 
@@ -357,7 +404,7 @@ Tree *parse_type_name(Token **rest, Token *tok, TypedefScope *state) {
 }
 
 Declarator *parse_abstract_declarator(Token **rest, Token *tok,
-                                      TypedefScope *state) {
+                                      Analyze *state) {
   Declarator *declarator = calloc(1, sizeof(Declarator));
 
   Pointer **cur = &declarator->pointer;
@@ -392,7 +439,7 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
   return declarator;
 }
 
-Tree *parse_stmt(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node;
 
   if (equal(tok, "{")) {
@@ -417,7 +464,7 @@ bool is_label_stmt(Token *tok) {
          equal_kind(tok, TK_DEFAULT) || equal_kind(tok, TK_CASE);
 }
 
-Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
     Token *label_tok = consume_kind(&tok, tok, TK_IDENT);
@@ -453,7 +500,7 @@ Tree *parse_label_stmt(Token **rest, Token *tok, TypedefScope *state) {
   return node;
 }
 
-Tree *parse_compound_stmt(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
   expect(&tok, tok, "{");
   Tree *head = calloc(1, sizeof(Tree));
   Tree *cur = head;
@@ -479,7 +526,7 @@ bool is_jump_stmt(Token *tok) {
          equal_kind(tok, TK_CONTINUE);
 }
 
-Tree *parse_jump_stmt(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_jump_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node = calloc(1, sizeof(Tree));
   if (equal_kind(tok, TK_RETURN)) {
 
@@ -513,7 +560,7 @@ bool is_iteration_stmt(Token *tok) {
          equal_kind(tok, TK_FOR);
 }
 
-Tree *parse_iteration_stmt(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_WHILE)) {
     consume_kind(&tok, tok, TK_WHILE);
@@ -590,7 +637,7 @@ bool is_selection_stmt(Token *tok) {
   return equal_kind(tok, TK_IF) || equal_kind(tok, TK_SWITCH);
 }
 
-Tree *parse_selection_stmt(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IF)) {
     consume_kind(&tok, tok, TK_IF);
@@ -628,7 +675,7 @@ Tree *parse_selection_stmt(Token **rest, Token *tok, TypedefScope *state) {
   return node;
 }
 
-Tree *parse_expr_stmt(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_expr_stmt(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, ";")) {
     not_implemented_at(tok->str);
   }
@@ -638,7 +685,7 @@ Tree *parse_expr_stmt(Token **rest, Token *tok, TypedefScope *state) {
   return node;
 }
 
-Tree *parse_expr(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_expr(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_assign(&tok, tok, state);
   for (;;) {
     if (equal(tok, ",")) {
@@ -652,7 +699,7 @@ Tree *parse_expr(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_assign(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_assign(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_conditional(&tok, tok, state);
 
   if (equal(tok, "=")) {
@@ -705,7 +752,7 @@ Tree *parse_assign(Token **rest, Token *tok, TypedefScope *state) {
   return lhs;
 }
 
-Tree *parse_conditional(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_conditional(Token **rest, Token *tok, Analyze *state) {
   Tree *cond = parse_logical_or(&tok, tok, state);
   if (equal(tok, "?")) {
     consume(&tok, tok, "?");
@@ -726,7 +773,7 @@ Tree *parse_conditional(Token **rest, Token *tok, TypedefScope *state) {
   return cond;
 }
 
-Tree *parse_logical_or(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_logical_or(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_logical_and(&tok, tok, state);
   for (;;) {
     if (equal(tok, "||")) {
@@ -740,7 +787,7 @@ Tree *parse_logical_or(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_logical_and(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_logical_and(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_bit_or(&tok, tok, state);
   for (;;) {
     if (equal(tok, "&&")) {
@@ -754,7 +801,7 @@ Tree *parse_logical_and(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_bit_or(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_bit_or(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_bit_xor(&tok, tok, state);
   for (;;) {
     if (equal(tok, "|")) {
@@ -768,7 +815,7 @@ Tree *parse_bit_or(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_bit_xor(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_bit_xor(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_bit_and(&tok, tok, state);
   for (;;) {
     if (equal(tok, "^")) {
@@ -782,7 +829,7 @@ Tree *parse_bit_xor(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_bit_and(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_bit_and(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_equality(&tok, tok, state);
   for (;;) {
     if (equal(tok, "&")) {
@@ -796,7 +843,7 @@ Tree *parse_bit_and(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_equality(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_equality(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_relational(&tok, tok, state);
 
   for (;;) {
@@ -815,7 +862,7 @@ Tree *parse_equality(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_relational(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_relational(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_shift(&tok, tok, state);
 
   for (;;) {
@@ -842,7 +889,7 @@ Tree *parse_relational(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_shift(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_shift(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_add(&tok, tok, state);
 
   for (;;) {
@@ -861,7 +908,7 @@ Tree *parse_shift(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_add(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_add(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_mul(&tok, tok, state);
 
   for (;;) {
@@ -880,7 +927,7 @@ Tree *parse_add(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_mul(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_mul(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_cast(&tok, tok, state);
 
   for (;;) {
@@ -903,12 +950,12 @@ Tree *parse_mul(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_cast(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_cast(Token **rest, Token *tok, Analyze *state) {
   Tree *node = parse_unary(rest, tok, state);
   return node;
 }
 
-Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_unary(Token **rest, Token *tok, Analyze *state) {
   if (equal_kind(tok, TK_SIZEOF)) {
     consume_kind(&tok, tok, TK_SIZEOF);
 
@@ -1012,7 +1059,7 @@ Tree *parse_unary(Token **rest, Token *tok, TypedefScope *state) {
   return lhs;
 }
 
-Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_primary(&tok, tok, state);
 
   for (;;) {
@@ -1072,7 +1119,7 @@ Tree *parse_postfix(Token **rest, Token *tok, TypedefScope *state) {
   }
 }
 
-Tree *parse_primary(Token **rest, Token *tok, TypedefScope *state) {
+Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
   Tree *primary = calloc(1, sizeof(Tree));
 
   if (equal_kind(tok, TK_NUM)) {
@@ -1094,6 +1141,7 @@ Tree *parse_primary(Token **rest, Token *tok, TypedefScope *state) {
     primary = parse_expr(&tok, tok, state);
     expect(&tok, tok, ")");
   } else {
+    fprintf(stderr, "%.*s", tok->len, tok->str);
     error("cannot parse primary");
   }
 

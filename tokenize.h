@@ -2,7 +2,13 @@
 
 #include <stdbool.h>
 
-typedef enum {
+#ifndef __STDC__
+
+#include "selfhost_util.h"
+
+#endif
+
+typedef enum TokenKind {
   TK_RESERVED,
   TK_RETURN,
   TK_SIZEOF,
@@ -23,9 +29,11 @@ typedef enum {
   TK_VOID,
   TK_INT,
   TK_CHAR,
+  TK_BOOL,
   TK_CONST,
   TK_EXTERN,
   TK_STATIC,
+  TK_TYPEDEF,
   TK_NUM,
   TK_STR,
   TK_NEWLINE,
@@ -42,6 +50,8 @@ struct Token {
   char *str;
   int len;
 
+  char *filepath;
+
   // for str-literal
   StrLiteral *str_literal;
 };
@@ -55,8 +65,7 @@ struct StrLiteral {
   StrLiteral *next;
 };
 
-extern const char variable_letters[];
-extern Token *dummy_token;
+extern const char *variable_letters;
 
 extern StrLiteral *str_literals;
 
@@ -71,7 +80,6 @@ bool at_eof(Token *token);
 
 bool is_alnum(char c);
 
-Token *tokenize(char *p);
-Token *new_token(TokenKind kind,Token *cur,char *str,int len);
+Token *tokenize(char *p,char *filepath);
 
 void debug_token(Token *token);

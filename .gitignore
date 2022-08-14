@@ -57,3 +57,5 @@ donuts
 donuts.s
 .gdb_history
 mycc
+mycc2
+build/

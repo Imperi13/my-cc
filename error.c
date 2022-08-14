@@ -5,9 +5,16 @@
 #include "error.h"
 #include "file.h"
 
+// TODO 置き場
+
+char call_register64[6][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+char call_register32[6][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
+char call_register8[6][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
+  fprintf(stderr,"[error] ");
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
   exit(1);
@@ -29,7 +36,7 @@ void error_at(char *loc, char *fmt, ...) {
     if (*p == '\n')
       line_num++;
 
-  int indent = fprintf(stderr, "%s:%d: ", filename, line_num);
+  int indent = fprintf(stderr, "[error] %s:%d: ", filename, line_num);
   fprintf(stderr, "%.*s\n", (int)(end - line), line);
 
   int pos = loc - line + indent;
@@ -50,6 +57,7 @@ void not_implemented_at(char *loc) { error_at(loc, "not implemented"); }
 void warn(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
+  fprintf(stderr,"[warn] ");
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
 }
@@ -70,7 +78,7 @@ void warn_at(char *loc, char *fmt, ...) {
     if (*p == '\n')
       line_num++;
 
-  int indent = fprintf(stderr, "%s:%d: ", filename, line_num);
+  int indent = fprintf(stderr, "[warn] %s:%d: ", filename, line_num);
   fprintf(stderr, "%.*s\n", (int)(end - line), line);
 
   int pos = loc - line + indent;

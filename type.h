@@ -1,9 +1,10 @@
 #pragma once
 
-typedef enum {
+typedef enum TypeKind {
   VOID,
   INT,
   CHAR,
+  BOOL,
   PTR,
   STRUCT,
   FUNC,
@@ -12,8 +13,14 @@ typedef enum {
 
 typedef struct Type Type;
 
-#include "parse.h"
 #include "analyze.h"
+#include "parse.h"
+
+#ifndef __STDC__
+
+#include "selfhost_util.h"
+
+#endif
 
 struct Type {
   TypeKind kind;
@@ -37,8 +44,9 @@ struct Type {
 extern Type *type_void;
 extern Type *type_int;
 extern Type *type_char;
+extern Type *type_bool;
 
-Type *gettype_decl_spec(DeclSpec *decl_spec);
+Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state);
 Type *gettype_declarator(Declarator *declarator, Type *base_type);
 char *getname_declarator(Declarator *declarator);
 Tree *getargs_declarator(Declarator *declarator);
@@ -50,5 +58,5 @@ int type_size(Type *type);
 int type_alignment(Type *type);
 
 bool is_integer(Type *type);
-bool is_same_type(Type *a,Type *b);
-bool is_compatible(Type *a,Tree *b);
+bool is_same_type(Type *a, Type *b);
+bool is_compatible(Type *a, Tree *b);

@@ -7,6 +7,17 @@
 #include "parse.h"
 #include "type.h"
 
+#ifndef __STDC__
+
+#include "selfhost_util.h"
+
+void *calloc();
+size_t strlen();
+int memcmp();
+void *memcpy();
+
+#endif
+
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
@@ -48,7 +59,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     analyze_decl_spec(ast->decl_specs, state, true);
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
@@ -88,24 +99,35 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     if (ast->declarator->init_expr)
       not_implemented("initialize global variable");
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
 
-    Obj *obj = calloc(1, sizeof(Obj));
-    obj->obj_name = obj_name;
-    obj->obj_len = strlen(obj_name);
-    obj->type = obj_type;
-    obj->is_global = true;
+    if (ast->decl_specs->has_typedef) {
+      Typedef *new_def = calloc(1, sizeof(Typedef));
+      new_def->name = obj_name;
+      new_def->len = strlen(obj_name);
+      new_def->type = obj_type;
 
-    if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
-      obj->is_defined = true;
+      new_def->next = state->glb_typedefs;
+      state->glb_typedefs = new_def;
+    } else {
 
-    obj->next = state->glb_objs;
-    state->glb_objs = obj;
+      Obj *obj = calloc(1, sizeof(Obj));
+      obj->obj_name = obj_name;
+      obj->obj_len = strlen(obj_name);
+      obj->type = obj_type;
+      obj->is_global = true;
 
-    ast->def_obj = obj;
+      if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
+        obj->is_defined = true;
+
+      obj->next = state->glb_objs;
+      state->glb_objs = obj;
+
+      ast->def_obj = obj;
+    }
 
   } else {
     error("not external_decl");
@@ -147,7 +169,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         Member *mem = calloc(1, sizeof(Member));
 
         analyze_decl_spec(cur->decl_specs, state, false);
-        Type *obj_type = gettype_decl_spec(cur->decl_specs);
+        Type *obj_type = gettype_decl_spec(cur->decl_specs, state);
         obj_type = gettype_declarator(cur->declarator, obj_type);
 
         char *obj_name = getname_declarator(cur->declarator);
@@ -222,7 +244,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
     if (obj_type->kind == ARRAY)
@@ -230,18 +252,23 @@ void analyze_parameter(Tree *ast, Analyze *state) {
 
     char *obj_name = getname_declarator(ast->declarator);
 
-    Obj *lvar = calloc(1, sizeof(Obj));
-    lvar->obj_name = obj_name;
-    lvar->obj_len = strlen(obj_name);
-    lvar->type = obj_type;
-    lvar->rbp_offset =
-        calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
-                        type_alignment(obj_type));
-    state->current_func->stack_size = lvar->rbp_offset;
+    if (ast->decl_specs->has_typedef) {
+      not_implemented(__func__);
+    } else {
 
-    ast->def_obj = lvar;
+      Obj *lvar = calloc(1, sizeof(Obj));
+      lvar->obj_name = obj_name;
+      lvar->obj_len = strlen(obj_name);
+      lvar->type = obj_type;
+      lvar->rbp_offset =
+          calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
+                          type_alignment(obj_type));
+      state->current_func->stack_size = lvar->rbp_offset;
 
-    push_lvar(state->current_func->locals, lvar);
+      ast->def_obj = lvar;
+
+      push_lvar(state->current_func->locals, lvar);
+    }
 
   } else
     error("cannot analyze parameter");
@@ -266,7 +293,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
@@ -593,7 +620,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == SIZEOF) {
     if (ast->lhs->kind == TYPE_NAME) {
       analyze_decl_spec(ast->lhs->decl_specs, state, false);
-      Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
+      Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
       base_type = gettype_declarator(ast->lhs->declarator, base_type);
 
       // replace "sizeof" -> num
@@ -605,7 +632,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     }
   } else if (ast->kind == ALIGNOF) {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
-    Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
+    Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
     base_type = gettype_declarator(ast->lhs->declarator, base_type);
 
     // replace "sizeof" -> num
@@ -661,6 +688,31 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = newtype_ptr(type_char);
   } else if (ast->kind == VAR) {
 
+    // predefined ident
+    if (!memcmp(ast->var_name, "__func__", 8)) {
+
+      // make str-literal for func-name
+      StrLiteral *func_name = calloc(1, sizeof(StrLiteral));
+      func_name->str = calloc(state->current_func->obj_len + 1, sizeof(char));
+      func_name->len = state->current_func->obj_len;
+      memcpy(func_name->str, state->current_func->obj_name, func_name->len);
+
+      if (!str_literals) {
+        func_name->id = 0;
+        str_literals = func_name;
+      } else {
+        func_name->id = str_literals->id + 1;
+        func_name->next = str_literals;
+        str_literals = func_name;
+      }
+
+      // replace ast type
+      ast->kind = STR;
+      ast->str_literal = func_name;
+      ast->type = newtype_ptr(type_char);
+      return;
+    }
+
     EnumVal *en_val =
         find_enum_val(state->glb_endefs, ast->var_name, ast->var_len);
     if (en_val) {
@@ -676,7 +728,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (!var) {
       var = find_global(state->glb_objs, ast->var_name, ast->var_len);
       if (!var)
-        error("cannot find var");
+        error("cannot find var: %.*s", ast->var_len, ast->var_name);
     }
 
     ast->var_obj = var;
@@ -767,6 +819,13 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
     for (EnumVal *cur = cur_def->members; cur; cur = cur->next)
       if (cur->len == len && !memcmp(name, cur->name, len))
         return cur;
+  return NULL;
+}
+
+Typedef *find_typedef(Analyze *state, char *def_name, int def_len) {
+  for (Typedef *cur = state->glb_typedefs; cur; cur = cur->next)
+    if (cur->len == def_len && !memcmp(def_name, cur->name, def_len))
+      return cur;
   return NULL;
 }
 
