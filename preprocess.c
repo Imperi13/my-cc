@@ -14,6 +14,7 @@ typedef int size_t;
 size_t strlen();
 int memcmp();
 void *calloc();
+void *memcpy();
 
 #endif
 
