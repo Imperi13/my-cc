@@ -31,8 +31,7 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
     return find_typedef(state, decl_spec->def_name, decl_spec->def_len)->type;
   } else
     error("empty type");
-  return 0;
-  // return NULL;
+  return NULL;
 }
 
 Type *gettype_declarator(Declarator *declarator, Type *base_type) {
@@ -150,10 +149,8 @@ int type_alignment(Type *type) {
 
 bool is_integer(Type *type) {
   if (type->kind == INT || type->kind == CHAR)
-    return 1;
-  // return true;
-  return 0;
-  // return false;
+    return true;
+  return false;
 }
 
 bool is_void_ptr(Type *type) {
@@ -162,20 +159,16 @@ bool is_void_ptr(Type *type) {
 
 bool is_primitive_type(Type *a) {
   if (a->kind == VOID || a->kind == CHAR || a->kind == INT || a->kind == BOOL)
-    return 1;
-  // return true;
+    return true;
   else
-    return 0;
-  // return false;
+    return false;
 }
 
 bool is_same_type(Type *a, Type *b) {
   if (a->kind != b->kind)
-    return 0;
-  // return false;
+    return false;
   else if (is_primitive_type(a))
-    return 1;
-  // return true;
+    return true;
   else if (a->kind == PTR)
     return is_same_type(a->ptr_to, b->ptr_to);
   else if (a->kind == ARRAY)
@@ -184,36 +177,28 @@ bool is_same_type(Type *a, Type *b) {
     return a->st_def == b->st_def;
   else if (a->kind == FUNC || b->kind == FUNC)
     error("type comp FUNC");
-  return 0;
-  // return false;
+  return false;
 }
 
 // Check if node b can be converted to type a
 bool is_compatible(Type *a, Tree *b) {
   if (is_same_type(a, b->type))
-    return 1;
-  // return true;
+    return true;
   else if (is_integer(a) && is_integer(b->type))
-    return 1;
-  // return true;
+    return true;
   else if(a->kind == BOOL && is_integer(b->type))
-    return 1;
-    //return true;
+    return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
-    return 1;
-  // return true;
+    return true;
 
   // TODO start 暗黙の型変換はanalyzeに載せたい
   else if (is_void_ptr(a) && b->type->kind == FUNC)
-    return 1;
-  // return true;
+    return true;
   // TODO end
 
   else if (a->kind == PTR && is_constexpr(b) && eval_constexpr(b) == 0)
-    return 1;
-  // return true;
+    return true;
 
-  return 0;
-  // return false;
+  return false;
 }

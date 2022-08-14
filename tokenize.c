@@ -30,10 +30,8 @@ int fprintf();
 bool equal(Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
-    return 0;
-  // return false;
-  return 1;
-  // return true;
+    return false;
+  return true;
 }
 
 bool equal_kind(Token *token, TokenKind kind) { return token->kind == kind; }
@@ -42,19 +40,16 @@ bool consume(Token **rest, Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len)) {
     *rest = token;
-    return 0;
-    // return false;
+    return false;
   }
   *rest = token->next;
-  return 1;
-  // return true;
+  return true;
 }
 
 Token *consume_kind(Token **rest, Token *token, TokenKind kind) {
   if (token->kind != kind) {
     *rest = token;
-    return 0;
-    // return NULL;
+    return NULL;
   }
   *rest = token->next;
   return token;
@@ -100,10 +95,8 @@ const char *variable_letters;
 bool is_alnum(char c) {
   for (const char *p = variable_letters; *p != '\0'; p++)
     if (*p == c)
-      return 1;
-  // return true;
-  return 0;
-  // return false;
+      return true;
+  return false;
 }
 
 char *skip_space(char *str, char c) {
@@ -112,8 +105,7 @@ char *skip_space(char *str, char c) {
 
   if (*str == c)
     return str;
-  return 0;
-  // return NULL;
+  return NULL;
 }
 
 int digit_base(char t, int base) {
@@ -210,8 +202,7 @@ StrLiteral *str_literals;
 
 Token *tokenize(char *p, char *filepath) {
   Token head;
-  // head.next = NULL;
-  head.next = 0;
+  head.next = NULL;
   Token *cur = &head;
 
   while (*p) {
@@ -482,8 +473,7 @@ Token *tokenize(char *p, char *filepath) {
 
 void debug_token(Token *token) {
   Token *cur = token;
-  while (cur != 0) {
-    // while (cur != NULL) {
+  while (cur != NULL) {
     fprintf(stderr, "kind:%d , len :%d , str: %.*s\n", cur->kind, cur->len,
             cur->len, cur->str);
     cur = cur->next;

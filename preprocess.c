@@ -56,10 +56,8 @@ DefineList *define_list;
 bool is_included(char *filepath) {
   for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
     if (strncmp(cur->filepath, filepath, strlen(filepath)) == 0)
-      return 1;
-  // return true;
-  return 0;
-  // return false;
+      return true;
+  return false;
 }
 
 // insert token sequence
@@ -80,8 +78,7 @@ DefineList *find_define(char *def_name, int def_len) {
   for (DefineList *cur = define_list; cur; cur = cur->next)
     if (cur->sym_len == def_len && !memcmp(def_name, cur->sym_name, def_len))
       return cur;
-  return 0;
-  // return NULL;
+  return NULL;
 }
 
 bool cmp_ident(Token *tok, const char *name) {
@@ -99,11 +96,9 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
   if (is_if_group(tok)) {
     process_if_group(post, pre, tok);
   } else if (cmp_ident(tok->next, "include")) {
-    process_include_line(0, pre, tok);
-    // process_include_line(NULL, pre, tok);
+    process_include_line(NULL, pre, tok);
   } else if (cmp_ident(tok->next, "define")) {
-    process_define_line(0, pre, tok);
-    // process_define_line(NULL,pre,tok);
+    process_define_line(NULL, pre, tok);
   } else if (cmp_ident(tok->next, "pragma")) {
     process_pragma_line(post, pre, tok);
   } else {
@@ -117,8 +112,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_IDENT);
 
     Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) != 0);
-    // bool cond = (find_define(cond_tok->str, cond_tok->len) != NULL);
+    bool cond = (find_define(cond_tok->str, cond_tok->len) != NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
@@ -141,8 +135,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_IDENT);
 
     Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) == 0);
-    // bool cond = (find_define(cond_tok->str, cond_tok->len) == NULL);
+    bool cond = (find_define(cond_tok->str, cond_tok->len) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     Token *dummy;

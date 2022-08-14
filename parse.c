@@ -80,8 +80,7 @@ Tree *parse_translation_unit(Token *tok) {
   Analyze *state = calloc(1, sizeof(Analyze));
 
   while (!at_eof(tok)) {
-    Tree *ex_decl = parse_external_decl(&tok, tok, state, 1);
-    // Tree *ex_decl = parse_external_decl(&tok, tok, state, true);
+    Tree *ex_decl = parse_external_decl(&tok, tok, state, true);
     cur->next = ex_decl;
     cur = ex_decl;
   }
@@ -154,57 +153,44 @@ bool is_declaration_specs(Token *tok, Analyze *state) {
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
   DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
-  bool parsed_type = 0;
-  // bool parsed_type = false;
+  bool parsed_type = false;
   while (1) {
     if (equal_kind(tok, TK_CONST)) {
       consume_kind(&tok, tok, TK_CONST);
-      decl_spec->has_const = 1;
-      // decl_spec->has_const = true;
+      decl_spec->has_const = true;
     } else if (equal_kind(tok, TK_EXTERN)) {
       consume_kind(&tok, tok, TK_EXTERN);
-      decl_spec->has_extern = 1;
-      // decl_spec->has_extern = true;
+      decl_spec->has_extern = true;
     } else if (equal_kind(tok, TK_STATIC)) {
       consume_kind(&tok, tok, TK_STATIC);
-      decl_spec->has_static = 1;
-      // decl_spec->has_static = true;
+      decl_spec->has_static = true;
     } else if (equal_kind(tok, TK_TYPEDEF)) {
       consume_kind(&tok, tok, TK_TYPEDEF);
-      decl_spec->has_typedef = 1;
-      // decl_spec->has_typedef = true;
+      decl_spec->has_typedef = true;
     } else if (equal_kind(tok, TK_INT)) {
       if (parsed_type)
         error("dup type");
-      decl_spec->has_int = 1;
-      // decl_spec->has_int = true;
+      decl_spec->has_int = true;
       consume_kind(&tok, tok, TK_INT);
-      parsed_type = 1;
-      // parsed_type = true;
+      parsed_type = true;
     } else if (equal_kind(tok, TK_CHAR)) {
       if (parsed_type)
         error("dup type");
-      decl_spec->has_char = 1;
-      // decl_spec->has_char = true;
+      decl_spec->has_char = true;
       consume_kind(&tok, tok, TK_CHAR);
-      parsed_type = 1;
-      // parsed_type = true;
+      parsed_type = true;
     } else if (equal_kind(tok, TK_VOID)) {
       if (parsed_type)
         error("dup type");
-      decl_spec->has_void = 1;
-      // decl_spec->has_void = true;
+      decl_spec->has_void = true;
       consume_kind(&tok, tok, TK_VOID);
-      parsed_type = 1;
-      // parsed_type = true;
+      parsed_type = true;
     } else if (equal_kind(tok, TK_BOOL)) {
       if (parsed_type)
         error("dup type");
-      decl_spec->has_bool = 1;
-      // decl_spec->has_bool = true;
+      decl_spec->has_bool = true;
       consume_kind(&tok, tok, TK_BOOL);
-      parsed_type = 1;
-      // parsed_type = true;
+      parsed_type = true;
     } else if (equal_kind(tok, TK_IDENT) &&
                find_typedef(state, tok->str, tok->len)) {
       if (parsed_type)
@@ -212,8 +198,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       decl_spec->def_name = tok->str;
       decl_spec->def_len = tok->len;
       consume_kind(&tok, tok, TK_IDENT);
-      parsed_type = 1;
-      // parsed_type = true;
+      parsed_type = true;
     } else if (equal_kind(tok, TK_STRUCT)) {
       if (parsed_type)
         error("dup type");
@@ -226,13 +211,11 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
         st_spec->st_len = st_ident->len;
 
         if (consume(&tok, tok, "{")) {
-          st_spec->has_decl = 1;
-          // st_spec->has_decl = true;
+          st_spec->has_decl = true;
           Tree *head = calloc(1, sizeof(Tree));
           Tree *cur = head;
           while (!consume(&tok, tok, "}")) {
-            cur->next = parse_external_decl(&tok, tok, state, 0);
-            // cur->next = parse_external_decl(&tok, tok, state, false);
+            cur->next = parse_external_decl(&tok, tok, state, false);
             cur = cur->next;
             consume(&tok, tok, ",");
           }
@@ -241,13 +224,11 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
         }
       } else {
         expect(&tok, tok, "{");
-        st_spec->has_decl = 1;
-        // st_spec->has_decl = true;
+        st_spec->has_decl = true;
         Tree *head = calloc(1, sizeof(Tree));
         Tree *cur = head;
         while (!consume(&tok, tok, "}")) {
-          cur->next = parse_external_decl(&tok, tok, state, 0);
-          // cur->next = parse_external_decl(&tok, tok, state, false);
+          cur->next = parse_external_decl(&tok, tok, state, false);
           cur = cur->next;
           consume(&tok, tok, ",");
         }
@@ -255,8 +236,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
         st_spec->members = head->next;
       }
 
-      parsed_type = 1;
-      // parsed_type = true;
+      parsed_type = true;
 
     } else if (equal_kind(tok, TK_ENUM)) {
       if (parsed_type)
@@ -274,8 +254,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
 
         if (equal(tok, "{")) {
           consume(&tok, tok, "{");
-          en_spec->has_decl = 1;
-          // en_spec->has_decl = true;
+          en_spec->has_decl = true;
 
           EnumVal *head = calloc(1, sizeof(EnumVal));
           EnumVal *cur = head;
@@ -297,8 +276,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
         not_implemented_at(tok->str);
       }
 
-      parsed_type = 1;
-      // parsed_type = true;
+      parsed_type = true;
     } else {
       break;
     }
@@ -381,8 +359,7 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
 
 bool is_type_name(Token *tok, Analyze *state) {
   if (!is_declaration_specs(tok, state))
-    return 0;
-  // return false;
+    return false;
   parse_declaration_specs(&tok, tok, state);
 
   return is_abstract_declarator(tok, state);
@@ -399,21 +376,18 @@ bool is_abstract_declarator(Token *tok, Analyze *state) {
   if (equal(tok, "[")) {
     while (consume(&tok, tok, "[")) {
       if (!equal_kind(tok, TK_NUM))
-        return 0;
-      // return false;
+        return false;
 
       consume_kind(&tok, tok, TK_NUM);
       if (!equal(tok, "]"))
-        return 0;
-      // return false;
+        return false;
       consume(&tok, tok, "]");
     }
   } else if (equal(tok, "(")) {
     not_implemented_at(tok->str);
   }
 
-  return 1;
-  // return true;
+  return true;
 }
 
 Tree *parse_type_name(Token **rest, Token *tok, Analyze *state) {
@@ -491,15 +465,13 @@ bool is_label_stmt(Token *tok) {
 }
 
 Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
-  Tree *node = 0;
-  // Tree *node = NULL;
+  Tree *node = NULL;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
     Token *label_tok = consume_kind(&tok, tok, TK_IDENT);
     consume(&tok, tok, ":");
 
     Tree *lhs = parse_stmt(&tok, tok, state);
-    Tree *node = new_binary_node(LABEL, lhs, 0);
-    // Tree *node = new_binary_node(LABEL, lhs, NULL);
+    Tree *node = new_binary_node(LABEL, lhs, NULL);
     node->label_name = label_tok->str;
     node->label_len = label_tok->len;
 
@@ -512,8 +484,7 @@ Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
     Tree *lhs = parse_stmt(&tok, tok, state);
 
     *rest = tok;
-    Tree *node = new_binary_node(CASE, lhs, 0);
-    // Tree *node = new_binary_node(CASE, lhs, NULL);
+    Tree *node = new_binary_node(CASE, lhs, NULL);
     node->case_num_node = expr;
 
     return node;
@@ -524,8 +495,7 @@ Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
     Tree *lhs = parse_stmt(&tok, tok, state);
 
     *rest = tok;
-    return new_binary_node(DEFAULT, lhs, 0);
-    // return new_binary_node(DEFAULT, lhs, NULL);
+    return new_binary_node(DEFAULT, lhs, NULL);
   }
   return node;
 }
@@ -536,8 +506,7 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *cur = head;
   while (!consume(&tok, tok, "}")) {
     if (is_declaration_specs(tok, state)) {
-      cur->next = parse_external_decl(&tok, tok, state, 0);
-      // cur->next = parse_external_decl(&tok, tok, state, false);
+      cur->next = parse_external_decl(&tok, tok, state, false);
       cur = cur->next;
     } else {
       cur->next = parse_stmt(&tok, tok, state);
@@ -592,8 +561,7 @@ bool is_iteration_stmt(Token *tok) {
 }
 
 Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state) {
-  Tree *node = 0;
-  // Tree *node = NULL;
+  Tree *node = NULL;
   if (equal_kind(tok, TK_WHILE)) {
     consume_kind(&tok, tok, TK_WHILE);
 
@@ -631,8 +599,7 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state) {
     // parse init
     if (!equal(tok, ";")) {
       if (is_declaration_specs(tok, state))
-        node->for_init = parse_external_decl(&tok, tok, state, 0);
-      // node->for_init = parse_external_decl(&tok, tok, state, false);
+        node->for_init = parse_external_decl(&tok, tok, state, false);
       else {
         node->for_init = parse_expr(&tok, tok, state);
         consume(&tok, tok, ";");
@@ -671,8 +638,7 @@ bool is_selection_stmt(Token *tok) {
 }
 
 Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state) {
-  Tree *node = 0;
-  // Tree *node = NULL;
+  Tree *node = NULL;
   if (equal_kind(tok, TK_IF)) {
     consume_kind(&tok, tok, TK_IF);
     expect(&tok, tok, "(");
@@ -998,8 +964,7 @@ Tree *parse_unary(Token **rest, Token *tok, Analyze *state) {
       Tree *typename = parse_type_name(&tok, tok, state);
       expect(&tok, tok, ")");
       *rest = tok;
-      return new_binary_node(SIZEOF, typename, 0);
-      // return new_binary_node(SIZEOF, typename, NULL);
+      return new_binary_node(SIZEOF, typename, NULL);
     } else {
       not_implemented_at(tok->str);
     }
@@ -1011,8 +976,7 @@ Tree *parse_unary(Token **rest, Token *tok, Analyze *state) {
     Tree *typename = parse_type_name(&tok, tok, state);
     expect(&tok, tok, ")");
     *rest = tok;
-    return new_binary_node(ALIGNOF, typename, 0);
-    // return new_binary_node(ALIGNOF, typename, NULL);
+    return new_binary_node(ALIGNOF, typename, NULL);
   }
 
   if (equal(tok, "++")) {
@@ -1105,8 +1069,7 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
       consume(&tok, tok, "]");
 
       Tree *add_node = new_binary_node(ADD, lhs, rhs);
-      lhs = new_binary_node(DEREF, add_node, 0);
-      // lhs = new_binary_node(DEREF, add_node, NULL);
+      lhs = new_binary_node(DEREF, add_node, NULL);
     } else if (equal(tok, "(")) {
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = FUNC_CALL;
@@ -1145,12 +1108,10 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
       lhs = node;
     } else if (equal(tok, "++")) {
       consume(&tok, tok, "++");
-      lhs = new_binary_node(POST_INCREMENT, lhs, 0);
-      // lhs = new_binary_node(POST_INCREMENT, lhs, NULL);
+      lhs = new_binary_node(POST_INCREMENT, lhs, NULL);
     } else if (equal(tok, "--")) {
       consume(&tok, tok, "--");
-      lhs = new_binary_node(POST_DECREMENT, lhs, 0);
-      // lhs = new_binary_node(POST_DECREMENT, lhs, NULL);
+      lhs = new_binary_node(POST_DECREMENT, lhs, NULL);
     } else {
       *rest = tok;
       return lhs;
