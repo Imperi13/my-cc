@@ -16,11 +16,11 @@ int main(int argc, char **argv) {
 
   filename = argv[1];
   user_input = read_file(argv[1]);
-  Token *token = tokenize(user_input);
+  Token *token = tokenize(user_input,filename);
 
   //debug_token(token);
 
-  token = preprocess(token,filename);
+  token = preprocess(token);
 
   //debug_token(token);
 

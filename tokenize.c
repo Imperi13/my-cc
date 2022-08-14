@@ -59,11 +59,13 @@ int expect_number(Token **rest, Token *token) {
 
 bool at_eof(Token *token) { return token->kind == TK_EOF; }
 
-Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
+Token *new_token(TokenKind kind, Token *cur, char *str, int len,
+                 char *filepath) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
   tok->str = str;
   tok->len = len;
+  tok->filepath = filepath;
   cur->next = tok;
   return tok;
 }
@@ -175,7 +177,7 @@ char consume_char(char **rest, char *p) {
 
 StrLiteral *str_literals = NULL;
 
-Token *tokenize(char *p) {
+Token *tokenize(char *p, char *filepath) {
   Token head;
   head.next = NULL;
   Token *cur = &head;
@@ -187,7 +189,7 @@ Token *tokenize(char *p) {
     }
 
     if (*p == '\n') {
-      cur = new_token(TK_NEWLINE, cur, p, 1);
+      cur = new_token(TK_NEWLINE, cur, p, 1, filepath);
       p++;
       continue;
     }
@@ -200,7 +202,7 @@ Token *tokenize(char *p) {
         error_at(p, "not find '");
       p++;
 
-      cur = new_token(TK_NUM, cur, tok_start, p - tok_start);
+      cur = new_token(TK_NUM, cur, tok_start, p - tok_start, filepath);
       cur->val = val;
       continue;
     }
@@ -235,7 +237,8 @@ Token *tokenize(char *p) {
         str_literals = push_literal;
       }
 
-      Token *tmp = new_token(TK_STR, cur, tok_start, str_cur - tok_start + 1);
+      Token *tmp =
+          new_token(TK_STR, cur, tok_start, str_cur - tok_start + 1, filepath);
       tmp->str_literal = push_literal;
 
       p = str_cur + 1;
@@ -259,7 +262,7 @@ Token *tokenize(char *p) {
     }
 
     if (strncmp(p, "<<=", 3) == 0 || strncmp(p, ">>=", 3) == 0) {
-      cur = new_token(TK_RESERVED, cur, p, 3);
+      cur = new_token(TK_RESERVED, cur, p, 3, filepath);
       p += 3;
       continue;
     }
@@ -274,160 +277,160 @@ Token *tokenize(char *p) {
         strncmp(p, "<<", 2) == 0 || strncmp(p, ">>", 2) == 0 ||
         strncmp(p, "&&", 2) == 0 || strncmp(p, "||", 2) == 0 ||
         strncmp(p, "->", 2) == 0 || strncmp(p, "##", 2) == 0) {
-      cur = new_token(TK_RESERVED, cur, p, 2);
+      cur = new_token(TK_RESERVED, cur, p, 2, filepath);
       p += 2;
       continue;
     }
 
     if (strchr("+-*/|&!~^%:?.,;=(){}[]<>#", *p)) {
-      cur = new_token(TK_RESERVED, cur, p, 1);
+      cur = new_token(TK_RESERVED, cur, p, 1, filepath);
       p++;
       continue;
     }
 
     if (isdigit(*p)) {
       char *prev = p;
-      cur = new_token(TK_NUM, cur, p, 1);
+      cur = new_token(TK_NUM, cur, p, 1, filepath);
       cur->val = num_literal(p, &p);
       cur->len = p - prev;
       continue;
     }
 
     if (strncmp(p, "typedef", 7) == 0 && !is_alnum(p[7])) {
-      cur = new_token(TK_TYPEDEF, cur, p, 7);
+      cur = new_token(TK_TYPEDEF, cur, p, 7, filepath);
       p += 7;
       continue;
     }
 
     if (strncmp(p, "return", 6) == 0 && !is_alnum(p[6])) {
-      cur = new_token(TK_RETURN, cur, p, 6);
+      cur = new_token(TK_RETURN, cur, p, 6, filepath);
       p += 6;
       continue;
     }
 
     if (strncmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])) {
-      cur = new_token(TK_SIZEOF, cur, p, 6);
+      cur = new_token(TK_SIZEOF, cur, p, 6, filepath);
       p += 6;
       continue;
     }
 
     if (strncmp(p, "_Alignof", 8) == 0 && !is_alnum(p[8])) {
-      cur = new_token(TK_ALIGNOF, cur, p, 8);
+      cur = new_token(TK_ALIGNOF, cur, p, 8, filepath);
       p += 8;
       continue;
     }
 
     if (strncmp(p, "struct", 6) == 0 && !is_alnum(p[6])) {
-      cur = new_token(TK_STRUCT, cur, p, 6);
+      cur = new_token(TK_STRUCT, cur, p, 6, filepath);
       p += 6;
       continue;
     }
 
     if (strncmp(p, "enum", 4) == 0 && !is_alnum(p[4])) {
-      cur = new_token(TK_ENUM, cur, p, 4);
+      cur = new_token(TK_ENUM, cur, p, 4, filepath);
       p += 4;
       continue;
     }
 
     if (strncmp(p, "switch", 6) == 0 && !is_alnum(p[6])) {
-      cur = new_token(TK_SWITCH, cur, p, 6);
+      cur = new_token(TK_SWITCH, cur, p, 6, filepath);
       p += 6;
       continue;
     }
 
     if (strncmp(p, "if", 2) == 0 && !is_alnum(p[2])) {
-      cur = new_token(TK_IF, cur, p, 2);
+      cur = new_token(TK_IF, cur, p, 2, filepath);
       p += 2;
       continue;
     }
 
     if (strncmp(p, "else", 4) == 0 && !is_alnum(p[4])) {
-      cur = new_token(TK_ELSE, cur, p, 4);
+      cur = new_token(TK_ELSE, cur, p, 4, filepath);
       p += 4;
       continue;
     }
 
     if (strncmp(p, "do", 2) == 0 && !is_alnum(p[2])) {
-      cur = new_token(TK_DO, cur, p, 2);
+      cur = new_token(TK_DO, cur, p, 2, filepath);
       p += 2;
       continue;
     }
 
     if (strncmp(p, "while", 5) == 0 && !is_alnum(p[5])) {
-      cur = new_token(TK_WHILE, cur, p, 5);
+      cur = new_token(TK_WHILE, cur, p, 5, filepath);
       p += 5;
       continue;
     }
 
     if (strncmp(p, "for", 3) == 0 && !is_alnum(p[3])) {
-      cur = new_token(TK_FOR, cur, p, 3);
+      cur = new_token(TK_FOR, cur, p, 3, filepath);
       p += 3;
       continue;
     }
 
     if (strncmp(p, "break", 5) == 0 && !is_alnum(p[5])) {
-      cur = new_token(TK_BREAK, cur, p, 5);
+      cur = new_token(TK_BREAK, cur, p, 5, filepath);
       p += 5;
       continue;
     }
 
     if (strncmp(p, "continue", 8) == 0 && !is_alnum(p[8])) {
-      cur = new_token(TK_CONTINUE, cur, p, 8);
+      cur = new_token(TK_CONTINUE, cur, p, 8, filepath);
       p += 8;
       continue;
     }
 
     if (strncmp(p, "default", 7) == 0 && !is_alnum(p[7])) {
-      cur = new_token(TK_DEFAULT, cur, p, 7);
+      cur = new_token(TK_DEFAULT, cur, p, 7, filepath);
       p += 7;
       continue;
     }
 
     if (strncmp(p, "case", 4) == 0 && !is_alnum(p[4])) {
-      cur = new_token(TK_CASE, cur, p, 4);
+      cur = new_token(TK_CASE, cur, p, 4, filepath);
       p += 4;
       continue;
     }
 
     if (strncmp(p, "const", 5) == 0 && !is_alnum(p[5])) {
-      cur = new_token(TK_CONST, cur, p, 5);
+      cur = new_token(TK_CONST, cur, p, 5, filepath);
       p += 5;
       continue;
     }
 
     if (strncmp(p, "extern", 6) == 0 && !is_alnum(p[6])) {
-      cur = new_token(TK_EXTERN, cur, p, 6);
+      cur = new_token(TK_EXTERN, cur, p, 6, filepath);
       p += 6;
       continue;
     }
 
     if (strncmp(p, "static", 6) == 0 && !is_alnum(p[6])) {
-      cur = new_token(TK_STATIC, cur, p, 6);
+      cur = new_token(TK_STATIC, cur, p, 6, filepath);
       p += 6;
       continue;
     }
 
     if (strncmp(p, "void", 4) == 0 && !is_alnum(p[4])) {
-      cur = new_token(TK_VOID, cur, p, 4);
+      cur = new_token(TK_VOID, cur, p, 4, filepath);
       p += 4;
       continue;
     }
 
     if (strncmp(p, "int", 3) == 0 && !is_alnum(p[3])) {
-      cur = new_token(TK_INT, cur, p, 3);
+      cur = new_token(TK_INT, cur, p, 3, filepath);
       p += 3;
       continue;
     }
 
     if (strncmp(p, "char", 4) == 0 && !is_alnum(p[4])) {
-      cur = new_token(TK_CHAR, cur, p, 4);
+      cur = new_token(TK_CHAR, cur, p, 4, filepath);
       p += 4;
       continue;
     }
 
     if (strspn(p, variable_letters) > 0) {
       int len = strspn(p, variable_letters);
-      cur = new_token(TK_IDENT, cur, p, len);
+      cur = new_token(TK_IDENT, cur, p, len, filepath);
       p += len;
       continue;
     }
@@ -435,7 +438,7 @@ Token *tokenize(char *p) {
     error_at(p, "cannot tokenize");
   }
 
-  new_token(TK_EOF, cur, p, 0);
+  new_token(TK_EOF, cur, p, 0, filepath);
   return head.next;
 }
 

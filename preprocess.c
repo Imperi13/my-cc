@@ -135,7 +135,7 @@ void process_text_line(Token **post, Token **pre, Token *tok) {
   *pre = tok->next;
 }
 
-Token *preprocess(Token *tok, char *filepath) {
+Token *preprocess(Token *tok) {
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
 
@@ -147,6 +147,6 @@ Token *preprocess(Token *tok, char *filepath) {
     }
   }
 
-  cur = new_token(TK_EOF, cur, NULL, 0);
+  cur->next = tok;
   return head->next;
 }

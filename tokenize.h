@@ -43,6 +43,8 @@ struct Token {
   char *str;
   int len;
 
+  char *filepath;
+
   // for str-literal
   StrLiteral *str_literal;
 };
@@ -72,7 +74,6 @@ bool at_eof(Token *token);
 
 bool is_alnum(char c);
 
-Token *tokenize(char *p);
-Token *new_token(TokenKind kind,Token *cur,char *str,int len);
+Token *tokenize(char *p,char *filepath);
 
 void debug_token(Token *token);

@@ -14,4 +14,4 @@ struct Define {
   Define *next;
 };
 
-Token *preprocess(Token *tok,char *filepath);
+Token *preprocess(Token *tok);
