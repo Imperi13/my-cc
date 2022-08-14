@@ -677,6 +677,31 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = newtype_ptr(type_char);
   } else if (ast->kind == VAR) {
 
+    // predefined ident
+    if (!memcmp(ast->var_name, "__func__", 8)) {
+
+      // make str-literal for func-name
+      StrLiteral *func_name = calloc(1, sizeof(StrLiteral));
+      func_name->str = calloc(state->current_func->obj_len + 1, sizeof(char));
+      func_name->len = state->current_func->obj_len;
+      memcpy(func_name->str, state->current_func->obj_name, func_name->len);
+
+      if (!str_literals) {
+        func_name->id = 0;
+        str_literals = func_name;
+      } else {
+        func_name->id = str_literals->id + 1;
+        func_name->next = str_literals;
+        str_literals = func_name;
+      }
+
+      // replace ast type
+      ast->kind = STR;
+      ast->str_literal = func_name;
+      ast->type = newtype_ptr(type_char);
+      return;
+    }
+
     EnumVal *en_val =
         find_enum_val(state->glb_endefs, ast->var_name, ast->var_len);
     if (en_val) {

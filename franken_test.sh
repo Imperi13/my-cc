@@ -1,6 +1,6 @@
 #!/bin/bash
 
-compile="file.c main.c"
+compile="file.c main.c type.c"
 
 rm -f ./build/*
 
@@ -20,8 +20,14 @@ rm *.o
 for filepath in ${compile}; do
   ./build/mycc1 ${filepath} > ./build/${filepath%.c}1.s;
   if [ $? -ne 0 ]; then { exit 1; }; fi
+
+  echo "${filepath%.c}1.c is compiled"
+
   ./build/mycc2 ${filepath} > ./build/${filepath%.c}2.s;
   if [ $? -ne 0 ]; then { exit 1; }; fi
+
+  echo "${filepath%.c}2.c is compiled"
+
   diff ./build/${filepath%.c}1.s ./build/${filepath%.c}2.s;
   if [ $? -ne 0 ]; then { echo "FAIL";exit 1; }; else echo "PASS"; fi
 done

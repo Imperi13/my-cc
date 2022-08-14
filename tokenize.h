@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #ifndef __STDC__
-typedef int bool;
+typedef char bool;
 #endif
 
 typedef enum TokenKind {
