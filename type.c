@@ -21,6 +21,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
     return type_char;
   } else if (decl_spec->has_void) {
     return type_void;
+  } else if (decl_spec->has_bool) {
+    return type_bool;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->en_def) {
@@ -111,6 +113,8 @@ int type_size(Type *type) {
     return 4;
   else if (type->kind == CHAR)
     return 1;
+  else if (type->kind == BOOL)
+    return 1;
   else if (type->kind == PTR)
     return 8;
   else if (type->kind == ARRAY)
@@ -128,6 +132,8 @@ int type_alignment(Type *type) {
   if (type->kind == INT)
     return 4;
   else if (type->kind == CHAR)
+    return 1;
+  else if (type->kind == BOOL)
     return 1;
   else if (type->kind == PTR)
     return 8;
@@ -155,7 +161,7 @@ bool is_void_ptr(Type *type) {
 }
 
 bool is_primitive_type(Type *a) {
-  if (a->kind == VOID || a->kind == CHAR || a->kind == INT)
+  if (a->kind == VOID || a->kind == CHAR || a->kind == INT || a->kind == BOOL)
     return 1;
   // return true;
   else
@@ -190,6 +196,9 @@ bool is_compatible(Type *a, Tree *b) {
   else if (is_integer(a) && is_integer(b->type))
     return 1;
   // return true;
+  else if(a->kind == BOOL && is_integer(b->type))
+    return 1;
+    //return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
     return 1;

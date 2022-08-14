@@ -209,7 +209,7 @@ StrLiteral *str_literals;
 
 Token *tokenize(char *p, char *filepath) {
   Token head;
-  //head.next = NULL;
+  // head.next = NULL;
   head.next = 0;
   Token *cur = &head;
 
@@ -324,6 +324,12 @@ Token *tokenize(char *p, char *filepath) {
       cur = new_token(TK_NUM, cur, p, 1, filepath);
       cur->val = num_literal(p, &p);
       cur->len = p - prev;
+      continue;
+    }
+
+    if (strncmp(p, "_Bool", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_BOOL, cur, p, 5, filepath);
+      p += 5;
       continue;
     }
 
@@ -475,8 +481,8 @@ Token *tokenize(char *p, char *filepath) {
 
 void debug_token(Token *token) {
   Token *cur = token;
-  while(cur!=0){
-  //while (cur != NULL) {
+  while (cur != 0) {
+    // while (cur != NULL) {
     fprintf(stderr, "kind:%d , len :%d , str: %.*s\n", cur->kind, cur->len,
             cur->len, cur->str);
     cur = cur->next;

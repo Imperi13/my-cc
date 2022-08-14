@@ -4,6 +4,7 @@ typedef enum TypeKind {
   VOID,
   INT,
   CHAR,
+  BOOL,
   PTR,
   STRUCT,
   FUNC,
@@ -37,6 +38,7 @@ struct Type {
 extern Type *type_void;
 extern Type *type_int;
 extern Type *type_char;
+extern Type *type_bool;
 
 Type *gettype_decl_spec(DeclSpec *decl_spec,Analyze *state);
 Type *gettype_declarator(Declarator *declarator, Type *base_type);

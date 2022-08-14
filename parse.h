@@ -168,6 +168,7 @@ struct DeclSpec {
   bool has_void;
   bool has_int;
   bool has_char;
+  bool has_bool;
   StructSpec *st_spec;
   StructDef *st_def;
   EnumSpec *en_spec;

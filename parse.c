@@ -140,7 +140,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 
 bool is_declaration_specs(Token *tok, Analyze *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
-         equal_kind(tok, TK_VOID) || equal_kind(tok, TK_STRUCT) ||
+         equal_kind(tok, TK_VOID) || equal_kind(tok,TK_BOOL) ||equal_kind(tok, TK_STRUCT) ||
          equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
          equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC) ||
          equal_kind(tok, TK_TYPEDEF) ||
@@ -190,6 +190,14 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       decl_spec->has_void = 1;
       //decl_spec->has_void = true;
       consume_kind(&tok, tok, TK_VOID);
+      parsed_type = 1;
+      //parsed_type = true;
+    }else if(equal_kind(tok,TK_BOOL)) {
+      if(parsed_type)
+        error("dup type");
+      decl_spec->has_bool = 1;
+      //decl_spec->has_bool = true;
+      consume_kind(&tok,tok,TK_BOOL);
       parsed_type = 1;
       //parsed_type = true;
     } else if (equal_kind(tok, TK_IDENT) &&

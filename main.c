@@ -19,6 +19,7 @@ char *user_input;
 Type *type_void;
 Type *type_int;
 Type *type_char;
+Type *type_bool;
 
 // for avoiding global-var init
 void init() {
@@ -28,6 +29,8 @@ void init() {
   type_int->kind = INT;
   type_char = calloc(1, sizeof(Type));
   type_char->kind = CHAR;
+  type_bool = calloc(1,sizeof(Type));
+  type_bool->kind = BOOL;
 
   
   variable_letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";

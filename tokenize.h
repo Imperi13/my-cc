@@ -27,6 +27,7 @@ typedef enum TokenKind {
   TK_VOID,
   TK_INT,
   TK_CHAR,
+  TK_BOOL,
   TK_CONST,
   TK_EXTERN,
   TK_STATIC,
