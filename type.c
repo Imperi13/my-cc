@@ -7,9 +7,6 @@
 #include "parse.h"
 #include "type.h"
 
-Type *type_void = &(Type){.kind = VOID};
-Type *type_int = &(Type){.kind = INT};
-Type *type_char = &(Type){.kind = CHAR};
 
 Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
   if (decl_spec->has_int) {
