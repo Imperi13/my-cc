@@ -222,16 +222,23 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   new_def->sym_name = sym_tok->str;
   new_def->sym_len = sym_tok->len;
 
-  if (equal_kind(tok, TK_NEWLINE)) {
-    consume_kind(&tok, tok, TK_NEWLINE);
+  Token *head = calloc(1, sizeof(Token));
+  Token *cur = head;
 
-    new_def->next = define_list;
-    define_list = new_def;
+  while (expand_define(&tok, tok), tok->kind != TK_NEWLINE) {
+    cur->next = tok;
+    cur = cur->next;
 
-    *pre = tok;
-  } else {
-    not_implemented_at(tok->str);
+    tok = tok->next;
   }
+
+  new_def->start = head->next;
+
+  new_def->next = define_list;
+  define_list = new_def;
+
+  expect_kind(&tok, tok, TK_NEWLINE);
+  *pre = tok;
 }
 
 // 先頭tokenが展開できなくなるまで繰り返す
