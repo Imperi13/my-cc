@@ -385,7 +385,9 @@ run_test 314 'int main(void){int *p = 0; return (!p)*174; }' 174
 run_test 315 'int main(void){int q; int *p = &q; return (1+!p)*174;}' 174
 
 run_test pp_1 'int main(){\n#ifdef TEST\nreturn 170;\n#endif\nreturn 174;}' 174
-run_test pp_1 'int main(){\n#ifndef TEST\nreturn 174;\n#endif\n}' 174
+run_test pp_2 'int main(){\n#ifndef TEST\nreturn 174;\n#endif\n}' 174
+
+run_test pp_3 '#define TEST\n int main() { int TEST test; test = 174; return test;}' 174
 
 run_test typedef_1 'typedef int TEST; TEST main(){return 174;}' 174
 run_test typedef_2 'typedef struct A TEST; int main(){ TEST *p; return 174;}' 174
