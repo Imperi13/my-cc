@@ -3,15 +3,49 @@
 #include <string.h>
 
 #include "error.h"
+#include "file.h"
 #include "preprocess.h"
 #include "tokenize.h"
 
 static void process_macro_group(Token **post, Token **pre, Token *tok);
 static void process_if_group(Token **post, Token **pre, Token *tok);
 static void process_include_line(Token **post, Token **pre, Token *tok);
+static void process_pragma_line(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
 
+static void consume_line(Token **pre, Token *tok);
+
+typedef struct PragmaOnceList PragmaOnceList;
+struct PragmaOnceList {
+  char *filepath;
+
+  // for linked-list
+  PragmaOnceList *next;
+};
+
 Define *define_list;
+PragmaOnceList *pragma_list;
+
+bool is_included(char *filepath) {
+  for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
+    if (strncmp(cur->filepath, filepath, strlen(filepath)) == 0)
+      return true;
+  return false;
+}
+
+// insert token sequence
+// dst -> dst_next , src -> ... -> src_end -> TK_EOF
+// dst -> src -> ... -> src_end -> dst_next
+void insert_token_seq(Token *dst, Token *src) {
+  Token *dst_next = dst->next;
+
+  Token *cur = src;
+  while (cur->next->kind != TK_EOF)
+    cur = cur->next;
+
+  dst->next = src;
+  cur->next = dst_next;
+}
 
 Define *find_define(char *def_name, int def_len) {
   for (Define *cur = define_list; cur; cur = cur->next)
@@ -35,9 +69,9 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
   if (is_if_group(tok)) {
     process_if_group(post, pre, tok);
   } else if (cmp_ident(tok->next, "include")) {
-    // ignore include
-    warn_at(tok->str, "ignore include");
     process_include_line(NULL, pre, tok);
+  } else if (cmp_ident(tok->next, "pragma")) {
+    process_pragma_line(post, pre, tok);
   } else {
     not_implemented_at(tok->str);
   }
@@ -53,10 +87,14 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_NEWLINE);
 
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
-      if (equal(tok, "#"))
-        process_macro_group((cond ? post : NULL), &tok, tok);
-      else
-        process_text_line((cond ? post : NULL), &tok, tok);
+      if (cond) {
+        if (equal(tok, "#"))
+          process_macro_group(post, &tok, tok);
+        else
+          process_text_line(post, &tok, tok);
+      } else {
+        consume_line(&tok, tok);
+      }
     }
 
     expect(&tok, tok, "#");
@@ -72,8 +110,15 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_NEWLINE);
 
     Token *dummy;
-    while (!equal(tok, "#")) {
-      process_text_line((cond ? post : NULL), &tok, tok);
+    while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+      if (cond) {
+        if (equal(tok, "#"))
+          process_macro_group(post, &tok, tok);
+        else
+          process_text_line(post, &tok, tok);
+      } else {
+        consume_line(&tok, tok);
+      }
     }
 
     expect(&tok, tok, "#");
@@ -98,6 +143,8 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
     not_implemented_at(tok->str);
 
   if (equal(tok, "<")) {
+    // ignore include
+    warn_at(tok->str, "ignore include");
     consume(&tok, tok, "<");
 
     while (!equal(tok, ">")) {
@@ -109,13 +156,42 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
 
     *pre = tok;
   } else if (equal_kind(tok, TK_STR)) {
-    consume_kind(&tok, tok, TK_STR);
+    Token *file = consume_kind(&tok, tok, TK_STR);
+    char *filepath = file->str_literal->str;
+
+    if (!is_included(filepath)) {
+      char *buf = read_file(filepath);
+      Token *inc_tok = tokenize(buf, filepath);
+
+      insert_token_seq(tok, inc_tok);
+    }
 
     expect_kind(&tok, tok, TK_NEWLINE);
 
     *pre = tok;
   } else {
     not_implemented(__func__);
+  }
+}
+
+void process_pragma_line(Token **post, Token **pre, Token *tok) {
+  expect(&tok, tok, "#");
+  if (!cmp_ident(tok, "pragma"))
+    error_at(tok->str, "this line is not pragma line");
+  expect_kind(&tok, tok, TK_IDENT);
+
+  if (cmp_ident(tok, "once")) {
+    expect_kind(&tok, tok, TK_IDENT);
+
+    PragmaOnceList *pragma = calloc(1, sizeof(PragmaOnceList));
+    pragma->filepath = tok->filepath;
+    pragma->next = pragma_list;
+    pragma_list = pragma;
+
+    expect_kind(&tok, tok, TK_NEWLINE);
+    *pre = tok;
+  } else {
+    not_implemented_at(tok->str);
   }
 }
 
@@ -132,6 +208,12 @@ void process_text_line(Token **post, Token **pre, Token *tok) {
   }
 
   // skip TK_NEWLINE
+  *pre = tok->next;
+}
+
+void consume_line(Token **pre, Token *tok) {
+  while (tok->kind != TK_NEWLINE)
+    tok = tok->next;
   *pre = tok->next;
 }
 

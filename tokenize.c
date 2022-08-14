@@ -70,7 +70,7 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len,
   return tok;
 }
 
-const char variable_letters[] =
+const char *variable_letters =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
 Token *dummy_token = &(Token){};
@@ -211,19 +211,19 @@ Token *tokenize(char *p, char *filepath) {
       char *tok_start = p;
       char *str_cur = tok_start + 1;
       int len = 0;
-      while (*str_cur != '\"') {
+      while (*str_cur != '"') {
         len++;
         consume_char(&str_cur, str_cur);
       }
 
       StrLiteral *push_literal = calloc(1, sizeof(StrLiteral));
-      char *str = malloc(len + 1);
+      char *str = calloc(len + 1, sizeof(char));
       push_literal->str = str;
       push_literal->len = len;
 
       str_cur = tok_start + 1;
       int i = 0;
-      while (*str_cur != '\"') {
+      while (*str_cur != '"') {
         str[i] = consume_char(&str_cur, str_cur);
         i++;
       }

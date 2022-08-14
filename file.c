@@ -1,5 +1,4 @@
 
-#ifdef __STDC__
 
 #include <errno.h>
 #include <stdio.h>
@@ -8,8 +7,6 @@
 
 #include "file.h"
 #include "error.h"
-
-#endif
 
 #ifndef __STDC__
 typedef struct _IO_FILE FILE;
@@ -22,7 +19,6 @@ void *calloc();
 size_t fread();
 int fclose();
 
-void error();
 #endif
 
 char *read_file(char *path) {

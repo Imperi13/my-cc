@@ -2,7 +2,11 @@
 
 #include <stdbool.h>
 
-typedef enum {
+#ifndef __STDC__
+typedef int bool;
+#endif
+
+typedef enum TokenKind {
   TK_RESERVED,
   TK_RETURN,
   TK_SIZEOF,
@@ -58,7 +62,7 @@ struct StrLiteral {
   StrLiteral *next;
 };
 
-extern const char variable_letters[];
+extern const char *variable_letters;
 extern Token *dummy_token;
 
 extern StrLiteral *str_literals;
