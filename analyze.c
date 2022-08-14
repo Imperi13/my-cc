@@ -7,6 +7,16 @@
 #include "parse.h"
 #include "type.h"
 
+#ifndef __STDC__
+
+void *calloc();
+typedef int size_t;
+size_t strlen();
+int memcmp();
+void *memcpy();
+
+#endif
+
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
@@ -46,7 +56,8 @@ void analyze_translation_unit(Tree *ast) {
 void analyze_external_decl(Tree *ast, Analyze *state) {
   if (ast->kind == FUNC_DEF) {
 
-    analyze_decl_spec(ast->decl_specs, state, true);
+    analyze_decl_spec(ast->decl_specs, state, 1);
+    //analyze_decl_spec(ast->decl_specs, state, true);
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type);
@@ -60,8 +71,10 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     func->type = obj_type;
     func->stack_size = 0;
     func->locals = calloc(1, sizeof(ObjScope));
-    func->is_defined = true;
-    func->is_global = true;
+    func->is_defined = 1;
+    //func->is_defined = true;
+    func->is_global = 1;
+    //func->is_global = true;
 
     state->current_func = func;
     func->next = state->glb_objs;
@@ -79,7 +92,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == DECLARATION) {
 
-    analyze_decl_spec(ast->decl_specs, state, true);
+    analyze_decl_spec(ast->decl_specs, state, 1);
+    //analyze_decl_spec(ast->decl_specs, state, true);
 
     if (!ast->declarator) {
       return;
@@ -107,10 +121,12 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       obj->obj_name = obj_name;
       obj->obj_len = strlen(obj_name);
       obj->type = obj_type;
-      obj->is_global = true;
+      obj->is_global = 1;
+      //obj->is_global = true;
 
       if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
-        obj->is_defined = true;
+        obj->is_defined = 1;
+        //obj->is_defined = true;
 
       obj->next = state->glb_objs;
       state->glb_objs = obj;
@@ -147,7 +163,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       error("redifine struct");
 
     if (decl_spec->st_spec->has_decl) {
-      st_defs->is_defined = true;
+      st_defs->is_defined = 1;
+      //st_defs->is_defined = true;
       st_defs->size = 0;
       st_defs->alignment = 1;
 
@@ -157,7 +174,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       while (cur) {
         Member *mem = calloc(1, sizeof(Member));
 
-        analyze_decl_spec(cur->decl_specs, state, false);
+        analyze_decl_spec(cur->decl_specs, state, 0);
+        //analyze_decl_spec(cur->decl_specs, state, false);
         Type *obj_type = gettype_decl_spec(cur->decl_specs, state);
         obj_type = gettype_declarator(cur->declarator, obj_type);
 
@@ -210,7 +228,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       error("redifine enum");
 
     if (decl_spec->en_spec->has_decl) {
-      en_def->is_defined = true;
+      en_def->is_defined = 1;
+      //en_def->is_defined = true;
 
       en_def->members = decl_spec->en_spec->members;
       int val = 0;
@@ -227,7 +246,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 void analyze_parameter(Tree *ast, Analyze *state) {
   if (ast->kind == DECLARATION) {
 
-    analyze_decl_spec(ast->decl_specs, state, false);
+    analyze_decl_spec(ast->decl_specs, state, 0);
+    //analyze_decl_spec(ast->decl_specs, state, false);
 
     if (!ast->declarator) {
       return;
@@ -276,7 +296,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_lvar_scope(&state->current_func->locals);
   } else if (ast->kind == DECLARATION) {
 
-    analyze_decl_spec(ast->decl_specs, state, false);
+    analyze_decl_spec(ast->decl_specs, state, 0);
+    //analyze_decl_spec(ast->decl_specs, state, false);
 
     if (!ast->declarator) {
       return;
@@ -330,7 +351,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (state->switch_stmts->switch_node->has_default)
       error("already exist default");
 
-    state->switch_stmts->switch_node->has_default = true;
+    state->switch_stmts->switch_node->has_default = 1;
+    //state->switch_stmts->switch_node->has_default = true;
     ast->label_number = state->switch_stmts->switch_node->label_number;
 
     analyze_stmt(ast->lhs, state);
@@ -608,7 +630,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = ast->lhs->type;
   } else if (ast->kind == SIZEOF) {
     if (ast->lhs->kind == TYPE_NAME) {
-      analyze_decl_spec(ast->lhs->decl_specs, state, false);
+      analyze_decl_spec(ast->lhs->decl_specs, state, 0);
+      //analyze_decl_spec(ast->lhs->decl_specs, state, false);
       Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
       base_type = gettype_declarator(ast->lhs->declarator, base_type);
 
@@ -620,7 +643,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       not_implemented("sizeof expr");
     }
   } else if (ast->kind == ALIGNOF) {
-    analyze_decl_spec(ast->lhs->decl_specs, state, false);
+    analyze_decl_spec(ast->lhs->decl_specs, state, 0);
+    //analyze_decl_spec(ast->lhs->decl_specs, state, false);
     Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
     base_type = gettype_declarator(ast->lhs->declarator, base_type);
 
@@ -747,14 +771,16 @@ Obj *find_lvar(ObjScope *locals, char *lvar_name, int lvar_len) {
       if (cur->obj_len == lvar_len &&
           !memcmp(lvar_name, cur->obj_name, lvar_len))
         return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 Obj *find_global(Obj *globals, char *var_name, int var_len) {
   for (Obj *cur = globals; cur; cur = cur->next)
     if (cur->obj_len == var_len && !memcmp(var_name, cur->obj_name, var_len))
       return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 void push_label(LabelScope **lscope, int label_number) {
@@ -785,7 +811,8 @@ StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len) {
   for (StructDef *cur = st_defs; cur; cur = cur->next)
     if (cur->st_len == st_len && !memcmp(st_name, cur->st_name, st_len))
       return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 Member *find_member(StructDef *st_def, char *mem_name, int mem_len) {
@@ -793,14 +820,16 @@ Member *find_member(StructDef *st_def, char *mem_name, int mem_len) {
     if (cur->member_len == mem_len &&
         !memcmp(mem_name, cur->member_name, mem_len))
       return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 EnumDef *find_enum(EnumDef *en_defs, char *en_name, int en_len) {
   for (EnumDef *cur = en_defs; cur; cur = cur->next)
     if (cur->en_len == en_len && !memcmp(en_name, cur->en_name, en_len))
       return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
@@ -808,21 +837,25 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
     for (EnumVal *cur = cur_def->members; cur; cur = cur->next)
       if (cur->len == len && !memcmp(name, cur->name, len))
         return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 Typedef *find_typedef(Analyze *state, char *def_name, int def_len) {
   for (Typedef *cur = state->glb_typedefs; cur; cur = cur->next)
     if (cur->len == def_len && !memcmp(def_name, cur->name, def_len))
       return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 bool is_constexpr(Tree *expr) {
   if (expr->kind == NUM)
-    return true;
+    return 1;
+    //return true;
   else
-    return false;
+    return 0;
+    //return false;
 }
 
 int eval_constexpr(Tree *expr) {
