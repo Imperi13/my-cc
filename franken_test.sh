@@ -1,6 +1,6 @@
 #!/bin/bash
 
-compile="file.c main.c type.c"
+compile="file.c main.c type.c tokenize.c"
 
 rm -f ./build/*
 

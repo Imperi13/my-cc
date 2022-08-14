@@ -27,6 +27,10 @@ void init() {
   type_int->kind = INT;
   type_char = calloc(1, sizeof(Type));
   type_char->kind = CHAR;
+
+  
+  variable_letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+  str_literals = 0;
 }
 
 int main(int argc, char **argv) {

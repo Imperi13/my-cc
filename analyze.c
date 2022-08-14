@@ -717,7 +717,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (!var) {
       var = find_global(state->glb_objs, ast->var_name, ast->var_len);
       if (!var)
-        error("cannot find var");
+        error("cannot find var: %.*s",ast->var_len,ast->var_name);
     }
 
     ast->var_obj = var;

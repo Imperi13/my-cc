@@ -63,7 +63,6 @@ struct StrLiteral {
 };
 
 extern const char *variable_letters;
-extern Token *dummy_token;
 
 extern StrLiteral *str_literals;
 

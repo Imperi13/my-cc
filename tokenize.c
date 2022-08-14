@@ -7,11 +7,34 @@
 #include "error.h"
 #include "tokenize.h"
 
+#ifndef __STDC__
+
+int strlen();
+int memcmp();
+void *calloc();
+int isblank();
+int strncmp();
+char *strstr();
+char *strchr();
+int isdigit();
+
+typedef int size_t;
+size_t strspn();
+
+int fprintf();
+
+typedef struct _IO_FILE FILE;
+extern FILE *stderr;
+
+#endif
+
 bool equal(Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
-    return false;
-  return true;
+    return 0;
+  // return false;
+  return 1;
+  // return true;
 }
 
 bool equal_kind(Token *token, TokenKind kind) { return token->kind == kind; }
@@ -20,16 +43,19 @@ bool consume(Token **rest, Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len)) {
     *rest = token;
-    return false;
+    return 0;
+    // return false;
   }
   *rest = token->next;
-  return true;
+  return 1;
+  // return true;
 }
 
 Token *consume_kind(Token **rest, Token *token, TokenKind kind) {
   if (token->kind != kind) {
     *rest = token;
-    return NULL;
+    return 0;
+    // return NULL;
   }
   *rest = token->next;
   return token;
@@ -70,16 +96,15 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len,
   return tok;
 }
 
-const char *variable_letters =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
-
-Token *dummy_token = &(Token){};
+const char *variable_letters;
 
 bool is_alnum(char c) {
   for (const char *p = variable_letters; *p != '\0'; p++)
     if (*p == c)
-      return true;
-  return false;
+      return 1;
+  // return true;
+  return 0;
+  // return false;
 }
 
 char *skip_space(char *str, char c) {
@@ -88,10 +113,11 @@ char *skip_space(char *str, char c) {
 
   if (*str == c)
     return str;
-  return NULL;
+  return 0;
+  // return NULL;
 }
 
-int digit_base(char t, unsigned long base) {
+int digit_base(char t, int base) {
   if (base == 16) {
     if ('0' <= t && t <= '9')
       return t - '0';
@@ -121,8 +147,8 @@ int digit_base(char t, unsigned long base) {
   return -1;
 }
 
-unsigned long num_literal(char *p, char **rest) {
-  unsigned long base;
+int num_literal(char *p, char **rest) {
+  int base;
   char *start;
 
   if (*p != '0') {
@@ -139,7 +165,7 @@ unsigned long num_literal(char *p, char **rest) {
     start = p + 1;
   }
 
-  unsigned long num = 0;
+  int num = 0;
   while (digit_base(*start, base) >= 0) {
     num *= base;
     num += digit_base(*start, base);
@@ -157,6 +183,10 @@ char consume_char(char **rest, char *p) {
       ret = '\e';
     } else if (*p == 'n') {
       ret = '\n';
+    } else if (*p == '\\') {
+      ret = '\\';
+    } else if (*p == '\'') {
+      ret = '\'';
     } else if (*p == '0') {
       ret = '\0';
     } else {
@@ -175,11 +205,12 @@ char consume_char(char **rest, char *p) {
   }
 }
 
-StrLiteral *str_literals = NULL;
+StrLiteral *str_literals;
 
 Token *tokenize(char *p, char *filepath) {
   Token head;
-  head.next = NULL;
+  //head.next = NULL;
+  head.next = 0;
   Token *cur = &head;
 
   while (*p) {
@@ -444,7 +475,8 @@ Token *tokenize(char *p, char *filepath) {
 
 void debug_token(Token *token) {
   Token *cur = token;
-  while (cur != NULL) {
+  while(cur!=0){
+  //while (cur != NULL) {
     fprintf(stderr, "kind:%d , len :%d , str: %.*s\n", cur->kind, cur->len,
             cur->len, cur->str);
     cur = cur->next;
