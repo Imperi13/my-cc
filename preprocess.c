@@ -41,6 +41,7 @@ struct DefineList {
   char *sym_name;
   int sym_len;
 
+  // startからTK_NEWLINEまでが展開するトークン
   Token *start;
 
   // for linked-list
@@ -231,6 +232,7 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
     tok = tok->next;
   }
+  cur->next = tok;
 
   new_def->start = head->next;
 
@@ -255,11 +257,17 @@ void expand_define(Token **pre, Token *tok) {
     return;
   }
 
-  if (def->start) {
-    not_implemented_at(tok->str);
-  } else {
-    expand_define(pre, tok->next);
+  Token *symbol = tok;
+  Token *sym_next = tok->next;
+  Token *cur = symbol;
+  for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
+    Token *cpy = calloc(1, sizeof(Token));
+    memcpy(cpy, src, sizeof(Token));
+    cur->next = cpy;
+    cur = cur->next;
   }
+  cur->next = sym_next;
+  expand_define(pre, symbol->next);
 }
 
 void process_pragma_line(Token **post, Token **pre, Token *tok) {

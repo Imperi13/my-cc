@@ -388,6 +388,7 @@ run_test pp_1 'int main(){\n#ifdef TEST\nreturn 170;\n#endif\nreturn 174;}' 174
 run_test pp_2 'int main(){\n#ifndef TEST\nreturn 174;\n#endif\n}' 174
 
 run_test pp_3 '#define TEST\n int main() { int TEST test; test = 174; return test;}' 174
+run_test pp_4 '#define TEST int\n TEST main() { TEST test; test = 174; return test;}' 174
 
 run_test typedef_1 'typedef int TEST; TEST main(){return 174;}' 174
 run_test typedef_2 'typedef struct A TEST; int main(){ TEST *p; return 174;}' 174
@@ -396,7 +397,7 @@ run_test typedef_3 'typedef void *TEST; int main(){  return 166 + sizeof(TEST);}
 run_test bool_1 'int main() {return 173 + sizeof(_Bool);}' 174
 run_test bool_2 'int main() {return 173 + _Alignof(_Bool);}' 174
 run_test bool_3 'int main() {_Bool test; test = 1; if(test)return 174;else return 170;}' 174
-run_test bool_3 'int main() {_Bool test; test = 256; if(test)return 174;else return 170;}' 174
+run_test bool_4 'int main() {_Bool test; test = 256; if(test)return 174;else return 170;}' 174
 
 run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
