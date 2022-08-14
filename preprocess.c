@@ -7,6 +7,16 @@
 #include "preprocess.h"
 #include "tokenize.h"
 
+#ifndef __STDC__
+
+int strncmp();
+typedef int size_t;
+size_t strlen();
+int memcmp();
+void *calloc();
+
+#endif
+
 static void process_macro_group(Token **post, Token **pre, Token *tok);
 static void process_if_group(Token **post, Token **pre, Token *tok);
 static void process_include_line(Token **post, Token **pre, Token *tok);
@@ -29,8 +39,10 @@ PragmaOnceList *pragma_list;
 bool is_included(char *filepath) {
   for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
     if (strncmp(cur->filepath, filepath, strlen(filepath)) == 0)
-      return true;
-  return false;
+      return 1;
+      //return true;
+  return 0;
+  //return false;
 }
 
 // insert token sequence
@@ -51,7 +63,8 @@ Define *find_define(char *def_name, int def_len) {
   for (Define *cur = define_list; cur; cur = cur->next)
     if (cur->len == def_len && !memcmp(def_name, cur->next, def_len))
       return cur;
-  return NULL;
+  return 0;
+  //return NULL;
 }
 
 bool cmp_ident(Token *tok, const char *name) {
@@ -69,7 +82,8 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
   if (is_if_group(tok)) {
     process_if_group(post, pre, tok);
   } else if (cmp_ident(tok->next, "include")) {
-    process_include_line(NULL, pre, tok);
+    process_include_line(0, pre, tok);
+    //process_include_line(NULL, pre, tok);
   } else if (cmp_ident(tok->next, "pragma")) {
     process_pragma_line(post, pre, tok);
   } else {
@@ -83,7 +97,8 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_IDENT);
 
     Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) != NULL);
+    bool cond = (find_define(cond_tok->str, cond_tok->len) != 0);
+    //bool cond = (find_define(cond_tok->str, cond_tok->len) != NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
@@ -106,7 +121,8 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_IDENT);
 
     Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) == NULL);
+    bool cond = (find_define(cond_tok->str, cond_tok->len) == 0);
+    //bool cond = (find_define(cond_tok->str, cond_tok->len) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     Token *dummy;
