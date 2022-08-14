@@ -102,7 +102,9 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
   } else if (cmp_ident(tok->next, "pragma")) {
     process_pragma_line(post, pre, tok);
   } else {
-    not_implemented_at(tok->str);
+    warn("ignore unrecognized macro group");
+    consume_line(pre, tok);
+    // not_implemented_at(tok->str);
   }
 }
 
