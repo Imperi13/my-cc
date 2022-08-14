@@ -9,6 +9,8 @@
 
 #ifndef __STDC__
 
+#include "selfhost_util.h"
+
 int strlen();
 int memcmp();
 void *calloc();
@@ -18,13 +20,10 @@ char *strstr();
 char *strchr();
 int isdigit();
 
-typedef int size_t;
 size_t strspn();
 
 int fprintf();
 
-typedef struct _IO_FILE FILE;
-extern FILE *stderr;
 
 #endif
 

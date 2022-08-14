@@ -5,12 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "file.h"
 #include "error.h"
+#include "file.h"
 
 #ifndef __STDC__
-typedef struct _IO_FILE FILE;
-typedef int size_t;
+
+#include "selfhost_util.h"
 
 FILE *fopen();
 int fseek();
@@ -24,16 +24,16 @@ int fclose();
 char *read_file(char *path) {
   FILE *fp = fopen(path, "r");
   if (!fp)
-    error("cannot open %s",path);
-    //error("cannot open %s: %s", path, strerror(errno));
+    error("cannot open %s", path);
+  // error("cannot open %s: %s", path, strerror(errno));
 
-  if (fseek(fp, 0, 2/*SEEK_END*/) == -1)
-    error("%s: fseek",path);
-    //error("%s: fseek: %s", path, strerror(errno));
+  if (fseek(fp, 0, SEEK_END) == -1)
+    error("%s: fseek", path);
+  // error("%s: fseek: %s", path, strerror(errno));
   size_t size = ftell(fp);
-  if (fseek(fp, 0, 0 /*SEEK_SET*/) == -1)
-    error("%s: fseek",path);
-    //error("%s: fseek: %s", path, strerror(errno));
+  if (fseek(fp, 0, SEEK_SET) == -1)
+    error("%s: fseek", path);
+  // error("%s: fseek: %s", path, strerror(errno));
 
   char *buf = calloc(1, size + 2);
   fread(buf, size, 1, fp);

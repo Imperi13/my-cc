@@ -9,8 +9,9 @@
 
 #ifndef __STDC__
 
+#include "selfhost_util.h"
+
 void *calloc();
-typedef int size_t;
 size_t strlen();
 int memcmp();
 void *memcpy();
