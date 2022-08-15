@@ -27,8 +27,6 @@ static DeclSpec *parse_declaration_specs(Token **rest, Token *tok,
 static Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_parameter_type_list(Token **rest, Token *tok,
                                        Analyze *state);
-static bool is_type_name(Token *tok, Analyze *state);
-static bool is_abstract_declarator(Token *tok, Analyze *state);
 static Tree *parse_type_name(Token **rest, Token *tok, Analyze *state);
 static Declarator *parse_abstract_declarator(Token **rest, Token *tok,
                                              Analyze *state);
@@ -315,7 +313,8 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, "(")) {
     expect(&tok, tok, "(");
     declarator->type_suffix_kind = FUNC_DECLARATOR;
-    if (!equal(tok, ")") && !equal_kind(tok, TK_VOID))
+    if (!equal(tok, ")") &&
+        !(equal_kind(tok, TK_VOID) && equal(tok->next, ")")))
       declarator->args = parse_parameter_type_list(&tok, tok, state);
 
     consume_kind(&tok, tok, TK_VOID);
@@ -357,39 +356,6 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
   return head;
 }
 
-bool is_type_name(Token *tok, Analyze *state) {
-  if (!is_declaration_specs(tok, state))
-    return false;
-  parse_declaration_specs(&tok, tok, state);
-
-  return is_abstract_declarator(tok, state);
-}
-
-bool is_abstract_declarator(Token *tok, Analyze *state) {
-  while (equal(tok, "*"))
-    consume(&tok, tok, "*");
-
-  if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
-  }
-
-  if (equal(tok, "[")) {
-    while (consume(&tok, tok, "[")) {
-      if (!equal_kind(tok, TK_NUM))
-        return false;
-
-      consume_kind(&tok, tok, TK_NUM);
-      if (!equal(tok, "]"))
-        return false;
-      consume(&tok, tok, "]");
-    }
-  } else if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
-  }
-
-  return true;
-}
-
 Tree *parse_type_name(Token **rest, Token *tok, Analyze *state) {
   DeclSpec *decl_spec = parse_declaration_specs(&tok, tok, state);
   Declarator *declarator = parse_abstract_declarator(&tok, tok, state);
@@ -415,7 +381,7 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
     cur = &(*cur)->nest;
   }
 
-  if (equal(tok, "(") && is_abstract_declarator(tok->next, state)) {
+  if (equal(tok, "(") && !is_declaration_specs(tok->next,state)) {
     not_implemented_at(tok->str);
   }
 
@@ -959,7 +925,7 @@ Tree *parse_unary(Token **rest, Token *tok, Analyze *state) {
   if (equal_kind(tok, TK_SIZEOF)) {
     consume_kind(&tok, tok, TK_SIZEOF);
 
-    if (equal(tok, "(") && is_type_name(tok->next, state)) {
+    if (equal(tok, "(") && is_declaration_specs(tok->next, state)) {
       expect(&tok, tok, "(");
       Tree *typename = parse_type_name(&tok, tok, state);
       expect(&tok, tok, ")");
