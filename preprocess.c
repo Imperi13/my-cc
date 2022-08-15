@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,6 +17,7 @@ size_t strlen();
 int memcmp();
 void *calloc();
 void *memcpy();
+int fprintf();
 
 #endif
 
@@ -86,7 +88,8 @@ bool cmp_ident(Token *tok, const char *name) {
 }
 
 bool is_if_group(Token *tok) {
-  return cmp_ident(tok->next, "ifdef") || cmp_ident(tok->next, "ifndef");
+  return cmp_ident(tok->next, "ifdef") || cmp_ident(tok->next, "ifndef") ||
+         equal_kind(tok->next, TK_IF);
 }
 
 void process_macro_group(Token **post, Token **pre, Token *tok) {
@@ -175,12 +178,25 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
 
   if (equal(tok, "<")) {
     // ignore include
-    warn_at(tok->str, "ignore include");
     consume(&tok, tok, "<");
 
+    Token *filename_start = tok;
+    int len = 0;
+    for (Token *cur = filename_start; !equal(cur, ">"); cur = cur->next) {
+      len += cur->len;
+    }
+
+    char *filename = calloc(len + 1, sizeof(char));
+    int off = 0;
+
     while (!equal(tok, ">")) {
+      memcpy(filename + off, tok->str, tok->len);
+      off += tok->len;
       tok = tok->next;
     }
+
+    fprintf(stderr,"%s\n",filename);
+    warn_at(tok->str, "ignore include");
 
     expect(&tok, tok, ">");
     expect_kind(&tok, tok, TK_NEWLINE);
