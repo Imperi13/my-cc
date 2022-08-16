@@ -31,6 +31,9 @@ static Tree *parse_type_name(Token **rest, Token *tok, Analyze *state);
 static Declarator *parse_abstract_declarator(Token **rest, Token *tok,
                                              Analyze *state);
 
+static bool is_declaration(Token *tok, Analyze *state);
+static bool is_declarator(Token *tok, Analyze *state);
+
 static Tree *parse_stmt(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state);
@@ -336,17 +339,28 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
 }
 
 Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
-  Tree *head = calloc(1, sizeof(Tree));
-  head->kind = DECLARATION;
-  head->decl_specs = parse_declaration_specs(&tok, tok, state);
-  head->declarator = parse_declarator(&tok, tok, state);
+  Tree *head;
+  if (is_declaration(tok, state)) {
+    head = calloc(1, sizeof(Tree));
+    head->kind = DECLARATION;
+    head->decl_specs = parse_declaration_specs(&tok, tok, state);
+    head->declarator = parse_declarator(&tok, tok, state);
+  } else {
+    head = parse_type_name(&tok, tok, state);
+  }
+
   Tree *cur = head;
 
   while (consume(&tok, tok, ",")) {
-    Tree *node = calloc(1, sizeof(Tree));
-    node->kind = DECLARATION;
-    node->decl_specs = parse_declaration_specs(&tok, tok, state);
-    node->declarator = parse_declarator(&tok, tok, state);
+    Tree *node;
+    if (is_declaration(tok, state)) {
+      node = calloc(1, sizeof(Tree));
+      node->kind = DECLARATION;
+      node->decl_specs = parse_declaration_specs(&tok, tok, state);
+      node->declarator = parse_declarator(&tok, tok, state);
+    } else {
+      node = parse_type_name(&tok, tok, state);
+    }
 
     cur->next = node;
     cur = node;
@@ -381,7 +395,7 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
     cur = &(*cur)->nest;
   }
 
-  if (equal(tok, "(") && !is_declaration_specs(tok->next,state)) {
+  if (equal(tok, "(") && !is_declaration_specs(tok->next, state)) {
     not_implemented_at(tok->str);
   }
 
@@ -403,6 +417,49 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
 
   *rest = tok;
   return declarator;
+}
+
+bool is_declaration(Token *tok, Analyze *state) {
+  if (!is_declaration_specs(tok, state))
+    return false;
+  parse_declaration_specs(&tok, tok, state);
+
+  return is_declarator(tok, state);
+}
+
+bool is_declarator(Token *tok, Analyze *state) {
+  while (equal(tok, "*")) {
+    consume(&tok, tok, "*");
+    consume_kind(&tok, tok, TK_CONST);
+  }
+
+  if (equal_kind(tok, TK_IDENT)) {
+    consume_kind(&tok, tok, TK_IDENT);
+  } else if (equal(tok, "(")) {
+    consume(&tok, tok, "(");
+    if (!is_declarator(tok, state))
+      return false;
+    parse_declarator(&tok, tok, state);
+    if (!equal(tok, ")"))
+      return false;
+    consume(&tok, tok, ")");
+  } else {
+    return false;
+  }
+
+  if (equal(tok, "(")) {
+    not_implemented_at(tok->str);
+  } else if (equal(tok, "[")) {
+    consume(&tok, tok, "[");
+    if (!equal_kind(tok, TK_NUM))
+      return false;
+    consume_kind(&tok, tok, TK_NUM);
+    if (!equal(tok, "]"))
+      return false;
+    consume(&tok, tok, "]");
+  }
+
+  return true;
 }
 
 Tree *parse_stmt(Token **rest, Token *tok, Analyze *state) {
