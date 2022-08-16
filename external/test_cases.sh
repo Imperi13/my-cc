@@ -395,7 +395,7 @@ run_test typedef_2 'typedef struct A TEST; int main(){ TEST *p; return 174;}' 17
 run_test typedef_3 'typedef void *TEST; int main(){  return 166 + sizeof(TEST);}' 174
 
 run_test parameter_type_list_1 'int test(void *);int main(){return 174;}' 174
-#run_test parameter_type_list_1 'int test(void *,int (*)[10] );int main(){return 174;}' 174
+run_test parameter_type_list_1 'int test(void *,int (*)[10] );int main(){return 174;}' 174
 
 run_test bool_1 'int main() {return 173 + sizeof(_Bool);}' 174
 run_test bool_2 'int main() {return 173 + _Alignof(_Bool);}' 174

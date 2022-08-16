@@ -396,7 +396,9 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
   }
 
   if (equal(tok, "(") && !is_declaration_specs(tok->next, state)) {
-    not_implemented_at(tok->str);
+    consume(&tok, tok, "(");
+    declarator->nest = parse_abstract_declarator(&tok, tok, state);
+    expect(&tok, tok, ")");
   }
 
   // parse type-suffix
