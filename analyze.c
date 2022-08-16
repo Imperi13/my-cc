@@ -96,13 +96,15 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       return;
     }
 
-    if (ast->declarator->init_expr)
-      not_implemented("initialize global variable");
-
     Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
+
+    if (ast->declarator->init_expr) {
+      analyze_stmt(ast->declarator->init_expr, state);
+      not_implemented("initialize global variable");
+    }
 
     if (ast->decl_specs->has_typedef) {
       Typedef *new_def = calloc(1, sizeof(Typedef));

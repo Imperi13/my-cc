@@ -116,6 +116,9 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     return ex_decl;
   }
 
+  // parse DECLARATION
+  ex_decl->kind = DECLARATION;
+
   if (equal(tok, "=")) {
     consume(&tok, tok, "=");
 
@@ -125,7 +128,6 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
   }
   // TODO multiple declarator
 
-  ex_decl->kind = DECLARATION;
 
   expect(&tok, tok, ";");
 
