@@ -262,6 +262,11 @@ void codegen_stmt(Tree *stmt) {
       printf("  mov rsi, rax\n");
       printf("  mov rcx, %d\n", type_size(stmt->lhs->type));
       printf("  rep movsb\n");
+    } else if (stmt->lhs->type->kind == BOOL) {
+      printf("  cmp rax,0\n");
+      printf("  setne al\n");
+      printf("  pop rdi\n");
+      printf("  mov [rdi],al\n");
     } else {
       printf("  pop rdi\n");
       store2rdiaddr_from_rax(stmt->type);
