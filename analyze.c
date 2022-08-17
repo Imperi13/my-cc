@@ -652,9 +652,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       cur = cur->next;
     }
 
-    if (ast->lhs->type->kind != FUNC)
+    if (ast->lhs->type->kind == FUNC) {
+      ast->type = ast->lhs->type->return_type;
+    } else if (ast->lhs->type->kind == PTR &&
+               ast->lhs->type->ptr_to->kind == FUNC) {
+      ast->type = ast->lhs->type->ptr_to->return_type;
+    } else
       error("cannot call func");
-    ast->type = ast->lhs->type->return_type;
+
   } else if (ast->kind == POST_INCREMENT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
