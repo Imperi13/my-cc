@@ -101,11 +101,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     char *obj_name = getname_declarator(ast->declarator);
 
-    if (ast->declarator->init_expr) {
-      analyze_stmt(ast->declarator->init_expr, state);
-      not_implemented("initialize global variable");
-    }
-
     if (ast->decl_specs->has_typedef) {
       Typedef *new_def = calloc(1, sizeof(Typedef));
       new_def->name = obj_name;
@@ -115,6 +110,14 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       new_def->next = state->glb_typedefs;
       state->glb_typedefs = new_def;
     } else {
+
+      if (ast->declarator->init_expr) {
+        analyze_stmt(ast->declarator->init_expr, state);
+        if (!is_constexpr(ast->declarator->init_expr))
+          error("not constexpr");
+        if (!is_compatible(obj_type, ast->declarator->init_expr))
+          error("not compatible type");
+      }
 
       Obj *obj = calloc(1, sizeof(Obj));
       obj->obj_name = obj_name;

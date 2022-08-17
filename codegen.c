@@ -78,10 +78,24 @@ void codegen_str_literal(StrLiteral *sl) {
 void codegen_var_definition(Tree *var) {
   Obj *obj = var->def_obj;
   printf("  .globl %.*s\n", obj->obj_len, obj->obj_name);
-  printf("  .bss\n");
+
+  if (var->declarator->init_expr)
+    printf("  .data\n");
+  else
+    printf("  .bss\n");
+
   printf("  .align %d\n", type_alignment(obj->type));
   printf("%.*s:\n", obj->obj_len, obj->obj_name);
-  printf("  .zero %d\n", type_size(obj->type));
+
+  if (var->declarator->init_expr) {
+    if (obj->type->kind == CHAR) {
+      printf("  .byte %d\n", eval_constexpr(var->declarator->init_expr));
+    } else if (obj->type->kind == INT) {
+      printf("  .long %d\n", eval_constexpr(var->declarator->init_expr));
+    } else
+      not_implemented(__func__);
+  } else
+    printf("  .zero %d\n", type_size(obj->type));
 }
 
 void codegen_function(Tree *func) {
