@@ -471,7 +471,8 @@ void codegen_stmt(Tree *stmt) {
     return;
   case DEREF:
     codegen_stmt(stmt->lhs);
-    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
+        stmt->type->kind == FUNC)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;

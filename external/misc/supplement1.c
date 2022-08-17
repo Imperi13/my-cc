@@ -54,6 +54,8 @@ void *return_fp(void){return add_3;}
 
 struct Test{int a; int b; int *p; int *q; int *r; int *s;};
 
+int call_fp(void* q){int (*p)(int) = q;return (*p)(171);}
+
 #ifdef __STDC__
 
 struct Q q(void) {struct Q u; u.a = 100; u.b = 74; u.p = 0; return u;}
@@ -65,7 +67,5 @@ struct Test test_(int *s)
 	u.s = s;
 	return u;
 }
-
-int call_fp(void* q){int (*p)(int) = q;return (*p)(171);}
 
 #endif
