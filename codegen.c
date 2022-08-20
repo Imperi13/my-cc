@@ -49,6 +49,8 @@ void codegen_translation_unit(Tree *head) {
     }
     cur = cur->next;
   }
+
+  printf("  .section	.note.GNU-stack,\"\",@progbits\n");
 }
 
 void codegen_str_literal(StrLiteral *sl) {
