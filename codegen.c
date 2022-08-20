@@ -21,9 +21,9 @@ static void codegen_addr(Tree *stmt);
 static void load2rax_from_raxaddr(Type *type);
 static void store2rdiaddr_from_rax(Type *type);
 
-extern const char call_register64[6][4];
-extern const char call_register32[6][4];
-extern const char call_register8[6][4];
+extern const char *call_register64[6];
+extern const char *call_register32[6];
+extern const char *call_register8[6];
 
 void codegen_translation_unit(Tree *head) {
 

@@ -16,6 +16,10 @@ void *calloc();
 char *filename;
 char *user_input;
 
+char *call_register64[6];
+char *call_register32[6];
+char *call_register8[6];
+
 Type *type_void;
 Type *type_int;
 Type *type_char;
@@ -35,6 +39,26 @@ void init() {
   variable_letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
   str_literals = 0;
 
+  call_register64[0] = "rdi";
+  call_register64[1] = "rsi";
+  call_register64[2] = "rdx";
+  call_register64[3] = "rcx";
+  call_register64[4] = "r8";
+  call_register64[5] = "r9";
+
+  call_register32[0] = "edi";
+  call_register32[1] = "esi";
+  call_register32[2] = "edx";
+  call_register32[3] = "ecx";
+  call_register32[4] = "r8d";
+  call_register32[5] = "r9d";
+
+  call_register8[0] = "dil";
+  call_register8[1] = "sil";
+  call_register8[2] = "dl";
+  call_register8[3] = "cl";
+  call_register8[4] = "r8b";
+  call_register8[5] = "r9b";
 }
 
 int main(int argc, char **argv) {
