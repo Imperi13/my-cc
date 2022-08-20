@@ -102,6 +102,11 @@ struct Tree {
 
   Type *type;
 
+  // for argument
+
+  bool has_variable_arg;
+  int nth_arg;
+
   // for LABEL
   char *label_name;
   int label_len;

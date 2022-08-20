@@ -24,7 +24,6 @@ size_t strspn();
 
 int fprintf();
 
-
 #endif
 
 bool equal(Token *token, char *op) {
@@ -284,7 +283,8 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
-    if (strncmp(p, "<<=", 3) == 0 || strncmp(p, ">>=", 3) == 0) {
+    if (strncmp(p, "<<=", 3) == 0 || strncmp(p, ">>=", 3) == 0 ||
+        strncmp(p, "...", 3) == 0) {
       cur = new_token(TK_RESERVED, cur, p, 3, filepath);
       p += 3;
       continue;

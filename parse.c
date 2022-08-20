@@ -128,7 +128,6 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
   }
   // TODO multiple declarator
 
-
   expect(&tok, tok, ";");
 
   if (ex_decl->decl_specs->has_typedef) {
@@ -355,7 +354,16 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
 
   while (consume(&tok, tok, ",")) {
     Tree *node;
-    if (is_declaration(tok, state)) {
+    if (equal(tok, "...")) {
+      consume(&tok, tok, "...");
+      cur->has_variable_arg = true;
+
+      if (equal(tok, ","))
+        error("expected )");
+
+      *rest = tok;
+      return head;
+    } else if (is_declaration(tok, state)) {
       node = calloc(1, sizeof(Tree));
       node->kind = DECLARATION;
       node->decl_specs = parse_declaration_specs(&tok, tok, state);

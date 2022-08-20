@@ -402,6 +402,9 @@ run_test bool_2 'int main() {return 173 + _Alignof(_Bool);}' 174
 run_test bool_3 'int main() {_Bool test; test = 1; if(test)return 174;else return 170;}' 174
 run_test bool_4 'int main() {_Bool test; test = 256; if(test)return 174;else return 170;}' 174
 
+run_test variable_arg 'int test(char *fmt,...){return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
+run_test variable_arg 'int test(char *fmt,...){__builtin_va_list ap; __builtin_va_start(ap,fmt); __builtin_va_end(ap); return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
+
 run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
 
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
