@@ -1026,7 +1026,9 @@ Tree *parse_unary(Token **rest, Token *tok, Analyze *state) {
       *rest = tok;
       return new_binary_node(SIZEOF, typename, NULL);
     } else {
-      not_implemented_at(tok->str);
+      Tree *unary = parse_unary(&tok, tok, state);
+      *rest = tok;
+      return new_binary_node(SIZEOF, unary, NULL);
     }
   }
 

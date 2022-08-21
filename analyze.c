@@ -650,7 +650,12 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       ast->num = type_size(base_type);
       ast->type = type_int;
     } else {
-      not_implemented("sizeof expr");
+      analyze_stmt(ast->lhs, state);
+
+      // replace "sizeof" -> num
+      ast->kind = NUM;
+      ast->num = type_size(ast->lhs->type);
+      ast->type = type_int;
     }
   } else if (ast->kind == ALIGNOF) {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
