@@ -76,6 +76,10 @@ int expect_number(Token **rest, Token *token) {
   return val;
 }
 
+bool cmp_ident(Token *tok, const char *name) {
+  return strncmp(tok->str, name, tok->len) == 0;
+}
+
 bool at_eof(Token *token) { return token->kind == TK_EOF; }
 
 Token *new_token(TokenKind kind, Token *cur, char *str, int len,
@@ -197,7 +201,7 @@ char consume_char(char **rest, char *p) {
   }
 }
 
-StrLiteral *str_literals;
+StrLiteral *str_literals = NULL;
 
 Token *tokenize(char *p, char *filepath) {
   Token head;

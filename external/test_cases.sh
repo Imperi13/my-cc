@@ -402,8 +402,9 @@ run_test bool_2 'int main() {return 173 + _Alignof(_Bool);}' 174
 run_test bool_3 'int main() {_Bool test; test = 1; if(test)return 174;else return 170;}' 174
 run_test bool_4 'int main() {_Bool test; test = 256; if(test)return 174;else return 170;}' 174
 
-run_test variable_arg 'int test(char *fmt,...){return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
-run_test variable_arg 'int test(char *fmt,...){__builtin_va_list ap; __builtin_va_start(ap,fmt); __builtin_va_end(ap); return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
+run_test variable_arg_1 'int test(char *fmt,...){return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
+run_test variable_arg_2 'int test(char *fmt,...){__builtin_va_list ap; __builtin_va_start(ap,fmt); __builtin_va_end(ap); return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
+run_test_with_supplement0 variable_arg_3 'int sum_args();int sum(int n,...){__builtin_va_list ap;__builtin_va_start(ap,n);int ret = sum_args(n,ap);__builtin_va_end(ap);return ret;} int main(){return sum(4,160,1,3,10);}' 174
 
 run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
 

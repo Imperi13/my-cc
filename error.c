@@ -5,7 +5,16 @@
 #include "error.h"
 #include "file.h"
 
-// TODO 置き場
+#ifndef __STDC__
+
+#include "selfhost_util.h"
+
+int fprintf();
+int vfprintf();
+int snprintf();
+void exit();
+
+#endif
 
 void error(char *fmt, ...) {
   __builtin_va_list ap;

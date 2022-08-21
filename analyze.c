@@ -44,8 +44,9 @@ static EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len);
 
 void analyze_translation_unit(Tree *ast) {
   Analyze *state = calloc(1, sizeof(Analyze));
-  state->glb_objs = calloc(1, sizeof(Obj));
   state->label_cnt = 0;
+
+  builtin_type_init(state);
 
   Tree *cur = ast;
   while (cur) {
@@ -69,10 +70,11 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     func->obj_name = obj_name;
     func->obj_len = strlen(obj_name);
     func->type = obj_type;
-    func->stack_size = 0;
     func->locals = calloc(1, sizeof(ObjScope));
     func->is_defined = true;
     func->is_global = true;
+
+    func->stack_size = 0x0;
 
     state->current_func = func;
     func->next = state->glb_objs;
@@ -87,6 +89,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     }
 
     analyze_stmt(ast->func_body, state);
+
+    func->stack_size = calc_rbp_offset(0, func->stack_size, 8);
 
   } else if (ast->kind == DECLARATION) {
 
@@ -265,6 +269,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
       lvar->obj_name = obj_name;
       lvar->obj_len = strlen(obj_name);
       lvar->type = obj_type;
+      lvar->nth_arg = ast->nth_arg;
       lvar->rbp_offset =
           calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
                           type_alignment(obj_type));
@@ -596,6 +601,18 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
+  } else if (ast->kind == CAST) {
+    analyze_decl_spec(ast->type_name->decl_specs, state, false);
+    Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs, state);
+    cast_type = gettype_declarator(ast->type_name->declarator, cast_type);
+
+    analyze_stmt(ast->lhs, state);
+
+    if (!is_integer(cast_type) || !is_integer(ast->lhs->type))
+      not_implemented("not integer cast");
+
+    ast->type = cast_type;
+
   } else if (ast->kind == PLUS) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
@@ -744,6 +761,15 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->var_obj = var;
     ast->type = var->type;
 
+  } else if (ast->kind == BUILTIN_VA_START) {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+    if (ast->lhs->kind != VAR || ast->rhs->kind != VAR)
+      error("invalid usage  __builtin_va_start");
+  } else if (ast->kind == BUILTIN_VA_END) {
+    analyze_stmt(ast->lhs, state);
+    if (ast->lhs->kind != VAR)
+      error("invalid usage  __builtin_va_end");
   } else {
     not_implemented(__func__);
   }

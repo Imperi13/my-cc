@@ -10,6 +10,7 @@ void *calloc();
 #include "error.h"
 #include "file.h"
 #include "parse.h"
+#include "type.h"
 #include "preprocess.h"
 #include "tokenize.h"
 
@@ -37,7 +38,6 @@ void init() {
   type_bool->kind = BOOL;
   
   variable_letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
-  str_literals = 0;
 
   call_register64[0] = "rdi";
   call_register64[1] = "rsi";

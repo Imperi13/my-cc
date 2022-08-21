@@ -9,10 +9,68 @@
 
 #ifndef __STDC__
 
+#include "selfhost_util.h"
+
 void *calloc();
 char *strncpy();
+size_t strlen();
 
 #endif
+
+void builtin_type_init(Analyze *state) {
+
+  // struct __builtin_va_list
+  StructDef *st_def = calloc(1, sizeof(StructDef));
+  st_def->st_name = "__builtin_va_list";
+  st_def->st_len = strlen(st_def->st_name);
+  st_def->is_defined = true;
+  st_def->size = 0x18;
+  st_def->alignment = 0x8;
+
+  st_def->next = state->glb_stdefs;
+  state->glb_stdefs = st_def;
+
+  st_def->members = calloc(1, sizeof(Member));
+  Member *cur = st_def->members;
+
+  cur->member_name = "gp_offset";
+  cur->member_len = strlen(cur->member_name);
+  cur->type = type_int;
+  cur->offset = 0x0;
+
+  cur->next = calloc(1, sizeof(Member));
+  cur = cur->next;
+
+  cur->member_name = "fp_offset";
+  cur->member_len = strlen(cur->member_name);
+  cur->type = type_int;
+  cur->offset = 0x4;
+
+  cur->next = calloc(1, sizeof(Member));
+  cur = cur->next;
+
+  cur->member_name = "overflow_arg_area";
+  cur->member_len = strlen(cur->member_name);
+  cur->type = newtype_ptr(type_void);
+  cur->offset = 0x8;
+
+  cur->next = calloc(1, sizeof(Member));
+  cur = cur->next;
+
+  cur->member_name = "reg_save_area";
+  cur->member_len = strlen(cur->member_name);
+  cur->type = newtype_ptr(type_void);
+  cur->offset = 0x10;
+
+  // typedef struct __builtin_va_list __builtin_va_list
+  Typedef *new_def = calloc(1, sizeof(Typedef));
+  new_def->name = "__builtin_va_list";
+  new_def->len = strlen(new_def->name);
+  new_def->type = newtype_struct(st_def);
+
+  new_def->next = state->glb_typedefs;
+  state->glb_typedefs = new_def;
+}
 
 Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
   if (decl_spec->has_int) {
@@ -186,7 +244,7 @@ bool is_compatible(Type *a, Tree *b) {
     return true;
   else if (is_integer(a) && is_integer(b->type))
     return true;
-  else if(a->kind == BOOL && is_integer(b->type))
+  else if (a->kind == BOOL && is_integer(b->type))
     return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))

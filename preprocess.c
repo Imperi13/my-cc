@@ -83,9 +83,6 @@ DefineList *find_define(char *def_name, int def_len) {
   return NULL;
 }
 
-bool cmp_ident(Token *tok, const char *name) {
-  return strncmp(tok->str, name, tok->len) == 0;
-}
 
 bool is_if_group(Token *tok) {
   return cmp_ident(tok->next, "ifdef") || cmp_ident(tok->next, "ifndef") ||

@@ -59,6 +59,8 @@ static Tree *parse_unary(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_postfix(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_primary(Token **rest, Token *tok, Analyze *state);
 
+static Tree *parse_builtin(Token **rest, Token *tok, Analyze *state);
+
 static bool is_label_stmt(Token *tok);
 static bool is_selection_stmt(Token *tok);
 static bool is_iteration_stmt(Token *tok);
@@ -79,6 +81,8 @@ Tree *parse_translation_unit(Token *tok) {
   Tree *cur = head;
 
   Analyze *state = calloc(1, sizeof(Analyze));
+
+  builtin_type_init(state);
 
   while (!at_eof(tok)) {
     Tree *ex_decl = parse_external_decl(&tok, tok, state, true);
@@ -321,6 +325,10 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
         !(equal_kind(tok, TK_VOID) && equal(tok->next, ")")))
       declarator->args = parse_parameter_type_list(&tok, tok, state);
 
+    for (Tree *cur = declarator->args; cur; cur = cur->next)
+      if (cur->has_variable_arg)
+        declarator->has_variable_arg = true;
+
     consume_kind(&tok, tok, TK_VOID);
     consume(&tok, tok, ")");
   } else if (equal(tok, "[")) {
@@ -346,11 +354,13 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
     head->kind = DECLARATION;
     head->decl_specs = parse_declaration_specs(&tok, tok, state);
     head->declarator = parse_declarator(&tok, tok, state);
+    head->nth_arg = 1;
   } else {
     head = parse_type_name(&tok, tok, state);
   }
 
   Tree *cur = head;
+  int count = 2;
 
   while (consume(&tok, tok, ",")) {
     Tree *node;
@@ -368,10 +378,12 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
       node->kind = DECLARATION;
       node->decl_specs = parse_declaration_specs(&tok, tok, state);
       node->declarator = parse_declarator(&tok, tok, state);
+      node->nth_arg = count;
     } else {
       node = parse_type_name(&tok, tok, state);
     }
 
+    count++;
     cur->next = node;
     cur = node;
   }
@@ -986,6 +998,19 @@ Tree *parse_mul(Token **rest, Token *tok, Analyze *state) {
 }
 
 Tree *parse_cast(Token **rest, Token *tok, Analyze *state) {
+  if (equal(tok, "(") && is_declaration_specs(tok->next, state)) {
+
+    consume(&tok, tok, "(");
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = CAST;
+    node->type_name = parse_type_name(&tok, tok, state);
+    expect(&tok, tok, ")");
+    node->lhs = parse_cast(&tok, tok, state);
+
+    *rest = tok;
+    return node;
+  }
+
   Tree *node = parse_unary(rest, tok, state);
   return node;
 }
@@ -1154,19 +1179,29 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
   }
 }
 
+bool is_builtin(Token *tok) {
+  return cmp_ident(tok, "__builtin_va_start") ||
+         cmp_ident(tok, "__builtin_va_end");
+}
+
 Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
-  Tree *primary = calloc(1, sizeof(Tree));
+  Tree *primary;
 
   if (equal_kind(tok, TK_NUM)) {
+    primary = calloc(1, sizeof(Tree));
     Token *num_tok = consume_kind(&tok, tok, TK_NUM);
     primary->kind = NUM;
     primary->num = num_tok->val;
   } else if (equal_kind(tok, TK_STR)) {
+    primary = calloc(1, sizeof(Tree));
     StrLiteral *str_literal = consume_kind(&tok, tok, TK_STR)->str_literal;
 
     primary->kind = STR;
     primary->str_literal = str_literal;
+  } else if (is_builtin(tok)) {
+    primary = parse_builtin(&tok, tok, state);
   } else if (equal_kind(tok, TK_IDENT)) {
+    primary = calloc(1, sizeof(Tree));
     Token *ident_tok = consume_kind(&tok, tok, TK_IDENT);
     primary->kind = VAR;
     primary->var_name = ident_tok->str;
@@ -1182,4 +1217,30 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
 
   *rest = tok;
   return primary;
+}
+
+Tree *parse_builtin(Token **rest, Token *tok, Analyze *state) {
+  Tree *node = calloc(1, sizeof(Tree));
+  if (cmp_ident(tok, "__builtin_va_start")) {
+    consume_kind(&tok, tok, TK_IDENT);
+    node->kind = BUILTIN_VA_START;
+
+    expect(&tok, tok, "(");
+    node->lhs = parse_assign(&tok, tok, state);
+    expect(&tok, tok, ",");
+    node->rhs = parse_assign(&tok, tok, state);
+    expect(&tok, tok, ")");
+  } else if (cmp_ident(tok, "__builtin_va_end")) {
+    consume_kind(&tok, tok, TK_IDENT);
+    node->kind = BUILTIN_VA_END;
+
+    expect(&tok, tok, "(");
+    node->lhs = parse_assign(&tok, tok, state);
+    expect(&tok, tok, ")");
+
+  } else
+    not_implemented_at(tok->str);
+
+  *rest = tok;
+  return node;
 }
