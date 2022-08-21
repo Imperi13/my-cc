@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 int GLOBAL_VAR = 3;
 
@@ -57,3 +58,14 @@ struct INT_CHARS_INT merge7(int a, int b, int c, int d, int e, int f, int g
 	st.c[1] = g;
 	return st;
 }
+
+int sum_args(int n,va_list ap){
+  int ret = 0;
+  for(int i=0;i<n;i++){
+    int num = va_arg(ap,int);
+    ret += num;
+  }
+
+  return ret;
+}
+

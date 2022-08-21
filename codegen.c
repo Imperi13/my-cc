@@ -21,9 +21,11 @@ static void codegen_addr(Tree *stmt);
 static void load2rax_from_raxaddr(Type *type);
 static void store2rdiaddr_from_rax(Type *type);
 
-extern const char call_register64[6][4];
-extern const char call_register32[6][4];
-extern const char call_register8[6][4];
+extern const char *call_register64[6];
+extern const char *call_register32[6];
+extern const char *call_register8[6];
+
+Obj *current_function;
 
 void codegen_translation_unit(Tree *head) {
 
@@ -49,6 +51,8 @@ void codegen_translation_unit(Tree *head) {
     }
     cur = cur->next;
   }
+
+  printf("  .section	.note.GNU-stack,\"\",@progbits\n");
 }
 
 void codegen_str_literal(StrLiteral *sl) {
@@ -78,13 +82,31 @@ void codegen_str_literal(StrLiteral *sl) {
 void codegen_var_definition(Tree *var) {
   Obj *obj = var->def_obj;
   printf("  .globl %.*s\n", obj->obj_len, obj->obj_name);
-  printf("  .bss\n");
+
+  if (var->declarator->init_expr)
+    printf("  .data\n");
+  else
+    printf("  .bss\n");
+
   printf("  .align %d\n", type_alignment(obj->type));
   printf("%.*s:\n", obj->obj_len, obj->obj_name);
-  printf("  .zero %d\n", type_size(obj->type));
+
+  if (var->declarator->init_expr) {
+    if (obj->type->kind == CHAR) {
+      printf("  .byte %d\n", eval_constexpr(var->declarator->init_expr));
+    } else if (obj->type->kind == INT) {
+      printf("  .long %d\n", eval_constexpr(var->declarator->init_expr));
+    } else if (obj->type->kind == PTR) {
+      printf("  .quad %d\n", eval_constexpr(var->declarator->init_expr));
+    } else
+      not_implemented(__func__);
+  } else
+    printf("  .zero %d\n", type_size(obj->type));
 }
 
 void codegen_function(Tree *func) {
+
+  current_function = func->def_obj;
 
   printf("  .text\n");
   if (func->decl_specs->has_static)
@@ -95,7 +117,13 @@ void codegen_function(Tree *func) {
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, %d\n", calc_rbp_offset(0, func->def_obj->stack_size, 8));
+  printf("  sub rsp, %d\n", func->def_obj->stack_size);
+
+  if (func->declarator->has_variable_arg) {
+    for (int i = 5; i >= 0; i--) {
+      printf("  push %s\n", call_register64[i]);
+    }
+  }
 
   Tree *cur = getargs_declarator(func->declarator);
   int count = 0;
@@ -262,6 +290,11 @@ void codegen_stmt(Tree *stmt) {
       printf("  mov rsi, rax\n");
       printf("  mov rcx, %d\n", type_size(stmt->lhs->type));
       printf("  rep movsb\n");
+    } else if (stmt->lhs->type->kind == BOOL) {
+      printf("  cmp rax,0\n");
+      printf("  setne al\n");
+      printf("  pop rdi\n");
+      printf("  mov [rdi],al\n");
     } else {
       printf("  pop rdi\n");
       store2rdiaddr_from_rax(stmt->type);
@@ -440,6 +473,9 @@ void codegen_stmt(Tree *stmt) {
     codegen_stmt(stmt->lhs);
     printf("  not rax\n");
     return;
+  case CAST:
+    codegen_stmt(stmt->lhs);
+    return;
   case PLUS:
     codegen_stmt(stmt->lhs);
     return;
@@ -452,7 +488,8 @@ void codegen_stmt(Tree *stmt) {
     return;
   case DEREF:
     codegen_stmt(stmt->lhs);
-    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
+        stmt->type->kind == FUNC)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
@@ -527,6 +564,28 @@ void codegen_stmt(Tree *stmt) {
         stmt->type->kind == STRUCT)
       return;
     load2rax_from_raxaddr(stmt->type);
+    return;
+  case BUILTIN_VA_START: {
+    Obj *va_obj = stmt->lhs->var_obj;
+    Obj *last_para = stmt->rhs->var_obj;
+
+    printf("  mov eax,%d\n", last_para->nth_arg * 0x8);
+    printf("  mov [rbp - %d], eax\n", va_obj->rbp_offset);
+    printf("  mov eax,0x30\n");
+    printf("  mov [rbp - %d], eax\n", va_obj->rbp_offset - 0x4);
+    printf("  lea rax,[rbp + 0x10]\n");
+    printf("  mov [rbp - %d], rax\n", va_obj->rbp_offset - 0x8);
+    printf("  lea rax,[rbp - %d]\n", current_function->stack_size + 0x30);
+    printf("  mov [rbp - %d], rax\n", va_obj->rbp_offset - 0x10);
+  }
+    return;
+  case BUILTIN_VA_END: {
+    Obj *va_obj = stmt->lhs->var_obj;
+    printf("  mov rax, 0x0\n");
+    printf("  mov [rbp - %d],rax\n", va_obj->rbp_offset);
+    printf("  mov [rbp - %d],rax\n", va_obj->rbp_offset - 0x8);
+    printf("  mov [rbp - %d],rax\n", va_obj->rbp_offset - 0x10);
+  }
     return;
   default:
     break;

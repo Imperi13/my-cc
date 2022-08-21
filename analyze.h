@@ -46,6 +46,9 @@ struct Obj {
   bool is_defined;
   bool is_global;
 
+  // for arg
+  int nth_arg;
+
   // for local-var
   int rbp_offset;
 

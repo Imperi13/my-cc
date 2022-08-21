@@ -46,6 +46,8 @@ extern Type *type_int;
 extern Type *type_char;
 extern Type *type_bool;
 
+void builtin_type_init(Analyze *state);
+
 Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state);
 Type *gettype_declarator(Declarator *declarator, Type *base_type);
 char *getname_declarator(Declarator *declarator);

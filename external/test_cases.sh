@@ -394,28 +394,37 @@ run_test typedef_1 'typedef int TEST; TEST main(){return 174;}' 174
 run_test typedef_2 'typedef struct A TEST; int main(){ TEST *p; return 174;}' 174
 run_test typedef_3 'typedef void *TEST; int main(){  return 166 + sizeof(TEST);}' 174
 
+run_test parameter_type_list_1 'int test(void *);int main(){return 174;}' 174
+run_test parameter_type_list_1 'int test(void *,int (*)[10] );int main(){return 174;}' 174
+
 run_test bool_1 'int main() {return 173 + sizeof(_Bool);}' 174
 run_test bool_2 'int main() {return 173 + _Alignof(_Bool);}' 174
 run_test bool_3 'int main() {_Bool test; test = 1; if(test)return 174;else return 170;}' 174
 run_test bool_4 'int main() {_Bool test; test = 256; if(test)return 174;else return 170;}' 174
 
-run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
-run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
-run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
-run_test_with_supplement1 319 'struct A{int a; int b; int *p;}; struct A q(void); int r(struct A *p); int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return r(p);}}' 174
-run_test 320 'struct A{int a; int b; int *p;}; struct A f(int j) {struct A u; u.a = 100; u.b = 72 + j; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(2); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
+run_test variable_arg_1 'int test(char *fmt,...){return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
+run_test variable_arg_2 'int test(char *fmt,...){__builtin_va_list ap; __builtin_va_start(ap,fmt); __builtin_va_end(ap); return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
+run_test_with_supplement0 variable_arg_3 'int sum_args();int sum(int n,...){__builtin_va_list ap;__builtin_va_start(ap,n);int ret = sum_args(n,ap);__builtin_va_end(ap);return ret;} int main(){return sum(4,160,1,3,10);}' 174
 
-run_test_with_supplement1 321 'struct A{int a; int b; int *p; int *q; int *r; int *s;}; struct A test_(int *s); int main(void){int k; k = 100; struct A u = test_(&k); return u.a + *(u.s);}' 174
+run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
 
-run_test 322 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return u.a + 74;}' 174
-run_test 323 'struct A{int a; int b; int *q; int *r; int *s; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
+#run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
+#run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
+#run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
+#run_test_with_supplement1 319 'struct A{int a; int b; int *p;}; struct A q(void); int r(struct A *p); int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return r(p);}}' 174
+#run_test 320 'struct A{int a; int b; int *p;}; struct A f(int j) {struct A u; u.a = 100; u.b = 72 + j; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(2); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 
-run_test 324 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return (u, 174);}' 174
-run_test 325 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); struct A v; return (v = u).a + 74;}' 174
-run_test 326 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return (1,u).a + 74;}' 174
-run_test 326 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return (1,2,u).a + 74;}' 174
-run_test 327 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); struct A v; v.a = 1; return (1? u : v).a + 74;}' 174
-run_test 328 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); struct A v; v.a = 1; return (0? u : v).a + 74;}' 75
+#run_test_with_supplement1 321 'struct A{int a; int b; int *p; int *q; int *r; int *s;}; struct A test_(int *s); int main(void){int k; k = 100; struct A u = test_(&k); return u.a + *(u.s);}' 174
+
+#run_test 322 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return u.a + 74;}' 174
+#run_test 323 'struct A{int a; int b; int *q; int *r; int *s; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
+
+#run_test 324 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return (u, 174);}' 174
+#run_test 325 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); struct A v; return (v = u).a + 74;}' 174
+#run_test 326 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return (1,u).a + 74;}' 174
+#run_test 326 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); return (1,2,u).a + 74;}' 174
+#run_test 327 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); struct A v; v.a = 1; return (1? u : v).a + 74;}' 174
+#run_test 328 'struct A{int a; int b; int *q; int *t; int *p;}; struct A f(void) {struct A u; u.a = 100;return u;} int main(void){struct A u = f(); struct A v; v.a = 1; return (0? u : v).a + 74;}' 75
 
 run_test 329 'int main(){void *null = 0; int (*p)(void) = null; return 123;}' 123
 run_test 330 'int main(){void *null = 0; int (*p)(int) = null; return 123;}' 123

@@ -5,24 +5,30 @@
 #include "error.h"
 #include "file.h"
 
-// TODO 置き場
+#ifndef __STDC__
 
-char call_register64[6][4] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-char call_register32[6][4] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
-char call_register8[6][4] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+#include "selfhost_util.h"
+
+int fprintf();
+int vfprintf();
+int snprintf();
+void exit();
+
+#endif
 
 void error(char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  fprintf(stderr,"[error] ");
+  __builtin_va_list ap;
+  __builtin_va_start(ap, fmt);
+  fprintf(stderr, "[error] ");
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
+  __builtin_va_end(ap);
   exit(1);
 }
 
 void error_at(char *loc, char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
+  __builtin_va_list ap;
+  __builtin_va_start(ap, fmt);
 
   char *line = loc;
   while (user_input < line && line[-1] != '\n')
@@ -47,6 +53,7 @@ void error_at(char *loc, char *fmt, ...) {
 
   fprintf(stderr, "^ %s\n", msg);
 
+  __builtin_va_end(ap);
   exit(1);
 }
 
@@ -55,16 +62,17 @@ void not_implemented(const char *msg) { error("not implemented: %s", msg); }
 void not_implemented_at(char *loc) { error_at(loc, "not implemented"); }
 
 void warn(char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  fprintf(stderr,"[warn] ");
+  __builtin_va_list ap;
+  __builtin_va_start(ap, fmt);
+  fprintf(stderr, "[warn] ");
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
+  __builtin_va_end(ap);
 }
 
 void warn_at(char *loc, char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
+  __builtin_va_list ap;
+  __builtin_va_start(ap, fmt);
 
   char *line = loc;
   while (user_input < line && line[-1] != '\n')
@@ -88,4 +96,5 @@ void warn_at(char *loc, char *fmt, ...) {
   snprintf(msg, 0xff, fmt, ap);
 
   fprintf(stderr, "^ %s\n", msg);
+  __builtin_va_end(ap);
 }

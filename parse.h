@@ -49,6 +49,7 @@ typedef enum TreeKind {
   MUL,
   DIV,
   MOD,
+  CAST,
   PLUS,
   MINUS,
   ADDR,
@@ -65,6 +66,8 @@ typedef enum TreeKind {
   NUM,
   STR,
   VAR,
+  BUILTIN_VA_START,
+  BUILTIN_VA_END,
 } TreeKind;
 
 typedef enum TypeSuffixKind {
@@ -87,7 +90,6 @@ typedef struct ArrayDeclarator ArrayDeclarator;
 #include "tokenize.h"
 #include "type.h"
 
-
 struct Tree {
   TreeKind kind;
 
@@ -101,6 +103,14 @@ struct Tree {
   Tree *func_body;
 
   Type *type;
+
+  // for argument
+
+  bool has_variable_arg;
+  int nth_arg;
+
+  // for compound_stmt
+  Tree *stmts;
 
   // for LABEL
   char *label_name;
@@ -122,12 +132,12 @@ struct Tree {
   Tree *for_init;
   Tree *for_update;
 
+  // for cast
+  Tree *type_name;
+
   // for unary and binary op
   Tree *lhs; // for unary
   Tree *rhs;
-
-  // for compound_stmt
-  Tree *stmts;
 
   // for func-call
   Tree *call_args;
@@ -218,6 +228,7 @@ struct Declarator {
 
   // for FUNC_DECLARATOR
   Tree *args;
+  bool has_variable_arg;
 
   // for ARRAY_DECLARATOR
   ArrayDeclarator *arr_decl;
