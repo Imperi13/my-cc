@@ -359,6 +359,12 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
+    if (strncmp(p, "union", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_UNION, cur, p, 5, filepath);
+      p += 5;
+      continue;
+    }
+
     if (strncmp(p, "enum", 4) == 0 && !is_alnum(p[4])) {
       cur = new_token(TK_ENUM, cur, p, 4, filepath);
       p += 4;

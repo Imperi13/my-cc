@@ -210,6 +210,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     }
 
     decl_spec->st_def = st_defs;
+  } else if (decl_spec->union_spec) {
+    not_implemented(__func__);
   } else if (decl_spec->en_spec) {
     if (!decl_spec->en_spec->en_name)
       not_implemented(__func__);

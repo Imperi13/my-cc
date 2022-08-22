@@ -80,6 +80,7 @@ typedef struct Tree Tree;
 typedef struct Case Case;
 typedef struct DeclSpec DeclSpec;
 typedef struct StructSpec StructSpec;
+typedef struct UnionSpec UnionSpec;
 typedef struct EnumSpec EnumSpec;
 typedef struct EnumVal EnumVal;
 typedef struct Declarator Declarator;
@@ -181,6 +182,7 @@ struct DeclSpec {
   bool has_bool;
   StructSpec *st_spec;
   StructDef *st_def;
+  UnionSpec *union_spec;
   EnumSpec *en_spec;
   EnumDef *en_def;
 
@@ -195,6 +197,14 @@ struct StructSpec {
 
   bool has_decl;
 
+  Tree *members;
+};
+
+struct UnionSpec {
+  char *union_name;
+  int union_len;
+
+  bool has_decl;
   Tree *members;
 };
 
