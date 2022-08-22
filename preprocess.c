@@ -6,6 +6,7 @@
 #include "error.h"
 #include "file.h"
 #include "preprocess.h"
+#include "str_dict.h"
 #include "tokenize.h"
 
 #ifndef __STDC__
@@ -42,18 +43,14 @@ struct PragmaOnceList {
 
 typedef struct DefineList DefineList;
 struct DefineList {
-  char *sym_name;
-  int sym_len;
+  char *name;
 
   // startからTK_NEWLINEまでが展開するトークン
   Token *start;
-
-  // for linked-list
-  DefineList *next;
 };
 
 PragmaOnceList *pragma_list;
-DefineList *define_list;
+StrDict *define_dict;
 
 bool is_included(char *filepath) {
   for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
@@ -74,13 +71,6 @@ void insert_token_seq(Token *dst, Token *src) {
 
   dst->next = src;
   cur->next = dst_next;
-}
-
-DefineList *find_define(char *def_name, int def_len) {
-  for (DefineList *cur = define_list; cur; cur = cur->next)
-    if (cur->sym_len == def_len && !memcmp(def_name, cur->sym_name, def_len))
-      return cur;
-  return NULL;
 }
 
 bool is_if_group(Token *tok) {
@@ -113,7 +103,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_IDENT);
 
     char *define_str = getname_ident(&tok, tok);
-    bool cond = (find_define(define_str, strlen(define_str)) != NULL);
+    bool cond = (find_str_dict(define_dict, define_str) != NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
@@ -136,7 +126,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_IDENT);
 
     char *define_str = getname_ident(&tok, tok);
-    bool cond = (find_define(define_str, strlen(define_str)) == NULL);
+    bool cond = (find_str_dict(define_dict, define_str) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     Token *dummy;
@@ -229,8 +219,7 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   char *define_str = getname_ident(&tok, tok);
 
   DefineList *new_def = calloc(1, sizeof(DefineList));
-  new_def->sym_name = define_str;
-  new_def->sym_len = strlen(define_str);
+  new_def->name = define_str;
 
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
@@ -245,8 +234,7 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
   new_def->start = head->next;
 
-  new_def->next = define_list;
-  define_list = new_def;
+  add_str_dict(define_dict, define_str, new_def);
 
   expect_kind(&tok, tok, TK_NEWLINE);
   *pre = tok;
@@ -260,7 +248,7 @@ void expand_define(Token **pre, Token *tok) {
     return;
   }
 
-  DefineList *def = find_define(tok->str, tok->len);
+  DefineList *def = find_str_dict(define_dict, tok->ident_str);
   if (!def) {
     *pre = tok;
     return;
@@ -323,6 +311,8 @@ void consume_line(Token **pre, Token *tok) {
 }
 
 Token *preprocess(Token *tok) {
+  define_dict = new_str_dict();
+
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
 
