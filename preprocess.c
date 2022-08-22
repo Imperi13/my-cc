@@ -26,6 +26,7 @@ static void process_macro_group(Token **post, Token **pre, Token *tok);
 static void process_if_group(Token **post, Token **pre, Token *tok);
 static void process_include_line(Token **post, Token **pre, Token *tok);
 static void process_define_line(Token **post, Token **pre, Token *tok);
+static void process_undef_line(Token **post, Token **pre, Token *tok);
 static void process_pragma_line(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
 
@@ -88,6 +89,8 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
     process_include_line(NULL, pre, tok);
   } else if (cmp_ident(tok->next, "define")) {
     process_define_line(NULL, pre, tok);
+  } else if (cmp_ident(tok->next, "undef")) {
+    process_undef_line(NULL, pre, tok);
   } else if (cmp_ident(tok->next, "pragma")) {
     process_pragma_line(post, pre, tok);
   } else {
@@ -235,6 +238,26 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   new_def->start = head->next;
 
   add_str_dict(define_dict, define_str, new_def);
+
+  expect_kind(&tok, tok, TK_NEWLINE);
+  *pre = tok;
+}
+
+void process_undef_line(Token **post, Token **pre, Token *tok) {
+  expect(&tok, tok, "#");
+  if (!cmp_ident(tok, "undef"))
+    error_at(tok->str, "this line is not undef line");
+  expect_kind(&tok, tok, TK_IDENT);
+
+  if (post)
+    not_implemented_at(tok->str);
+
+  char *define_str = getname_ident(&tok, tok);
+
+  if (!find_str_dict(define_dict, define_str))
+    return;
+
+  remove_str_dict(define_dict, define_str);
 
   expect_kind(&tok, tok, TK_NEWLINE);
   *pre = tok;
