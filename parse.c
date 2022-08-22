@@ -31,6 +31,7 @@ static Tree *parse_type_name(Token **rest, Token *tok, Analyze *state);
 static Declarator *parse_abstract_declarator(Token **rest, Token *tok,
                                              Analyze *state);
 
+static bool is_declaration_specs(Token *tok, Analyze *state);
 static bool is_declaration(Token *tok, Analyze *state);
 static bool is_declarator(Token *tok, Analyze *state);
 
@@ -65,8 +66,6 @@ static bool is_label_stmt(Token *tok);
 static bool is_selection_stmt(Token *tok);
 static bool is_iteration_stmt(Token *tok);
 static bool is_jump_stmt(Token *tok);
-
-static bool is_declaration_specs(Token *tok, Analyze *state);
 
 Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs) {
   Tree *node = calloc(1, sizeof(Tree));
@@ -151,9 +150,10 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 bool is_declaration_specs(Token *tok, Analyze *state) {
   return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
          equal_kind(tok, TK_VOID) || equal_kind(tok, TK_BOOL) ||
-         equal_kind(tok, TK_STRUCT) || equal_kind(tok, TK_ENUM) ||
-         equal_kind(tok, TK_CONST) || equal_kind(tok, TK_EXTERN) ||
-         equal_kind(tok, TK_STATIC) || equal_kind(tok, TK_TYPEDEF) ||
+         equal_kind(tok, TK_STRUCT) || equal_kind(tok, TK_UNION) ||
+         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
+         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC) ||
+         equal_kind(tok, TK_TYPEDEF) ||
          (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->str, tok->len));
 }
 
@@ -244,6 +244,43 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
 
       parsed_type = true;
 
+    } else if (equal_kind(tok, TK_UNION)) {
+      if (parsed_type)
+        error("dup type");
+      consume_kind(&tok, tok, TK_UNION);
+      UnionSpec *union_spec = calloc(1, sizeof(UnionSpec));
+      decl_spec->union_spec = union_spec;
+      if (equal_kind(tok, TK_IDENT)) {
+        Token *union_ident = consume_kind(&tok, tok, TK_IDENT);
+        union_spec->union_name = union_ident->str;
+        union_spec->union_len = union_ident->len;
+
+        if (consume(&tok, tok, "{")) {
+          union_spec->has_decl = true;
+          Tree *head = calloc(1, sizeof(Tree));
+          Tree *cur = head;
+          while (!consume(&tok, tok, "}")) {
+            cur->next = parse_external_decl(&tok, tok, state, false);
+            cur = cur->next;
+            consume(&tok, tok, ",");
+          }
+
+          union_spec->members = head->next;
+        }
+      } else {
+        expect(&tok, tok, "{");
+        union_spec->has_decl = true;
+        Tree *head = calloc(1, sizeof(Tree));
+        Tree *cur = head;
+        while (!consume(&tok, tok, "}")) {
+          cur->next = parse_external_decl(&tok, tok, state, false);
+          cur = cur->next;
+          consume(&tok, tok, ",");
+        }
+
+        union_spec->members = head->next;
+      }
+      parsed_type = true;
     } else if (equal_kind(tok, TK_ENUM)) {
       if (parsed_type)
         error("dup type");

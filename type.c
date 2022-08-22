@@ -83,6 +83,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
     return type_bool;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
+  } else if (decl_spec->union_def) {
+    return newtype_union(decl_spec->union_def);
   } else if (decl_spec->en_def) {
     return type_int;
   } else if (decl_spec->def_name) {
@@ -165,6 +167,13 @@ Type *newtype_struct(StructDef *st_def) {
   return nt;
 }
 
+Type *newtype_union(UnionDef *union_def) {
+  Type *nt = calloc(1, sizeof(Type));
+  nt->kind = UNION;
+  nt->union_def = union_def;
+  return nt;
+}
+
 int type_size(Type *type) {
   if (type->kind == INT)
     return 4;
@@ -178,6 +187,8 @@ int type_size(Type *type) {
     return type->arr_size * type_size(type->ptr_to);
   else if (type->kind == STRUCT)
     return type->st_def->size;
+  else if (type->kind == UNION)
+    return type->union_def->size;
   else if (type->kind == FUNC)
     error("not defined type_size for FUNC");
   else
@@ -198,6 +209,8 @@ int type_alignment(Type *type) {
     return type_alignment(type->ptr_to);
   else if (type->kind == STRUCT)
     return type->st_def->alignment;
+  else if (type->kind == UNION)
+    return type->union_def->alignment;
   else if (type->kind == FUNC)
     error("not defined type_alignment for FUNC");
   else
@@ -233,6 +246,8 @@ bool is_same_type(Type *a, Type *b) {
     return a->arr_size == b->arr_size && is_same_type(a->ptr_to, b->ptr_to);
   else if (a->kind == STRUCT)
     return a->st_def == b->st_def;
+  else if (a->kind == UNION)
+    return a->union_def == b->union_def;
   else if (a->kind == FUNC || b->kind == FUNC)
     error("type comp FUNC");
   return false;

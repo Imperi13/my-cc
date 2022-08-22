@@ -37,7 +37,12 @@ static void push_switch(SwitchScope **switch_scope, Tree *switch_node);
 static void pop_switch(SwitchScope **switch_scope);
 
 static StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len);
-static Member *find_member(StructDef *st_def, char *mem_name, int mem_len);
+static UnionDef *find_union(UnionDef *union_defs, char *union_name,
+                            int union_len);
+static Member *find_struct_member(StructDef *st_def, char *mem_name,
+                                  int mem_len);
+static Member *find_union_member(UnionDef *union_def, char *mem_name,
+                                 int mem_len);
 static EnumDef *find_enum(EnumDef *en_defs, char *en_name, int en_len);
 
 static EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len);
@@ -210,6 +215,72 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     }
 
     decl_spec->st_def = st_defs;
+  } else if (decl_spec->union_spec) {
+
+    if (!decl_spec->union_spec->union_name) {
+      not_implemented(__func__);
+    }
+
+    UnionDef *union_def =
+        find_union(state->glb_uniondefs, decl_spec->union_spec->union_name,
+                   decl_spec->union_spec->union_len);
+
+    if (!union_def) {
+      union_def = calloc(1, sizeof(UnionDef));
+      union_def->union_name = decl_spec->union_spec->union_name;
+      union_def->union_len = decl_spec->union_spec->union_len;
+
+      union_def->next = state->glb_uniondefs;
+      state->glb_uniondefs = union_def;
+    }
+
+    if (union_def->is_defined && decl_spec->union_spec->has_decl)
+      error("redefine union");
+
+    if (decl_spec->union_spec->has_decl) {
+      union_def->is_defined = true;
+      union_def->size = 0;
+      union_def->alignment = 1;
+
+      Tree *cur = decl_spec->union_spec->members;
+      Member *head = calloc(1, sizeof(Member));
+      Member *mem_cur = head;
+
+      while (cur) {
+        Member *mem = calloc(1, sizeof(Member));
+
+        analyze_decl_spec(cur->decl_specs, state, false);
+        Type *obj_type = gettype_decl_spec(cur->decl_specs, state);
+        obj_type = gettype_declarator(cur->declarator, obj_type);
+
+        char *obj_name = getname_declarator(cur->declarator);
+
+        mem->member_name = obj_name;
+        mem->member_len = strlen(obj_name);
+        mem->type = obj_type;
+        mem->offset = 0;
+
+        union_def->size =
+            (type_size(obj_type) > union_def->size ? type_size(obj_type)
+                                                   : union_def->size);
+        union_def->alignment = (type_alignment(obj_type) > union_def->alignment
+                                    ? type_alignment(obj_type)
+                                    : union_def->alignment);
+        mem_cur->next = mem;
+        mem_cur = mem;
+
+        cur = cur->next;
+      }
+
+      union_def->members = head->next;
+      union_def->size = (union_def->size % union_def->alignment == 0)
+                            ? union_def->size
+                            : union_def->size + union_def->alignment -
+                                  union_def->size % union_def->alignment;
+    }
+
+    decl_spec->union_def = union_def;
+
   } else if (decl_spec->en_spec) {
     if (!decl_spec->en_spec->en_name)
       not_implemented(__func__);
@@ -690,11 +761,17 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = ast->lhs->type;
   } else if (ast->kind == DOT) {
     analyze_stmt(ast->lhs, state);
-    if (ast->lhs->type->kind != STRUCT)
+    if (ast->lhs->type->kind != STRUCT && ast->lhs->type->kind != UNION)
       error("lhs is not struct");
 
-    Member *member =
-        find_member(ast->lhs->type->st_def, ast->member_name, ast->member_len);
+    Member *member;
+    if (ast->lhs->type->kind == STRUCT)
+      member = find_struct_member(ast->lhs->type->st_def, ast->member_name,
+                                  ast->member_len);
+    else
+      member = find_union_member(ast->lhs->type->union_def, ast->member_name,
+                                 ast->member_len);
+
     if (!member)
       error("not find member");
 
@@ -703,11 +780,19 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == ARROW) {
     analyze_stmt(ast->lhs, state);
-    if (ast->lhs->type->kind != PTR || ast->lhs->type->ptr_to->kind != STRUCT)
+    if (ast->lhs->type->kind != PTR ||
+        (ast->lhs->type->ptr_to->kind != STRUCT &&
+         ast->lhs->type->ptr_to->kind != UNION))
       error("lhs is not ptr to struct");
 
-    Member *member = find_member(ast->lhs->type->ptr_to->st_def,
+    Member *member;
+    if (ast->lhs->type->ptr_to->kind == STRUCT)
+      member = find_struct_member(ast->lhs->type->ptr_to->st_def,
+                                  ast->member_name, ast->member_len);
+    else
+      member = find_union_member(ast->lhs->type->ptr_to->union_def,
                                  ast->member_name, ast->member_len);
+
     if (!member)
       error("not find member");
 
@@ -840,8 +925,24 @@ StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len) {
   return NULL;
 }
 
-Member *find_member(StructDef *st_def, char *mem_name, int mem_len) {
+UnionDef *find_union(UnionDef *union_defs, char *union_name, int union_len) {
+  for (UnionDef *cur = union_defs; cur; cur = cur->next)
+    if (cur->union_len == union_len &&
+        !memcmp(union_name, cur->union_name, union_len))
+      return cur;
+  return NULL;
+}
+
+Member *find_struct_member(StructDef *st_def, char *mem_name, int mem_len) {
   for (Member *cur = st_def->members; cur; cur = cur->next)
+    if (cur->member_len == mem_len &&
+        !memcmp(mem_name, cur->member_name, mem_len))
+      return cur;
+  return NULL;
+}
+
+Member *find_union_member(UnionDef *union_def, char *mem_name, int mem_len) {
+  for (Member *cur = union_def->members; cur; cur = cur->next)
     if (cur->member_len == mem_len &&
         !memcmp(mem_name, cur->member_name, mem_len))
       return cur;

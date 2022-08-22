@@ -16,10 +16,48 @@ void exit();
 
 #endif
 
+void warn(char *fmt, ...) {
+  __builtin_va_list ap;
+  __builtin_va_start(ap, fmt);
+  fprintf(stderr, "\e[33m[warn]\e[m ");
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  __builtin_va_end(ap);
+}
+
+void warn_at(char *loc, char *fmt, ...) {
+  __builtin_va_list ap;
+  __builtin_va_start(ap, fmt);
+
+  char *line = loc;
+  while (user_input < line && line[-1] != '\n')
+    line--;
+  char *end = loc;
+  while (*end != '\n')
+    end++;
+
+  int line_num = 1;
+  for (char *p = user_input; p < line; p++)
+    if (*p == '\n')
+      line_num++;
+
+  int indent = fprintf(stderr, "\e[33m[warn]\e[m %s:%d: ", filename, line_num);
+  fprintf(stderr, "%.*s\n", (int)(end - line), line);
+
+  int pos = loc - line + indent;
+  fprintf(stderr, "%*s", pos, "");
+
+  char msg[0x100];
+  snprintf(msg, 0xff, fmt, ap);
+
+  fprintf(stderr, "^ %s\n", msg);
+  __builtin_va_end(ap);
+}
+
 void error(char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
-  fprintf(stderr, "[error] ");
+  fprintf(stderr, "\e[31m[error]\e[m ");
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
   __builtin_va_end(ap);
@@ -42,7 +80,7 @@ void error_at(char *loc, char *fmt, ...) {
     if (*p == '\n')
       line_num++;
 
-  int indent = fprintf(stderr, "[error] %s:%d: ", filename, line_num);
+  int indent = fprintf(stderr, "\e[31m[error]\e[m %s:%d: ", filename, line_num);
   fprintf(stderr, "%.*s\n", (int)(end - line), line);
 
   int pos = loc - line + indent;
@@ -61,40 +99,3 @@ void not_implemented(const char *msg) { error("not implemented: %s", msg); }
 
 void not_implemented_at(char *loc) { error_at(loc, "not implemented"); }
 
-void warn(char *fmt, ...) {
-  __builtin_va_list ap;
-  __builtin_va_start(ap, fmt);
-  fprintf(stderr, "[warn] ");
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
-  __builtin_va_end(ap);
-}
-
-void warn_at(char *loc, char *fmt, ...) {
-  __builtin_va_list ap;
-  __builtin_va_start(ap, fmt);
-
-  char *line = loc;
-  while (user_input < line && line[-1] != '\n')
-    line--;
-  char *end = loc;
-  while (*end != '\n')
-    end++;
-
-  int line_num = 1;
-  for (char *p = user_input; p < line; p++)
-    if (*p == '\n')
-      line_num++;
-
-  int indent = fprintf(stderr, "[warn] %s:%d: ", filename, line_num);
-  fprintf(stderr, "%.*s\n", (int)(end - line), line);
-
-  int pos = loc - line + indent;
-  fprintf(stderr, "%*s", pos, "");
-
-  char msg[0x100];
-  snprintf(msg, 0xff, fmt, ap);
-
-  fprintf(stderr, "^ %s\n", msg);
-  __builtin_va_end(ap);
-}

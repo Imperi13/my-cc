@@ -14,6 +14,7 @@ typedef enum TokenKind {
   TK_SIZEOF,
   TK_ALIGNOF,
   TK_STRUCT,
+  TK_UNION,
   TK_ENUM,
   TK_IF,
   TK_ELSE,

@@ -8,6 +8,7 @@ typedef struct Typedef Typedef;
 typedef struct LabelScope LabelScope;
 typedef struct SwitchScope SwitchScope;
 typedef struct StructDef StructDef;
+typedef struct UnionDef UnionDef;
 typedef struct Member Member;
 typedef struct EnumDef EnumDef;
 
@@ -18,6 +19,7 @@ struct Analyze {
   // global scope
   Obj *glb_objs;
   StructDef *glb_stdefs;
+  UnionDef *glb_uniondefs;
   EnumDef *glb_endefs;
   Typedef *glb_typedefs;
   Obj *current_func;
@@ -76,6 +78,20 @@ struct StructDef {
 
   // for linked-list
   StructDef *next;
+};
+
+struct UnionDef {
+  char *union_name;
+  int union_len;
+
+  bool is_defined;
+  int size;
+  int alignment;
+
+  Member *members;
+
+  // for linked-list
+  UnionDef *next;
 };
 
 struct Member {

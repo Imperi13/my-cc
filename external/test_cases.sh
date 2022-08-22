@@ -406,6 +406,10 @@ run_test variable_arg_1 'int test(char *fmt,...){return *fmt;} int main(){int n 
 run_test variable_arg_2 'int test(char *fmt,...){__builtin_va_list ap; __builtin_va_start(ap,fmt); __builtin_va_end(ap); return *fmt;} int main(){int n = test("aaa",10); return n+77;}' 174
 run_test_with_supplement0 variable_arg_3 'int sum_args();int sum(int n,...){__builtin_va_list ap;__builtin_va_start(ap,n);int ret = sum_args(n,ap);__builtin_va_end(ap);return ret;} int main(){return sum(4,160,1,3,10);}' 174
 
+run_test union_1 'union Test {int *p;char a[6];}; int main(){union Test x; return sizeof(union Test) + 166;}' 174
+run_test union_2 'union Test {int n;char a[6];}; int main(){union Test x; x.n = 170; return x.n + 4;}' 174
+run_test union_2 'union Test {int n;char a[6];}; int main(){union Test x; x.n = 170; x.a[0] = 10;x.a[1] = 20; return x.a[0] + x.a[1] + 144;}' 174
+
 run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
 
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174

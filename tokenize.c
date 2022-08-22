@@ -57,13 +57,13 @@ Token *consume_kind(Token **rest, Token *token, TokenKind kind) {
 void expect(Token **rest, Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
-    error_at(token->str, "not '%c' op", op);
+    error_at(token->str, "not '%s' op", op);
   *rest = token->next;
 }
 
 Token *expect_kind(Token **rest, Token *token, TokenKind kind) {
   if (token->kind != kind)
-    error_at(token->str, "not expect TokenKind");
+    error_at(token->str, "not expected TokenKind");
   *rest = token->next;
   return token;
 }
@@ -356,6 +356,12 @@ Token *tokenize(char *p, char *filepath) {
     if (strncmp(p, "struct", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_STRUCT, cur, p, 6, filepath);
       p += 6;
+      continue;
+    }
+
+    if (strncmp(p, "union", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_UNION, cur, p, 5, filepath);
+      p += 5;
       continue;
     }
 
