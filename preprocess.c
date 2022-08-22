@@ -83,7 +83,6 @@ DefineList *find_define(char *def_name, int def_len) {
   return NULL;
 }
 
-
 bool is_if_group(Token *tok) {
   return cmp_ident(tok->next, "ifdef") || cmp_ident(tok->next, "ifndef") ||
          equal_kind(tok->next, TK_IF);
@@ -113,8 +112,8 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
   if (cmp_ident(tok, "ifdef")) {
     expect_kind(&tok, tok, TK_IDENT);
 
-    Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) != NULL);
+    char *define_str = getname_ident(&tok, tok);
+    bool cond = (find_define(define_str, strlen(define_str)) != NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
@@ -136,8 +135,8 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
   } else if (cmp_ident(tok, "ifndef")) {
     expect_kind(&tok, tok, TK_IDENT);
 
-    Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) == NULL);
+    char *define_str = getname_ident(&tok, tok);
+    bool cond = (find_define(define_str, strlen(define_str)) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     Token *dummy;
@@ -192,7 +191,7 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
       tok = tok->next;
     }
 
-    fprintf(stderr,"%s\n",filename);
+    fprintf(stderr, "%s\n", filename);
     warn_at(tok->str, "ignore include");
 
     expect(&tok, tok, ">");
@@ -227,11 +226,11 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   if (post)
     not_implemented_at(tok->str);
 
-  Token *sym_tok = expect_kind(&tok, tok, TK_IDENT);
+  char *define_str = getname_ident(&tok, tok);
 
   DefineList *new_def = calloc(1, sizeof(DefineList));
-  new_def->sym_name = sym_tok->str;
-  new_def->sym_len = sym_tok->len;
+  new_def->sym_name = define_str;
+  new_def->sym_len = strlen(define_str);
 
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;

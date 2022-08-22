@@ -77,9 +77,10 @@ int expect_number(Token **rest, Token *token) {
   return val;
 }
 
-char *getname_ident(Token *tok) {
+char *getname_ident(Token **rest, Token *tok) {
   if (!equal_kind(tok, TK_IDENT))
     error_at(tok->str, "not ident token");
+  *rest = tok->next;
   return tok->ident_str;
 }
 

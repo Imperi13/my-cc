@@ -80,7 +80,7 @@ Token *consume_kind(Token **rest, Token *token, TokenKind kind);
 void expect(Token **rest, Token *token, char *op);
 Token *expect_kind(Token **rest, Token *token, TokenKind kind);
 int expect_number(Token **rest, Token *token);
-char *getname_ident(Token *tok);
+char *getname_ident(Token **rest,Token *tok);
 bool cmp_ident(Token *tok, const char *name);
 bool at_eof(Token *token);
 
