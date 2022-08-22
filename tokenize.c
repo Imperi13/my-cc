@@ -23,6 +23,7 @@ int isdigit();
 size_t strspn();
 
 int fprintf();
+void *memcpy();
 
 #endif
 
@@ -74,6 +75,12 @@ int expect_number(Token **rest, Token *token) {
   int val = token->val;
   *rest = token->next;
   return val;
+}
+
+char *getname_ident(Token *tok) {
+  if (!equal_kind(tok, TK_IDENT))
+    error_at(tok->str, "not ident token");
+  return tok->ident_str;
 }
 
 bool cmp_ident(Token *tok, const char *name) {
@@ -470,6 +477,8 @@ Token *tokenize(char *p, char *filepath) {
     if (strspn(p, variable_letters) > 0) {
       int len = strspn(p, variable_letters);
       cur = new_token(TK_IDENT, cur, p, len, filepath);
+      cur->ident_str = calloc(len + 1, sizeof(char));
+      memcpy(cur->ident_str, p, len);
       p += len;
       continue;
     }
