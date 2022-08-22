@@ -1,7 +1,5 @@
 #pragma once
 
-#include "tokenize.h"
-
 #ifdef __STDC__
 
 void error(char *fmt, ...);
