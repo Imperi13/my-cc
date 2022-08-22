@@ -182,7 +182,8 @@ void codegen_stmt(Tree *stmt) {
       printf("  lea rdi, [rbp - %d]\n", stmt->def_obj->rbp_offset);
       printf("  push rdi\n");
       codegen_stmt(stmt->declarator->init_expr);
-      if (stmt->def_obj->type->kind == STRUCT) {
+      if (stmt->def_obj->type->kind == STRUCT ||
+          stmt->def_obj->type->kind == UNION) {
         printf("  pop rdi\n");
         printf("  mov rsi, rax\n");
         printf("  mov rcx, %d\n", type_size(stmt->def_obj->type));
@@ -285,7 +286,7 @@ void codegen_stmt(Tree *stmt) {
     codegen_addr(stmt->lhs);
     printf("  push rax\n");
     codegen_stmt(stmt->rhs);
-    if (stmt->lhs->type->kind == STRUCT) {
+    if (stmt->lhs->type->kind == STRUCT || stmt->lhs->type->kind == UNION) {
       printf("  pop rdi\n");
       printf("  mov rsi, rax\n");
       printf("  mov rcx, %d\n", type_size(stmt->lhs->type));
@@ -489,7 +490,7 @@ void codegen_stmt(Tree *stmt) {
   case DEREF:
     codegen_stmt(stmt->lhs);
     if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
-        stmt->type->kind == FUNC)
+        stmt->type->kind == UNION || stmt->type->kind == FUNC)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
@@ -542,13 +543,15 @@ void codegen_stmt(Tree *stmt) {
     return;
   case DOT:
     codegen_addr(stmt);
-    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
+        stmt->type->kind == UNION)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
   case ARROW:
     codegen_addr(stmt);
-    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT)
+    if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
+        stmt->type->kind == UNION)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;
@@ -561,7 +564,7 @@ void codegen_stmt(Tree *stmt) {
   case VAR:
     codegen_addr(stmt);
     if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY ||
-        stmt->type->kind == STRUCT)
+        stmt->type->kind == STRUCT || stmt->type->kind == UNION)
       return;
     load2rax_from_raxaddr(stmt->type);
     return;

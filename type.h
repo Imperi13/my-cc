@@ -7,6 +7,7 @@ typedef enum TypeKind {
   BOOL,
   PTR,
   STRUCT,
+  UNION,
   FUNC,
   ARRAY,
 } TypeKind;
@@ -37,6 +38,9 @@ struct Type {
   // for STRUCT
   StructDef *st_def;
 
+  // for UNION
+  UnionDef *union_def;
+
   // for linked-list
   Type *next;
 };
@@ -55,6 +59,7 @@ Tree *getargs_declarator(Declarator *declarator);
 
 Type *newtype_ptr(Type *type);
 Type *newtype_struct(StructDef *st_def);
+Type *newtype_union(UnionDef *union_def);
 
 int type_size(Type *type);
 int type_alignment(Type *type);

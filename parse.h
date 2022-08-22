@@ -183,6 +183,7 @@ struct DeclSpec {
   StructSpec *st_spec;
   StructDef *st_def;
   UnionSpec *union_spec;
+  UnionDef *union_def;
   EnumSpec *en_spec;
   EnumDef *en_def;
 
