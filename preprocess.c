@@ -35,6 +35,9 @@ static void expand_define(Token **pre, Token *tok);
 static void consume_line(Token **pre, Token *tok);
 
 static long process_constant(Token **pre, Token *tok);
+static long process_equality(Token **pre, Token *tok);
+static long process_relational(Token **pre, Token *tok);
+static long process_shift(Token **pre, Token *tok);
 static long process_add(Token **pre, Token *tok);
 static long process_mul(Token **ptr, Token *tok);
 static long process_cast(Token **pre, Token *tok);
@@ -361,7 +364,74 @@ void consume_line(Token **pre, Token *tok) {
   *pre = tok->next;
 }
 
-long process_constant(Token **pre, Token *tok) { return process_add(pre, tok); }
+long process_constant(Token **pre, Token *tok) {
+  return process_equality(pre, tok);
+}
+
+long process_equality(Token **pre, Token *tok) {
+  long lhs = process_relational(&tok, tok);
+
+  for (;;) {
+    if (equal(tok, "==")) {
+      consume(&tok, tok, "==");
+      long rhs = process_relational(&tok, tok);
+      lhs = lhs == rhs;
+    } else if (equal(tok, "!=")) {
+      consume(&tok, tok, "!=");
+      long rhs = process_relational(&tok, tok);
+      lhs = lhs != rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_relational(Token **pre, Token *tok) {
+  long lhs = process_shift(&tok, tok);
+
+  for (;;) {
+    if (equal(tok, "<")) {
+      consume(&tok, tok, "<");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs < rhs;
+    } else if (equal(tok, "<=")) {
+      consume(&tok, tok, "<=");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs <= rhs;
+    } else if (equal(tok, ">")) {
+      consume(&tok, tok, ">");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs > rhs;
+    } else if (equal(tok, ">=")) {
+      consume(&tok, tok, ">=");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs >= rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_shift(Token **pre, Token *tok) {
+  long lhs = process_add(&tok, tok);
+
+  for (;;) {
+    if (equal(tok, "<<")) {
+      consume(&tok, tok, "<<");
+      long rhs = process_add(&tok, tok);
+      lhs = lhs << rhs;
+    } else if (equal(tok, ">>")) {
+      consume(&tok, tok, ">>");
+      long rhs = process_add(&tok, tok);
+      lhs = lhs >> rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
 
 long process_add(Token **pre, Token *tok) {
   long lhs = process_mul(&tok, tok);
