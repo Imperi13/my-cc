@@ -35,6 +35,8 @@ static void expand_define(Token **pre, Token *tok);
 static void consume_line(Token **pre, Token *tok);
 
 static long process_constant(Token **pre, Token *tok);
+static long process_add(Token **pre, Token *tok);
+static long process_mul(Token **ptr, Token *tok);
 static long process_cast(Token **pre, Token *tok);
 static long process_unary(Token **pre, Token *tok);
 static long process_postfix(Token **pre, Token *tok);
@@ -359,8 +361,50 @@ void consume_line(Token **pre, Token *tok) {
   *pre = tok->next;
 }
 
-long process_constant(Token **pre, Token *tok) {
-  return process_cast(pre, tok);
+long process_constant(Token **pre, Token *tok) { return process_add(pre, tok); }
+
+long process_add(Token **pre, Token *tok) {
+  long lhs = process_mul(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "+")) {
+      consume(&tok, tok, "+");
+      long rhs = process_mul(&tok, tok);
+      lhs = lhs + rhs;
+    } else if (equal(tok, "-")) {
+      consume(&tok, tok, "-");
+      long rhs = process_mul(&tok, tok);
+      lhs = lhs - rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_mul(Token **pre, Token *tok) {
+  long lhs = process_cast(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "*")) {
+      consume(&tok, tok, "*");
+      long rhs = process_cast(&tok, tok);
+      lhs = lhs * rhs;
+    } else if (equal(tok, "/")) {
+      consume(&tok, tok, "/");
+      long rhs = process_cast(&tok, tok);
+      lhs = lhs / rhs;
+    } else if (equal(tok, "%")) {
+      consume(&tok, tok, "%");
+      long rhs = process_cast(&tok, tok);
+      lhs = lhs % rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
 }
 
 long process_cast(Token **pre, Token *tok) { return process_unary(pre, tok); }
