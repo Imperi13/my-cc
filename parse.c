@@ -79,7 +79,7 @@ Tree *parse_translation_unit(Token *tok) {
   Tree *head = calloc(1, sizeof(Tree));
   Tree *cur = head;
 
-  Analyze *state = calloc(1, sizeof(Analyze));
+  Analyze *state = new_analyze_state();
 
   builtin_type_init(state);
 
@@ -212,7 +212,6 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       decl_spec->st_spec = st_spec;
       if (equal_kind(tok, TK_IDENT)) {
         st_spec->st_name = getname_ident(&tok, tok);
-        st_spec->st_len = strlen(st_spec->st_name);
 
         if (consume(&tok, tok, "{")) {
           st_spec->has_decl = true;
@@ -250,7 +249,6 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       decl_spec->union_spec = union_spec;
       if (equal_kind(tok, TK_IDENT)) {
         union_spec->union_name = getname_ident(&tok, tok);
-        union_spec->union_len = strlen(union_spec->union_name);
 
         if (consume(&tok, tok, "{")) {
           union_spec->has_decl = true;

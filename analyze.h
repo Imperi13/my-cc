@@ -13,13 +13,14 @@ typedef struct Member Member;
 typedef struct EnumDef EnumDef;
 
 #include "parse.h"
+#include "str_dict.h"
 #include "type.h"
 
 struct Analyze {
   // global scope
   Obj *glb_objs;
-  StructDef *glb_stdefs;
-  UnionDef *glb_uniondefs;
+  StrDict *glb_struct_def_dict;
+  StrDict *glb_union_def_dict;
   EnumDef *glb_endefs;
   Typedef *glb_typedefs;
   Obj *current_func;
@@ -68,30 +69,22 @@ struct ObjScope {
 
 struct StructDef {
   char *st_name;
-  int st_len;
 
   bool is_defined;
   int size;
   int alignment;
 
   Member *members;
-
-  // for linked-list
-  StructDef *next;
 };
 
 struct UnionDef {
   char *union_name;
-  int union_len;
 
   bool is_defined;
   int size;
   int alignment;
 
   Member *members;
-
-  // for linked-list
-  UnionDef *next;
 };
 
 struct Member {
@@ -141,6 +134,8 @@ struct SwitchScope {
   Tree *switch_node;
   SwitchScope *next;
 };
+
+Analyze *new_analyze_state();
 
 void analyze_translation_unit(Tree *ast);
 

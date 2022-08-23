@@ -37,6 +37,8 @@ struct StrDictList {
 StrDict *new_str_dict() { return calloc(1, sizeof(StrDict)); }
 
 void *find_str_dict(StrDict *dict, char *name) {
+  if (!dict)
+    error("dict is NULL");
   if (!name)
     error("invalid key");
 
@@ -47,6 +49,8 @@ void *find_str_dict(StrDict *dict, char *name) {
 }
 
 void add_str_dict(StrDict *dict, char *name, void *val) {
+  if (!dict)
+    error("dict is NULL");
   if (!name)
     error("invalid key");
   if (!val)
@@ -63,6 +67,8 @@ void add_str_dict(StrDict *dict, char *name, void *val) {
 }
 
 void remove_str_dict(StrDict *dict, char *name) {
+  if (!dict)
+    error("dict is NULL");
   if (!name)
     error("invalid key");
   if (!find_str_dict(dict, name))
