@@ -16,6 +16,7 @@ int memcmp();
 void *calloc();
 int isblank();
 int strncmp();
+int strcmp();
 char *strstr();
 char *strchr();
 int isdigit();
