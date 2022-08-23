@@ -225,6 +225,14 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
+    if (*p == '\\') {
+      p++;
+      if (*p != '\n')
+        error("cannot tokenize backslash");
+      p++;
+      continue;
+    }
+
     if (*p == '\n') {
       cur = new_token(TK_NEWLINE, cur, p, 1, filepath);
       p++;
