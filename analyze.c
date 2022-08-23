@@ -797,7 +797,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = member->type;
 
   } else if (ast->kind == NUM) {
-    ast->type = type_int;
+    if (ast->is_long)
+      ast->type = type_long;
+    else
+      ast->type = type_int;
   } else if (ast->kind == STR) {
     ast->type = newtype_ptr(type_char);
   } else if (ast->kind == VAR) {

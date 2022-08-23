@@ -412,6 +412,7 @@ run_test union_2 'union Test {int n;char a[6];}; int main(){union Test x; x.n = 
 
 run_test long_1 'int main(){ long n; return 174;}' 174
 run_test long_2 'int main(){ long n = 10; return 164 + n;}' 174
+run_test long_3 'int main(){ long n = 10L; return 164 + n;}' 174
 
 run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
 

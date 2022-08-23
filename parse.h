@@ -145,6 +145,7 @@ struct Tree {
 
   // for const-val
   int num;
+  bool is_long;
   StrLiteral *str_literal;
 
   // for member

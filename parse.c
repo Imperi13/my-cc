@@ -1225,6 +1225,7 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
     Token *num_tok = consume_kind(&tok, tok, TK_NUM);
     primary->kind = NUM;
     primary->num = num_tok->val;
+    primary->is_long = num_tok->is_long;
   } else if (equal_kind(tok, TK_STR)) {
     primary = calloc(1, sizeof(Tree));
     StrLiteral *str_literal = consume_kind(&tok, tok, TK_STR)->str_literal;

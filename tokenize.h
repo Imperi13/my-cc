@@ -48,11 +48,14 @@ typedef struct StrLiteral StrLiteral;
 struct Token {
   TokenKind kind;
   Token *next;
-  int val;
   char *str;
   int len;
 
   char *filepath;
+
+  // for TK_NUM
+  long val;
+  bool is_long;
 
   // for TK_IDENT
   char *ident_str;
