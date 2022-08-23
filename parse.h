@@ -195,7 +195,6 @@ struct DeclSpec {
 
 struct StructSpec {
   char *st_name;
-  int st_len;
 
   bool has_decl;
 
@@ -204,7 +203,6 @@ struct StructSpec {
 
 struct UnionSpec {
   char *union_name;
-  int union_len;
 
   bool has_decl;
   Tree *members;

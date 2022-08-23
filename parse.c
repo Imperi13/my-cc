@@ -79,7 +79,7 @@ Tree *parse_translation_unit(Token *tok) {
   Tree *head = calloc(1, sizeof(Tree));
   Tree *cur = head;
 
-  Analyze *state = calloc(1, sizeof(Analyze));
+  Analyze *state = new_analyze_state();
 
   builtin_type_init(state);
 
@@ -137,10 +137,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     char *def_name = getname_declarator(ex_decl->declarator);
     Typedef *new_def = calloc(1, sizeof(Typedef));
     new_def->name = def_name;
-    new_def->len = strlen(def_name);
 
-    new_def->next = state->glb_typedefs;
-    state->glb_typedefs = new_def;
+    add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
   }
 
   *rest = tok;
@@ -154,7 +152,7 @@ bool is_declaration_specs(Token *tok, Analyze *state) {
          equal_kind(tok, TK_UNION) || equal_kind(tok, TK_ENUM) ||
          equal_kind(tok, TK_CONST) || equal_kind(tok, TK_EXTERN) ||
          equal_kind(tok, TK_STATIC) || equal_kind(tok, TK_TYPEDEF) ||
-         (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->str, tok->len));
+         (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->ident_str));
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
@@ -204,12 +202,11 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       consume_kind(&tok, tok, TK_BOOL);
       parsed_type = true;
     } else if (equal_kind(tok, TK_IDENT) &&
-               find_typedef(state, tok->str, tok->len)) {
+               find_typedef(state, tok->ident_str)) {
       if (parsed_type)
         error("dup type");
-      decl_spec->def_name = tok->str;
-      decl_spec->def_len = tok->len;
-      consume_kind(&tok, tok, TK_IDENT);
+      decl_spec->def_name = getname_ident(&tok, tok);
+      decl_spec->def_len = strlen(decl_spec->def_name);
       parsed_type = true;
     } else if (equal_kind(tok, TK_STRUCT)) {
       if (parsed_type)
@@ -218,9 +215,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       StructSpec *st_spec = calloc(1, sizeof(StructSpec));
       decl_spec->st_spec = st_spec;
       if (equal_kind(tok, TK_IDENT)) {
-        Token *st_ident = consume_kind(&tok, tok, TK_IDENT);
-        st_spec->st_name = st_ident->str;
-        st_spec->st_len = st_ident->len;
+        st_spec->st_name = getname_ident(&tok, tok);
 
         if (consume(&tok, tok, "{")) {
           st_spec->has_decl = true;
@@ -257,9 +252,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       UnionSpec *union_spec = calloc(1, sizeof(UnionSpec));
       decl_spec->union_spec = union_spec;
       if (equal_kind(tok, TK_IDENT)) {
-        Token *union_ident = consume_kind(&tok, tok, TK_IDENT);
-        union_spec->union_name = union_ident->str;
-        union_spec->union_len = union_ident->len;
+        union_spec->union_name = getname_ident(&tok, tok);
 
         if (consume(&tok, tok, "{")) {
           union_spec->has_decl = true;
@@ -296,10 +289,9 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       decl_spec->en_spec = en_spec;
 
       if (equal_kind(tok, TK_IDENT)) {
-        Token *enum_tok = consume_kind(&tok, tok, TK_IDENT);
 
-        en_spec->en_name = enum_tok->str;
-        en_spec->en_len = enum_tok->len;
+        en_spec->en_name = getname_ident(&tok, tok);
+        en_spec->en_len = strlen(en_spec->en_name);
 
         if (equal(tok, "{")) {
           consume(&tok, tok, "{");
@@ -310,9 +302,8 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
           while (!consume(&tok, tok, "}")) {
             EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
-            Token *val_tok = consume_kind(&tok, tok, TK_IDENT);
-            en_val->name = val_tok->str;
-            en_val->len = val_tok->len;
+            en_val->name = getname_ident(&tok, tok);
+            en_val->len = strlen(en_val->name);
 
             cur->next = en_val;
             cur = cur->next;
@@ -348,9 +339,8 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
 
   // parse ident or nest-declarator
   if (equal_kind(tok, TK_IDENT)) {
-    Token *decl_name = consume_kind(&tok, tok, TK_IDENT);
-    declarator->name = decl_name->str;
-    declarator->len = decl_name->len;
+    declarator->name = getname_ident(&tok, tok);
+    declarator->len = strlen(declarator->name);
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
     declarator->nest = parse_declarator(&tok, tok, state);
@@ -557,13 +547,13 @@ bool is_label_stmt(Token *tok) {
 Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
-    Token *label_tok = consume_kind(&tok, tok, TK_IDENT);
+    char *label_str = getname_ident(&tok, tok);
     consume(&tok, tok, ":");
 
     Tree *lhs = parse_stmt(&tok, tok, state);
     Tree *node = new_binary_node(LABEL, lhs, NULL);
-    node->label_name = label_tok->str;
-    node->label_len = label_tok->len;
+    node->label_name = label_str;
+    node->label_len = strlen(label_str);
 
     *rest = tok;
     return node;
@@ -1191,24 +1181,22 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
       lhs = node;
     } else if (equal(tok, ".")) {
       consume(&tok, tok, ".");
-      Token *mem_tok = consume_kind(&tok, tok, TK_IDENT);
 
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = DOT;
       node->lhs = lhs;
-      node->member_name = mem_tok->str;
-      node->member_len = mem_tok->len;
+      node->member_name = getname_ident(&tok, tok);
+      node->member_len = strlen(node->member_name);
 
       lhs = node;
     } else if (equal(tok, "->")) {
       consume(&tok, tok, "->");
-      Token *mem_tok = consume_kind(&tok, tok, TK_IDENT);
 
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = ARROW;
       node->lhs = lhs;
-      node->member_name = mem_tok->str;
-      node->member_len = mem_tok->len;
+      node->member_name = getname_ident(&tok, tok);
+      node->member_len = strlen(node->member_name);
 
       lhs = node;
     } else if (equal(tok, "++")) {
@@ -1247,10 +1235,9 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
     primary = parse_builtin(&tok, tok, state);
   } else if (equal_kind(tok, TK_IDENT)) {
     primary = calloc(1, sizeof(Tree));
-    Token *ident_tok = consume_kind(&tok, tok, TK_IDENT);
     primary->kind = VAR;
-    primary->var_name = ident_tok->str;
-    primary->var_len = ident_tok->len;
+    primary->var_name = getname_ident(&tok, tok);
+    primary->var_len = strlen(primary->var_name);
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
     primary = parse_expr(&tok, tok, state);

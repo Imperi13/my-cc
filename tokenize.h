@@ -54,6 +54,9 @@ struct Token {
 
   char *filepath;
 
+  // for TK_IDENT
+  char *ident_str;
+
   // for str-literal
   StrLiteral *str_literal;
 };
@@ -78,11 +81,12 @@ Token *consume_kind(Token **rest, Token *token, TokenKind kind);
 void expect(Token **rest, Token *token, char *op);
 Token *expect_kind(Token **rest, Token *token, TokenKind kind);
 int expect_number(Token **rest, Token *token);
-bool cmp_ident(Token *tok,const char *name);
+char *getname_ident(Token **rest,Token *tok);
+bool cmp_ident(Token *tok, const char *name);
 bool at_eof(Token *token);
 
 bool is_alnum(char c);
 
-Token *tokenize(char *p,char *filepath);
+Token *tokenize(char *p, char *filepath);
 
 void debug_token(Token *token);

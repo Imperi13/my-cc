@@ -36,9 +36,8 @@ static void pop_label(LabelScope **lscope);
 static void push_switch(SwitchScope **switch_scope, Tree *switch_node);
 static void pop_switch(SwitchScope **switch_scope);
 
-static StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len);
-static UnionDef *find_union(UnionDef *union_defs, char *union_name,
-                            int union_len);
+static StructDef *find_struct(Analyze *state, char *struct_name);
+static UnionDef *find_union(Analyze *state, char *union_name);
 static Member *find_struct_member(StructDef *st_def, char *mem_name,
                                   int mem_len);
 static Member *find_union_member(UnionDef *union_def, char *mem_name,
@@ -47,9 +46,17 @@ static EnumDef *find_enum(EnumDef *en_defs, char *en_name, int en_len);
 
 static EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len);
 
-void analyze_translation_unit(Tree *ast) {
+Analyze *new_analyze_state() {
   Analyze *state = calloc(1, sizeof(Analyze));
+  state->glb_struct_def_dict = new_str_dict();
+  state->glb_union_def_dict = new_str_dict();
+  state->glb_typedef_dict = new_str_dict();
   state->label_cnt = 0;
+  return state;
+}
+
+void analyze_translation_unit(Tree *ast) {
+  Analyze *state = new_analyze_state();
 
   builtin_type_init(state);
 
@@ -113,11 +120,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     if (ast->decl_specs->has_typedef) {
       Typedef *new_def = calloc(1, sizeof(Typedef));
       new_def->name = obj_name;
-      new_def->len = strlen(obj_name);
       new_def->type = obj_type;
 
-      new_def->next = state->glb_typedefs;
-      state->glb_typedefs = new_def;
+      add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
     } else {
 
       if (ast->declarator->init_expr) {
@@ -155,17 +160,13 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       not_implemented(__func__);
     }
 
-    StructDef *st_defs =
-        find_struct(state->glb_stdefs, decl_spec->st_spec->st_name,
-                    decl_spec->st_spec->st_len);
+    StructDef *st_defs = find_struct(state, decl_spec->st_spec->st_name);
 
     if (!st_defs) {
       st_defs = calloc(1, sizeof(StructDef));
       st_defs->st_name = decl_spec->st_spec->st_name;
-      st_defs->st_len = decl_spec->st_spec->st_len;
 
-      st_defs->next = state->glb_stdefs;
-      state->glb_stdefs = st_defs;
+      add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
     }
 
     if (st_defs->is_defined && decl_spec->st_spec->has_decl)
@@ -221,17 +222,13 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       not_implemented(__func__);
     }
 
-    UnionDef *union_def =
-        find_union(state->glb_uniondefs, decl_spec->union_spec->union_name,
-                   decl_spec->union_spec->union_len);
+    UnionDef *union_def = find_union(state, decl_spec->union_spec->union_name);
 
     if (!union_def) {
       union_def = calloc(1, sizeof(UnionDef));
       union_def->union_name = decl_spec->union_spec->union_name;
-      union_def->union_len = decl_spec->union_spec->union_len;
 
-      union_def->next = state->glb_uniondefs;
-      state->glb_uniondefs = union_def;
+      add_str_dict(state->glb_union_def_dict, union_def->union_name, union_def);
     }
 
     if (union_def->is_defined && decl_spec->union_spec->has_decl)
@@ -918,19 +915,12 @@ int calc_rbp_offset(int start, int data_size, int alignment) {
   return ((start + data_size + alignment - 1) / alignment) * alignment;
 }
 
-StructDef *find_struct(StructDef *st_defs, char *st_name, int st_len) {
-  for (StructDef *cur = st_defs; cur; cur = cur->next)
-    if (cur->st_len == st_len && !memcmp(st_name, cur->st_name, st_len))
-      return cur;
-  return NULL;
+StructDef *find_struct(Analyze *state, char *struct_name) {
+  return find_str_dict(state->glb_struct_def_dict, struct_name);
 }
 
-UnionDef *find_union(UnionDef *union_defs, char *union_name, int union_len) {
-  for (UnionDef *cur = union_defs; cur; cur = cur->next)
-    if (cur->union_len == union_len &&
-        !memcmp(union_name, cur->union_name, union_len))
-      return cur;
-  return NULL;
+UnionDef *find_union(Analyze *state, char *union_name) {
+  return find_str_dict(state->glb_union_def_dict, union_name);
 }
 
 Member *find_struct_member(StructDef *st_def, char *mem_name, int mem_len) {
@@ -964,11 +954,8 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
   return NULL;
 }
 
-Typedef *find_typedef(Analyze *state, char *def_name, int def_len) {
-  for (Typedef *cur = state->glb_typedefs; cur; cur = cur->next)
-    if (cur->len == def_len && !memcmp(def_name, cur->name, def_len))
-      return cur;
-  return NULL;
+Typedef *find_typedef(Analyze *state, char *typedef_name) {
+  return find_str_dict(state->glb_typedef_dict, typedef_name);
 }
 
 bool is_constexpr(Tree *expr) {
