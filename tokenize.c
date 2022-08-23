@@ -85,7 +85,9 @@ char *getname_ident(Token **rest, Token *tok) {
 }
 
 bool cmp_ident(Token *tok, const char *name) {
-  return strncmp(tok->str, name, tok->len) == 0;
+  if (tok->kind != TK_IDENT)
+    return false;
+  return strcmp(tok->ident_str, name) == 0;
 }
 
 bool at_eof(Token *token) { return token->kind == TK_EOF; }

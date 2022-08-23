@@ -34,6 +34,9 @@ static void expand_define(Token **pre, Token *tok);
 
 static void consume_line(Token **pre, Token *tok);
 
+static long process_constant(Token **pre, Token *tok);
+static long process_primary(Token **pre, Token *tok);
+
 typedef struct PragmaOnceList PragmaOnceList;
 struct PragmaOnceList {
   char *filepath;
@@ -132,7 +135,6 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     bool cond = (find_str_dict(define_dict, define_str) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
-    Token *dummy;
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
       if (cond) {
         if (equal(tok, "#"))
@@ -147,6 +149,27 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect(&tok, tok, "#");
     if (!cmp_ident(tok, "endif"))
       not_implemented_at("only ifndef~endif");
+    consume_kind(&tok, tok, TK_IDENT);
+    expect_kind(&tok, tok, TK_NEWLINE);
+
+    *pre = tok;
+  } else if (equal_kind(tok, TK_IF)) {
+    consume_kind(&tok, tok, TK_IF);
+    bool cond = (process_constant(&tok, tok) != 0);
+    expect_kind(&tok, tok, TK_NEWLINE);
+
+    while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+      if (cond) {
+        if (equal(tok, "#"))
+          process_macro_group(post, &tok, tok);
+        else
+          process_text_line(post, &tok, tok);
+      } else {
+        consume_line(&tok, tok);
+      }
+    }
+
+    expect(&tok, tok, "#");
     consume_kind(&tok, tok, TK_IDENT);
     expect_kind(&tok, tok, TK_NEWLINE);
 
@@ -331,6 +354,21 @@ void consume_line(Token **pre, Token *tok) {
   while (tok->kind != TK_NEWLINE)
     tok = tok->next;
   *pre = tok->next;
+}
+
+long process_constant(Token **pre, Token *tok) {
+  return process_primary(pre, tok);
+}
+
+long process_primary(Token **pre, Token *tok) {
+  expand_define(&tok, tok);
+  if (tok->kind == TK_NUM) {
+    *pre = tok->next;
+    return tok->val;
+  } else {
+    not_implemented_at(tok->str);
+    return 0;
+  }
 }
 
 Token *preprocess(Token *tok) {
