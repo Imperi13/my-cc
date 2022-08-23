@@ -145,6 +145,7 @@ struct Tree {
 
   // for const-val
   int num;
+  bool is_long;
   StrLiteral *str_literal;
 
   // for member
@@ -177,6 +178,7 @@ struct DeclSpec {
 
   // type_spec
   bool has_void;
+  bool has_long;
   bool has_int;
   bool has_char;
   bool has_bool;

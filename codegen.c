@@ -92,11 +92,11 @@ void codegen_var_definition(Tree *var) {
   printf("%.*s:\n", obj->obj_len, obj->obj_name);
 
   if (var->declarator->init_expr) {
-    if (obj->type->kind == CHAR) {
+    if (type_size(obj->type) == 1) {
       printf("  .byte %d\n", eval_constexpr(var->declarator->init_expr));
-    } else if (obj->type->kind == INT) {
+    } else if (type_size(obj->type) == 4) {
       printf("  .long %d\n", eval_constexpr(var->declarator->init_expr));
-    } else if (obj->type->kind == PTR) {
+    } else if (type_size(obj->type) == 8) {
       printf("  .quad %d\n", eval_constexpr(var->declarator->init_expr));
     } else
       not_implemented(__func__);

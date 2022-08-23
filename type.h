@@ -2,6 +2,7 @@
 
 typedef enum TypeKind {
   VOID,
+  LONG,
   INT,
   CHAR,
   BOOL,
@@ -46,6 +47,7 @@ struct Type {
 };
 
 extern Type *type_void;
+extern Type *type_long;
 extern Type *type_int;
 extern Type *type_char;
 extern Type *type_bool;

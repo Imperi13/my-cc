@@ -149,7 +149,7 @@ int digit_base(char t, int base) {
   return -1;
 }
 
-int num_literal(char *p, char **rest) {
+long num_literal(char *p, char **rest) {
   int base;
   char *start;
 
@@ -167,7 +167,7 @@ int num_literal(char *p, char **rest) {
     start = p + 1;
   }
 
-  int num = 0;
+  long num = 0;
   while (digit_base(*start, base) >= 0) {
     num *= base;
     num += digit_base(*start, base);
@@ -327,6 +327,12 @@ Token *tokenize(char *p, char *filepath) {
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath);
       cur->val = num_literal(p, &p);
+
+      if (*p == 'L') {
+        cur->is_long = true;
+        p++;
+      }
+
       cur->len = p - prev;
       continue;
     }
@@ -459,6 +465,12 @@ Token *tokenize(char *p, char *filepath) {
 
     if (strncmp(p, "void", 4) == 0 && !is_alnum(p[4])) {
       cur = new_token(TK_VOID, cur, p, 4, filepath);
+      p += 4;
+      continue;
+    }
+
+    if (strncmp(p, "long", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_LONG, cur, p, 4, filepath);
       p += 4;
       continue;
     }

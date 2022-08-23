@@ -10,9 +10,9 @@ void *calloc();
 #include "error.h"
 #include "file.h"
 #include "parse.h"
-#include "type.h"
 #include "preprocess.h"
 #include "tokenize.h"
+#include "type.h"
 
 char *filename;
 char *user_input;
@@ -22,6 +22,7 @@ char *call_register32[6];
 char *call_register8[6];
 
 Type *type_void;
+Type *type_long;
 Type *type_int;
 Type *type_char;
 Type *type_bool;
@@ -30,14 +31,17 @@ Type *type_bool;
 void init() {
   type_void = calloc(1, sizeof(Type));
   type_void->kind = VOID;
+  type_long = calloc(1, sizeof(Type));
+  type_long->kind = LONG;
   type_int = calloc(1, sizeof(Type));
   type_int->kind = INT;
   type_char = calloc(1, sizeof(Type));
   type_char->kind = CHAR;
-  type_bool = calloc(1,sizeof(Type));
+  type_bool = calloc(1, sizeof(Type));
   type_bool->kind = BOOL;
-  
-  variable_letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+
+  variable_letters =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
   call_register64[0] = "rdi";
   call_register64[1] = "rsi";
