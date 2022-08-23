@@ -6,6 +6,7 @@
 #include "error.h"
 #include "file.h"
 #include "preprocess.h"
+#include "str_dict.h"
 #include "tokenize.h"
 
 #ifndef __STDC__
@@ -25,6 +26,7 @@ static void process_macro_group(Token **post, Token **pre, Token *tok);
 static void process_if_group(Token **post, Token **pre, Token *tok);
 static void process_include_line(Token **post, Token **pre, Token *tok);
 static void process_define_line(Token **post, Token **pre, Token *tok);
+static void process_undef_line(Token **post, Token **pre, Token *tok);
 static void process_pragma_line(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
 
@@ -42,18 +44,14 @@ struct PragmaOnceList {
 
 typedef struct DefineList DefineList;
 struct DefineList {
-  char *sym_name;
-  int sym_len;
+  char *name;
 
   // startからTK_NEWLINEまでが展開するトークン
   Token *start;
-
-  // for linked-list
-  DefineList *next;
 };
 
 PragmaOnceList *pragma_list;
-DefineList *define_list;
+StrDict *define_dict;
 
 bool is_included(char *filepath) {
   for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
@@ -76,14 +74,6 @@ void insert_token_seq(Token *dst, Token *src) {
   cur->next = dst_next;
 }
 
-DefineList *find_define(char *def_name, int def_len) {
-  for (DefineList *cur = define_list; cur; cur = cur->next)
-    if (cur->sym_len == def_len && !memcmp(def_name, cur->sym_name, def_len))
-      return cur;
-  return NULL;
-}
-
-
 bool is_if_group(Token *tok) {
   return cmp_ident(tok->next, "ifdef") || cmp_ident(tok->next, "ifndef") ||
          equal_kind(tok->next, TK_IF);
@@ -99,6 +89,8 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
     process_include_line(NULL, pre, tok);
   } else if (cmp_ident(tok->next, "define")) {
     process_define_line(NULL, pre, tok);
+  } else if (cmp_ident(tok->next, "undef")) {
+    process_undef_line(NULL, pre, tok);
   } else if (cmp_ident(tok->next, "pragma")) {
     process_pragma_line(post, pre, tok);
   } else {
@@ -113,8 +105,8 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
   if (cmp_ident(tok, "ifdef")) {
     expect_kind(&tok, tok, TK_IDENT);
 
-    Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) != NULL);
+    char *define_str = getname_ident(&tok, tok);
+    bool cond = (find_str_dict(define_dict, define_str) != NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
@@ -136,8 +128,8 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
   } else if (cmp_ident(tok, "ifndef")) {
     expect_kind(&tok, tok, TK_IDENT);
 
-    Token *cond_tok = consume_kind(&tok, tok, TK_IDENT);
-    bool cond = (find_define(cond_tok->str, cond_tok->len) == NULL);
+    char *define_str = getname_ident(&tok, tok);
+    bool cond = (find_str_dict(define_dict, define_str) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
     Token *dummy;
@@ -192,7 +184,7 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
       tok = tok->next;
     }
 
-    fprintf(stderr,"%s\n",filename);
+    fprintf(stderr, "%s\n", filename);
     warn_at(tok->str, "ignore include");
 
     expect(&tok, tok, ">");
@@ -227,11 +219,10 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   if (post)
     not_implemented_at(tok->str);
 
-  Token *sym_tok = expect_kind(&tok, tok, TK_IDENT);
+  char *define_str = getname_ident(&tok, tok);
 
   DefineList *new_def = calloc(1, sizeof(DefineList));
-  new_def->sym_name = sym_tok->str;
-  new_def->sym_len = sym_tok->len;
+  new_def->name = define_str;
 
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
@@ -246,8 +237,27 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
   new_def->start = head->next;
 
-  new_def->next = define_list;
-  define_list = new_def;
+  add_str_dict(define_dict, define_str, new_def);
+
+  expect_kind(&tok, tok, TK_NEWLINE);
+  *pre = tok;
+}
+
+void process_undef_line(Token **post, Token **pre, Token *tok) {
+  expect(&tok, tok, "#");
+  if (!cmp_ident(tok, "undef"))
+    error_at(tok->str, "this line is not undef line");
+  expect_kind(&tok, tok, TK_IDENT);
+
+  if (post)
+    not_implemented_at(tok->str);
+
+  char *define_str = getname_ident(&tok, tok);
+
+  if (!find_str_dict(define_dict, define_str))
+    return;
+
+  remove_str_dict(define_dict, define_str);
 
   expect_kind(&tok, tok, TK_NEWLINE);
   *pre = tok;
@@ -261,7 +271,7 @@ void expand_define(Token **pre, Token *tok) {
     return;
   }
 
-  DefineList *def = find_define(tok->str, tok->len);
+  DefineList *def = find_str_dict(define_dict, tok->ident_str);
   if (!def) {
     *pre = tok;
     return;
@@ -324,6 +334,8 @@ void consume_line(Token **pre, Token *tok) {
 }
 
 Token *preprocess(Token *tok) {
+  define_dict = new_str_dict();
+
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
 
