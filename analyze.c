@@ -50,6 +50,7 @@ Analyze *new_analyze_state() {
   Analyze *state = calloc(1, sizeof(Analyze));
   state->glb_struct_def_dict = new_str_dict();
   state->glb_union_def_dict = new_str_dict();
+  state->glb_typedef_dict = new_str_dict();
   state->label_cnt = 0;
   return state;
 }
@@ -119,11 +120,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     if (ast->decl_specs->has_typedef) {
       Typedef *new_def = calloc(1, sizeof(Typedef));
       new_def->name = obj_name;
-      new_def->len = strlen(obj_name);
       new_def->type = obj_type;
 
-      new_def->next = state->glb_typedefs;
-      state->glb_typedefs = new_def;
+      add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
     } else {
 
       if (ast->declarator->init_expr) {
@@ -955,11 +954,8 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
   return NULL;
 }
 
-Typedef *find_typedef(Analyze *state, char *def_name, int def_len) {
-  for (Typedef *cur = state->glb_typedefs; cur; cur = cur->next)
-    if (cur->len == def_len && !memcmp(def_name, cur->name, def_len))
-      return cur;
-  return NULL;
+Typedef *find_typedef(Analyze *state, char *typedef_name) {
+  return find_str_dict(state->glb_typedef_dict, typedef_name);
 }
 
 bool is_constexpr(Tree *expr) {

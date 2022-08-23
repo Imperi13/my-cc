@@ -64,11 +64,9 @@ void builtin_type_init(Analyze *state) {
   // typedef struct __builtin_va_list __builtin_va_list
   Typedef *new_def = calloc(1, sizeof(Typedef));
   new_def->name = "__builtin_va_list";
-  new_def->len = strlen(new_def->name);
   new_def->type = newtype_struct(st_def);
 
-  new_def->next = state->glb_typedefs;
-  state->glb_typedefs = new_def;
+  add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
 }
 
 Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
@@ -87,7 +85,7 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
   } else if (decl_spec->en_def) {
     return type_int;
   } else if (decl_spec->def_name) {
-    return find_typedef(state, decl_spec->def_name, decl_spec->def_len)->type;
+    return find_typedef(state, decl_spec->def_name)->type;
   } else
     error("empty type");
   return NULL;

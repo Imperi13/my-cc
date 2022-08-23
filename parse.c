@@ -137,10 +137,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     char *def_name = getname_declarator(ex_decl->declarator);
     Typedef *new_def = calloc(1, sizeof(Typedef));
     new_def->name = def_name;
-    new_def->len = strlen(def_name);
 
-    new_def->next = state->glb_typedefs;
-    state->glb_typedefs = new_def;
+    add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
   }
 
   *rest = tok;
@@ -154,7 +152,7 @@ bool is_declaration_specs(Token *tok, Analyze *state) {
          equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
          equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC) ||
          equal_kind(tok, TK_TYPEDEF) ||
-         (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->str, tok->len));
+         (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->ident_str));
 }
 
 DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
@@ -198,7 +196,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
       consume_kind(&tok, tok, TK_BOOL);
       parsed_type = true;
     } else if (equal_kind(tok, TK_IDENT) &&
-               find_typedef(state, tok->str, tok->len)) {
+               find_typedef(state, tok->ident_str)) {
       if (parsed_type)
         error("dup type");
       decl_spec->def_name = getname_ident(&tok, tok);
