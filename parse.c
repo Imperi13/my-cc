@@ -148,12 +148,12 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 }
 
 bool is_declaration_specs(Token *tok, Analyze *state) {
-  return equal_kind(tok, TK_INT) || equal_kind(tok, TK_CHAR) ||
-         equal_kind(tok, TK_VOID) || equal_kind(tok, TK_BOOL) ||
-         equal_kind(tok, TK_STRUCT) || equal_kind(tok, TK_UNION) ||
-         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
-         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC) ||
-         equal_kind(tok, TK_TYPEDEF) ||
+  return equal_kind(tok, TK_LONG) || equal_kind(tok, TK_INT) ||
+         equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_VOID) ||
+         equal_kind(tok, TK_BOOL) || equal_kind(tok, TK_STRUCT) ||
+         equal_kind(tok, TK_UNION) || equal_kind(tok, TK_ENUM) ||
+         equal_kind(tok, TK_CONST) || equal_kind(tok, TK_EXTERN) ||
+         equal_kind(tok, TK_STATIC) || equal_kind(tok, TK_TYPEDEF) ||
          (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->str, tok->len));
 }
 
@@ -173,6 +173,12 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
     } else if (equal_kind(tok, TK_TYPEDEF)) {
       consume_kind(&tok, tok, TK_TYPEDEF);
       decl_spec->has_typedef = true;
+    } else if (equal_kind(tok, TK_LONG)) {
+      if (parsed_type)
+        error("dup type");
+      decl_spec->has_long = true;
+      consume_kind(&tok, tok, TK_LONG);
+      parsed_type = true;
     } else if (equal_kind(tok, TK_INT)) {
       if (parsed_type)
         error("dup type");

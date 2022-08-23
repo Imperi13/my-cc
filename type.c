@@ -73,7 +73,9 @@ void builtin_type_init(Analyze *state) {
 }
 
 Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
-  if (decl_spec->has_int) {
+  if (decl_spec->has_long) {
+    return type_long;
+  } else if (decl_spec->has_int) {
     return type_int;
   } else if (decl_spec->has_char) {
     return type_char;
@@ -175,7 +177,9 @@ Type *newtype_union(UnionDef *union_def) {
 }
 
 int type_size(Type *type) {
-  if (type->kind == INT)
+  if (type->kind == LONG)
+    return 8;
+  else if (type->kind == INT)
     return 4;
   else if (type->kind == CHAR)
     return 1;
@@ -197,7 +201,9 @@ int type_size(Type *type) {
 }
 
 int type_alignment(Type *type) {
-  if (type->kind == INT)
+  if (type->kind == LONG)
+    return 8;
+  else if (type->kind == INT)
     return 4;
   else if (type->kind == CHAR)
     return 1;
@@ -219,7 +225,7 @@ int type_alignment(Type *type) {
 }
 
 bool is_integer(Type *type) {
-  if (type->kind == INT || type->kind == CHAR)
+  if (type->kind == LONG || type->kind == INT || type->kind == CHAR)
     return true;
   return false;
 }
@@ -229,7 +235,8 @@ bool is_void_ptr(Type *type) {
 }
 
 bool is_primitive_type(Type *a) {
-  if (a->kind == VOID || a->kind == CHAR || a->kind == INT || a->kind == BOOL)
+  if (a->kind == VOID || a->kind == CHAR || a->kind == LONG || a->kind == INT ||
+      a->kind == BOOL)
     return true;
   else
     return false;

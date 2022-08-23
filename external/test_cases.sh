@@ -410,6 +410,9 @@ run_test union_1 'union Test {int *p;char a[6];}; int main(){union Test x; retur
 run_test union_2 'union Test {int n;char a[6];}; int main(){union Test x; x.n = 170; return x.n + 4;}' 174
 run_test union_2 'union Test {int n;char a[6];}; int main(){union Test x; x.n = 170; x.a[0] = 10;x.a[1] = 20; return x.a[0] + x.a[1] + 144;}' 174
 
+run_test long_1 'int main(){ long n; return 174;}' 174
+run_test long_2 'int main(){ long n = 10; return 164 + n;}' 174
+
 run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
 
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174

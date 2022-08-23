@@ -455,6 +455,12 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
+    if (strncmp(p, "long", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_LONG, cur, p, 4, filepath);
+      p += 4;
+      continue;
+    }
+
     if (strncmp(p, "int", 3) == 0 && !is_alnum(p[3])) {
       cur = new_token(TK_INT, cur, p, 3, filepath);
       p += 3;

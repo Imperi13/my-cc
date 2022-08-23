@@ -177,6 +177,7 @@ struct DeclSpec {
 
   // type_spec
   bool has_void;
+  bool has_long;
   bool has_int;
   bool has_char;
   bool has_bool;
