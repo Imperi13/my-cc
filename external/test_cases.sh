@@ -389,6 +389,16 @@ run_test pp_2 'int main(){\n#ifndef TEST\nreturn 174;\n#endif\n}' 174
 
 run_test pp_3 '#define TEST\n int main() { int TEST test; test = 174; return test;}' 174
 run_test pp_4 '#define TEST int\n TEST main() { TEST test; test = 174; return test;}' 174
+run_test pp_5 '#define TEST\n #undef TEST\n #ifndef TEST\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+
+run_test pp_6 '#if 1\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+run_test pp_7 '#define TEST 1 \n #if TEST\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+
+run_test pp_8 '#define TEST\n #if defined(TEST)\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+run_test pp_9 '#define TEST\n #if defined TEST\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+
+run_test pp_10 '#if 1+2 -2\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+run_test pp_11 '#if 2*2 - 3*1\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
 
 run_test typedef_1 'typedef int TEST; TEST main(){return 174;}' 174
 run_test typedef_2 'typedef struct A TEST; int main(){ TEST *p; return 174;}' 174

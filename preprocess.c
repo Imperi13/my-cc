@@ -34,6 +34,23 @@ static void expand_define(Token **pre, Token *tok);
 
 static void consume_line(Token **pre, Token *tok);
 
+static long process_constant(Token **pre, Token *tok);
+static long process_conditional(Token **pre, Token *tok);
+static long process_logical_or(Token **pre, Token *tok);
+static long process_logical_and(Token **pre, Token *tok);
+static long process_bit_or(Token **pre, Token *tok);
+static long process_bit_xor(Token **pre, Token *tok);
+static long process_bit_and(Token **pre, Token *tok);
+static long process_equality(Token **pre, Token *tok);
+static long process_relational(Token **pre, Token *tok);
+static long process_shift(Token **pre, Token *tok);
+static long process_add(Token **pre, Token *tok);
+static long process_mul(Token **ptr, Token *tok);
+static long process_cast(Token **pre, Token *tok);
+static long process_unary(Token **pre, Token *tok);
+static long process_postfix(Token **pre, Token *tok);
+static long process_primary(Token **pre, Token *tok);
+
 typedef struct PragmaOnceList PragmaOnceList;
 struct PragmaOnceList {
   char *filepath;
@@ -132,7 +149,6 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     bool cond = (find_str_dict(define_dict, define_str) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
-    Token *dummy;
     while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
       if (cond) {
         if (equal(tok, "#"))
@@ -147,6 +163,27 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     expect(&tok, tok, "#");
     if (!cmp_ident(tok, "endif"))
       not_implemented_at("only ifndef~endif");
+    consume_kind(&tok, tok, TK_IDENT);
+    expect_kind(&tok, tok, TK_NEWLINE);
+
+    *pre = tok;
+  } else if (equal_kind(tok, TK_IF)) {
+    consume_kind(&tok, tok, TK_IF);
+    bool cond = (process_constant(&tok, tok) != 0);
+    expect_kind(&tok, tok, TK_NEWLINE);
+
+    while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+      if (cond) {
+        if (equal(tok, "#"))
+          process_macro_group(post, &tok, tok);
+        else
+          process_text_line(post, &tok, tok);
+      } else {
+        consume_line(&tok, tok);
+      }
+    }
+
+    expect(&tok, tok, "#");
     consume_kind(&tok, tok, TK_IDENT);
     expect_kind(&tok, tok, TK_NEWLINE);
 
@@ -331,6 +368,284 @@ void consume_line(Token **pre, Token *tok) {
   while (tok->kind != TK_NEWLINE)
     tok = tok->next;
   *pre = tok->next;
+}
+
+long process_constant(Token **pre, Token *tok) {
+  return process_conditional(pre, tok);
+}
+
+long process_conditional(Token **pre, Token *tok) {
+  long cond = process_logical_or(&tok, tok);
+
+  expand_define(&tok, tok);
+  if (equal(tok, "?")) {
+    consume(&tok, tok, "?");
+    long lhs = process_conditional(&tok, tok);
+    expand_define(&tok, tok);
+    expect(&tok, tok, ":");
+    long rhs = process_conditional(&tok, tok);
+
+    *pre = tok;
+    return cond ? lhs : rhs;
+  }
+
+  *pre = tok;
+  return cond;
+}
+
+long process_logical_or(Token **pre, Token *tok) {
+  long lhs = process_logical_and(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "||")) {
+      consume(&tok, tok, "||");
+      long rhs = process_logical_and(&tok, tok);
+      lhs = lhs || rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_logical_and(Token **pre, Token *tok) {
+  long lhs = process_bit_or(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "&&")) {
+      consume(&tok, tok, "&&");
+      long rhs = process_bit_or(&tok, tok);
+      lhs = lhs && rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_bit_or(Token **pre, Token *tok) {
+  long lhs = process_bit_xor(&tok, tok);
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "|")) {
+      consume(&tok, tok, "|");
+      long rhs = process_bit_xor(&tok, tok);
+      lhs = lhs | rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_bit_xor(Token **pre, Token *tok) {
+  long lhs = process_bit_and(&tok, tok);
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "^")) {
+      consume(&tok, tok, "^");
+      long rhs = process_bit_and(&tok, tok);
+      lhs = lhs ^ rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_bit_and(Token **pre, Token *tok) {
+  long lhs = process_equality(&tok, tok);
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "&")) {
+      consume(&tok, tok, "&");
+      long rhs = process_equality(&tok, tok);
+      lhs = lhs & rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_equality(Token **pre, Token *tok) {
+  long lhs = process_relational(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "==")) {
+      consume(&tok, tok, "==");
+      long rhs = process_relational(&tok, tok);
+      lhs = lhs == rhs;
+    } else if (equal(tok, "!=")) {
+      consume(&tok, tok, "!=");
+      long rhs = process_relational(&tok, tok);
+      lhs = lhs != rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_relational(Token **pre, Token *tok) {
+  long lhs = process_shift(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "<")) {
+      consume(&tok, tok, "<");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs < rhs;
+    } else if (equal(tok, "<=")) {
+      consume(&tok, tok, "<=");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs <= rhs;
+    } else if (equal(tok, ">")) {
+      consume(&tok, tok, ">");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs > rhs;
+    } else if (equal(tok, ">=")) {
+      consume(&tok, tok, ">=");
+      long rhs = process_shift(&tok, tok);
+      lhs = lhs >= rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_shift(Token **pre, Token *tok) {
+  long lhs = process_add(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "<<")) {
+      consume(&tok, tok, "<<");
+      long rhs = process_add(&tok, tok);
+      lhs = lhs << rhs;
+    } else if (equal(tok, ">>")) {
+      consume(&tok, tok, ">>");
+      long rhs = process_add(&tok, tok);
+      lhs = lhs >> rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_add(Token **pre, Token *tok) {
+  long lhs = process_mul(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "+")) {
+      consume(&tok, tok, "+");
+      long rhs = process_mul(&tok, tok);
+      lhs = lhs + rhs;
+    } else if (equal(tok, "-")) {
+      consume(&tok, tok, "-");
+      long rhs = process_mul(&tok, tok);
+      lhs = lhs - rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_mul(Token **pre, Token *tok) {
+  long lhs = process_cast(&tok, tok);
+
+  for (;;) {
+    expand_define(&tok, tok);
+    if (equal(tok, "*")) {
+      consume(&tok, tok, "*");
+      long rhs = process_cast(&tok, tok);
+      lhs = lhs * rhs;
+    } else if (equal(tok, "/")) {
+      consume(&tok, tok, "/");
+      long rhs = process_cast(&tok, tok);
+      lhs = lhs / rhs;
+    } else if (equal(tok, "%")) {
+      consume(&tok, tok, "%");
+      long rhs = process_cast(&tok, tok);
+      lhs = lhs % rhs;
+    } else {
+      *pre = tok;
+      return lhs;
+    }
+  }
+}
+
+long process_cast(Token **pre, Token *tok) { return process_unary(pre, tok); }
+
+long process_unary(Token **pre, Token *tok) {
+  expand_define(&tok, tok);
+  if (equal(tok, "+")) {
+    consume(&tok, tok, "+");
+    return process_cast(pre, tok);
+  }
+
+  if (equal(tok, "-")) {
+    consume(&tok, tok, "-");
+    return -process_cast(pre, tok);
+  }
+
+  if (equal(tok, "!")) {
+    consume(&tok, tok, "!");
+    return !process_cast(pre, tok);
+  }
+
+  if (equal(tok, "~")) {
+    consume(&tok, tok, "~");
+    return ~process_cast(pre, tok);
+  }
+
+  if (cmp_ident(tok, "defined")) {
+    consume_kind(&tok, tok, TK_IDENT);
+
+    long ret;
+
+    if (equal(tok, "(")) {
+      consume(&tok, tok, "(");
+      char *name = getname_ident(&tok, tok);
+      expect(&tok, tok, ")");
+
+      ret = find_str_dict(define_dict, name) ? 1 : 0;
+    } else {
+      char *name = getname_ident(&tok, tok);
+
+      ret = find_str_dict(define_dict, name) ? 1 : 0;
+    }
+
+    *pre = tok;
+    return ret;
+  }
+
+  return process_postfix(pre, tok);
+}
+
+long process_postfix(Token **pre, Token *tok) {
+  return process_primary(pre, tok);
+}
+
+long process_primary(Token **pre, Token *tok) {
+  expand_define(&tok, tok);
+  if (tok->kind == TK_NUM) {
+    *pre = tok->next;
+    return tok->val;
+  } else if (tok->kind == TK_IDENT) {
+    *pre = tok->next;
+    return 0;
+  } else {
+    not_implemented_at(tok->str);
+    return 0;
+  }
 }
 
 Token *preprocess(Token *tok) {
