@@ -35,6 +35,9 @@ static void expand_define(Token **pre, Token *tok);
 static void consume_line(Token **pre, Token *tok);
 
 static long process_constant(Token **pre, Token *tok);
+static long process_cast(Token **pre, Token *tok);
+static long process_unary(Token **pre, Token *tok);
+static long process_postfix(Token **pre, Token *tok);
 static long process_primary(Token **pre, Token *tok);
 
 typedef struct PragmaOnceList PragmaOnceList;
@@ -357,6 +360,58 @@ void consume_line(Token **pre, Token *tok) {
 }
 
 long process_constant(Token **pre, Token *tok) {
+  return process_cast(pre, tok);
+}
+
+long process_cast(Token **pre, Token *tok) { return process_unary(pre, tok); }
+
+long process_unary(Token **pre, Token *tok) {
+  expand_define(&tok, tok);
+  if (equal(tok, "+")) {
+    consume(&tok, tok, "+");
+    return process_cast(pre, tok);
+  }
+
+  if (equal(tok, "-")) {
+    consume(&tok, tok, "-");
+    return -process_cast(pre, tok);
+  }
+
+  if (equal(tok, "!")) {
+    consume(&tok, tok, "!");
+    return !process_cast(pre, tok);
+  }
+
+  if (equal(tok, "~")) {
+    consume(&tok, tok, "~");
+    return ~process_cast(pre, tok);
+  }
+
+  if (cmp_ident(tok, "defined")) {
+    consume_kind(&tok, tok, TK_IDENT);
+
+    long ret;
+
+    if (equal(tok, "(")) {
+      consume(&tok, tok, "(");
+      char *name = getname_ident(&tok, tok);
+      expect(&tok, tok, ")");
+
+      ret = find_str_dict(define_dict, name) ? 1 : 0;
+    } else {
+      char *name = getname_ident(&tok, tok);
+
+      ret = find_str_dict(define_dict, name) ? 1 : 0;
+    }
+
+    *pre = tok;
+    return ret;
+  }
+
+  return process_postfix(pre, tok);
+}
+
+long process_postfix(Token **pre, Token *tok) {
   return process_primary(pre, tok);
 }
 

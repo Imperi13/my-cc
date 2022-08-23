@@ -394,6 +394,9 @@ run_test pp_5 '#define TEST\n #undef TEST\n #ifndef TEST\n int n = 10; \n #endif
 run_test pp_6 '#if 1\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
 run_test pp_7 '#define TEST 1 \n #if TEST\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
 
+run_test pp_8 '#define TEST\n #if defined(TEST)\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+run_test pp_9 '#define TEST\n #if defined TEST\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
+
 run_test typedef_1 'typedef int TEST; TEST main(){return 174;}' 174
 run_test typedef_2 'typedef struct A TEST; int main(){ TEST *p; return 174;}' 174
 run_test typedef_3 'typedef void *TEST; int main(){  return 166 + sizeof(TEST);}' 174
