@@ -13,4 +13,3 @@ typedef struct _IO_FILE FILE;
 typedef int size_t;
 
 extern FILE *stderr;
-

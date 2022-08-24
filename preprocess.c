@@ -9,6 +9,8 @@
 #include "str_dict.h"
 #include "tokenize.h"
 
+#define PATH_MAX 4096
+
 #ifndef __STDC__
 
 #include "selfhost_util.h"
@@ -19,6 +21,8 @@ int memcmp();
 void *calloc();
 void *memcpy();
 int fprintf();
+int snprintf();
+char *strcpy();
 
 #endif
 
@@ -37,6 +41,7 @@ static void process_pragma_line(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
 
 static void expand_define(Token **pre, Token *tok);
+static void add_predefine(char *name, char *replace);
 
 static void consume_line(Token **pre, Token *tok);
 
@@ -290,12 +295,24 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
       tok = tok->next;
     }
 
+    expect(&tok, tok, ">");
+
     if (post) {
-      fprintf(stderr, "%s\n", filename);
+      char *filepath = calloc(PATH_MAX + 1, sizeof(char));
+      snprintf(filepath, PATH_MAX, "/usr/local/musl/include/%s", filename);
+      fprintf(stderr, "%s\n", filepath);
       warn_at(tok->str, "ignore include");
+
+      /*
+      if (!is_included(filepath)) {
+        char *buf = read_file(filepath);
+        Token *inc_tok = tokenize(buf, filepath);
+
+        insert_token_seq(tok, inc_tok);
+      }
+      */
     }
 
-    expect(&tok, tok, ">");
     expect_kind(&tok, tok, TK_NEWLINE);
 
     *pre = tok;
@@ -390,6 +407,21 @@ void expand_define(Token **pre, Token *tok) {
   }
   cur->next = sym_next;
   expand_define(pre, symbol->next);
+}
+
+void add_predefine(char *name, char *replace) {
+  int size = strlen(replace);
+  char *buf = calloc(size + 2, sizeof(char));
+  strcpy(buf, replace);
+  buf[size] = '\n';
+
+  Token *start = tokenize(buf, "predefined_macro");
+
+  DefineList *def = calloc(1, sizeof(DefineList));
+  def->name = name;
+  def->start = start;
+
+  add_str_dict(define_dict, name, def);
 }
 
 void process_pragma_line(Token **post, Token **pre, Token *tok) {
@@ -715,6 +747,8 @@ long process_primary(Token **pre, Token *tok) {
 
 Token *preprocess(Token *tok) {
   define_dict = new_str_dict();
+
+  add_predefine("__STDC_VERSION__", "201112L");
 
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
