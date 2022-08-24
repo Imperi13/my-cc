@@ -1255,7 +1255,7 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
 Tree *parse_builtin(Token **rest, Token *tok, Analyze *state) {
   Tree *node = calloc(1, sizeof(Tree));
   if (cmp_ident(tok, "__builtin_va_start")) {
-    consume_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "__builtin_va_start");
     node->kind = BUILTIN_VA_START;
 
     expect(&tok, tok, "(");
@@ -1264,7 +1264,7 @@ Tree *parse_builtin(Token **rest, Token *tok, Analyze *state) {
     node->rhs = parse_assign(&tok, tok, state);
     expect(&tok, tok, ")");
   } else if (cmp_ident(tok, "__builtin_va_end")) {
-    consume_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "__builtin_va_end");
     node->kind = BUILTIN_VA_END;
 
     expect(&tok, tok, "(");
