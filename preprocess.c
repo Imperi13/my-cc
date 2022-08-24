@@ -37,6 +37,7 @@ static void process_pragma_line(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
 
 static void expand_define(Token **pre, Token *tok);
+static void add_predefine(char *name, char *replace);
 
 static void consume_line(Token **pre, Token *tok);
 
@@ -392,6 +393,21 @@ void expand_define(Token **pre, Token *tok) {
   expand_define(pre, symbol->next);
 }
 
+void add_predefine(char *name, char *replace) {
+  int size = strlen(replace);
+  char *buf = calloc(size + 2, sizeof(char));
+  strcpy(buf, replace);
+  buf[size] = '\n';
+
+  Token *start = tokenize(buf, "predefined_macro");
+
+  DefineList *def = calloc(1, sizeof(DefineList));
+  def->name = name;
+  def->start = start;
+
+  add_str_dict(define_dict, name, def);
+}
+
 void process_pragma_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "pragma");
@@ -715,6 +731,8 @@ long process_primary(Token **pre, Token *tok) {
 
 Token *preprocess(Token *tok) {
   define_dict = new_str_dict();
+
+  add_predefine("__STDC_VERSION__", "201112L");
 
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
