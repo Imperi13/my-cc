@@ -400,6 +400,8 @@ run_test pp_9 '#define TEST\n #if defined TEST\n int n = 10; \n #endif\n int mai
 run_test pp_10 '#if 1+2 -2\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
 run_test pp_11 '#if 2*2 - 3*1\n int n = 10; \n #endif\n int main() {return 164 + n;}' 174
 
+run_test pp_12 '#if 1\n int n = 10; \n #else \n int n = 20; \n #endif\n int main() {return 164 + n;}' 174
+
 run_test typedef_1 'typedef int TEST; TEST main(){return 174;}' 174
 run_test typedef_2 'typedef struct A TEST; int main(){ TEST *p; return 174;}' 174
 run_test typedef_3 'typedef void *TEST; int main(){  return 166 + sizeof(TEST);}' 174
