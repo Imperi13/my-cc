@@ -268,6 +268,8 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
   new_def->start = head->next;
 
+  if (find_str_dict(define_dict, define_str))
+    error("redifine %s", define_str);
   add_str_dict(define_dict, define_str, new_def);
 
   expect_kind(&tok, tok, TK_NEWLINE);
@@ -283,10 +285,8 @@ void process_undef_line(Token **post, Token **pre, Token *tok) {
 
   char *define_str = getname_ident(&tok, tok);
 
-  if (!find_str_dict(define_dict, define_str))
-    return;
-
-  remove_str_dict(define_dict, define_str);
+  if (find_str_dict(define_dict, define_str))
+    remove_str_dict(define_dict, define_str);
 
   expect_kind(&tok, tok, TK_NEWLINE);
   *pre = tok;
