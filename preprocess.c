@@ -24,6 +24,10 @@ int fprintf();
 
 static void process_macro_group(Token **post, Token **pre, Token *tok);
 static void process_if_group(Token **post, Token **pre, Token *tok);
+static void process_elif_group(Token **post, Token **pre, Token *tok,
+                               bool already_true);
+static void process_else_group(Token **post, Token **pre, Token *tok,
+                               bool already_true);
 static void process_include_line(Token **post, Token **pre, Token *tok);
 static void process_define_line(Token **post, Token **pre, Token *tok);
 static void process_undef_line(Token **post, Token **pre, Token *tok);
@@ -126,7 +130,9 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     bool cond = (find_str_dict(define_dict, define_str) != NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
-    while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+    while (!equal(tok, "#") ||
+           !(cmp_ident(tok->next, "endif") || cmp_ident(tok->next, "elif") ||
+             equal_kind(tok->next, TK_ELSE))) {
       if (cond) {
         if (equal(tok, "#"))
           process_macro_group(post, &tok, tok);
@@ -135,6 +141,14 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
       } else {
         consume_line(&tok, tok);
       }
+    }
+
+    if (cmp_ident(tok->next, "elif")) {
+      process_elif_group(post, pre, tok, cond);
+      return;
+    } else if (equal_kind(tok->next, TK_ELSE)) {
+      process_else_group(post, pre, tok, cond);
+      return;
     }
 
     expect(&tok, tok, "#");
@@ -149,7 +163,9 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     bool cond = (find_str_dict(define_dict, define_str) == NULL);
     expect_kind(&tok, tok, TK_NEWLINE);
 
-    while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+    while (!equal(tok, "#") ||
+           !(cmp_ident(tok->next, "endif") || cmp_ident(tok->next, "elif") ||
+             equal_kind(tok->next, TK_ELSE))) {
       if (cond) {
         if (equal(tok, "#"))
           process_macro_group(post, &tok, tok);
@@ -158,6 +174,14 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
       } else {
         consume_line(&tok, tok);
       }
+    }
+
+    if (cmp_ident(tok->next, "elif")) {
+      process_elif_group(post, pre, tok, cond);
+      return;
+    } else if (equal_kind(tok->next, TK_ELSE)) {
+      process_else_group(post, pre, tok, cond);
+      return;
     }
 
     expect(&tok, tok, "#");
@@ -170,7 +194,9 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     bool cond = (process_constant(&tok, tok) != 0);
     expect_kind(&tok, tok, TK_NEWLINE);
 
-    while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+    while (!equal(tok, "#") ||
+           !(cmp_ident(tok->next, "endif") || cmp_ident(tok->next, "elif") ||
+             equal_kind(tok->next, TK_ELSE))) {
       if (cond) {
         if (equal(tok, "#"))
           process_macro_group(post, &tok, tok);
@@ -181,6 +207,14 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
       }
     }
 
+    if (cmp_ident(tok->next, "elif")) {
+      process_elif_group(post, pre, tok, cond);
+      return;
+    } else if (equal_kind(tok->next, TK_ELSE)) {
+      process_else_group(post, pre, tok, cond);
+      return;
+    }
+
     expect(&tok, tok, "#");
     expect_ident(&tok, tok, "endif");
     expect_kind(&tok, tok, TK_NEWLINE);
@@ -189,6 +223,66 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
   } else {
     not_implemented_at(tok->str);
   }
+}
+
+void process_elif_group(Token **post, Token **pre, Token *tok,
+                        bool already_true) {
+  expect(&tok, tok, "#");
+  expect_ident(&tok, tok, "elif");
+
+  bool cond = (process_constant(&tok, tok) != 0);
+  expect_kind(&tok, tok, TK_NEWLINE);
+
+  while (!equal(tok, "#") ||
+         !(cmp_ident(tok->next, "endif") || cmp_ident(tok->next, "elif") ||
+           equal_kind(tok->next, TK_ELSE))) {
+    if (!already_true && cond) {
+      if (equal(tok, "#"))
+        process_macro_group(post, &tok, tok);
+      else
+        process_text_line(post, &tok, tok);
+    } else {
+      consume_line(&tok, tok);
+    }
+  }
+
+  if (cmp_ident(tok->next, "elif")) {
+    process_elif_group(post, pre, tok, already_true || cond);
+    return;
+  } else if (equal_kind(tok->next, TK_ELSE)) {
+    process_else_group(post, pre, tok, already_true || cond);
+    return;
+  }
+
+  expect(&tok, tok, "#");
+  expect_ident(&tok, tok, "endif");
+  expect_kind(&tok, tok, TK_NEWLINE);
+
+  *pre = tok;
+}
+
+void process_else_group(Token **post, Token **pre, Token *tok,
+                        bool already_true) {
+  expect(&tok, tok, "#");
+  expect_kind(&tok, tok, TK_ELSE);
+  expect_kind(&tok, tok, TK_NEWLINE);
+
+  while (!equal(tok, "#") || !cmp_ident(tok->next, "endif")) {
+    if (!already_true) {
+      if (equal(tok, "#"))
+        process_macro_group(post, &tok, tok);
+      else
+        process_text_line(post, &tok, tok);
+    } else {
+      consume_line(&tok, tok);
+    }
+  }
+
+  expect(&tok, tok, "#");
+  expect_ident(&tok, tok, "endif");
+  expect_kind(&tok, tok, TK_NEWLINE);
+
+  *pre = tok;
 }
 
 void process_include_line(Token **post, Token **pre, Token *tok) {
