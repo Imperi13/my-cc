@@ -120,7 +120,7 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
 void process_if_group(Token **post, Token **pre, Token *tok) {
   consume(&tok, tok, "#");
   if (cmp_ident(tok, "ifdef")) {
-    expect_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "ifdef");
 
     char *define_str = getname_ident(&tok, tok);
     bool cond = (find_str_dict(define_dict, define_str) != NULL);
@@ -138,12 +138,12 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     }
 
     expect(&tok, tok, "#");
-    consume_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "endif");
     expect_kind(&tok, tok, TK_NEWLINE);
 
     *pre = tok;
   } else if (cmp_ident(tok, "ifndef")) {
-    expect_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "ifndef");
 
     char *define_str = getname_ident(&tok, tok);
     bool cond = (find_str_dict(define_dict, define_str) == NULL);
@@ -161,9 +161,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     }
 
     expect(&tok, tok, "#");
-    if (!cmp_ident(tok, "endif"))
-      not_implemented_at("only ifndef~endif");
-    consume_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "endif");
     expect_kind(&tok, tok, TK_NEWLINE);
 
     *pre = tok;
@@ -184,7 +182,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     }
 
     expect(&tok, tok, "#");
-    consume_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "endif");
     expect_kind(&tok, tok, TK_NEWLINE);
 
     *pre = tok;
@@ -195,9 +193,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
 
 void process_include_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
-  if (!cmp_ident(tok, "include"))
-    error_at(tok->str, "this line is not include line");
-  expect_kind(&tok, tok, TK_IDENT);
+  expect_ident(&tok, tok, "include");
 
   if (post)
     not_implemented_at(tok->str);
@@ -249,9 +245,7 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
 
 void process_define_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
-  if (!cmp_ident(tok, "define"))
-    error_at(tok->str, "this line is not define line");
-  expect_kind(&tok, tok, TK_IDENT);
+  expect_ident(&tok, tok, "define");
 
   if (post)
     not_implemented_at(tok->str);
@@ -282,9 +276,7 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
 void process_undef_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
-  if (!cmp_ident(tok, "undef"))
-    error_at(tok->str, "this line is not undef line");
-  expect_kind(&tok, tok, TK_IDENT);
+  expect_ident(&tok, tok, "undef");
 
   if (post)
     not_implemented_at(tok->str);
@@ -329,12 +321,10 @@ void expand_define(Token **pre, Token *tok) {
 
 void process_pragma_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
-  if (!cmp_ident(tok, "pragma"))
-    error_at(tok->str, "this line is not pragma line");
-  expect_kind(&tok, tok, TK_IDENT);
+  expect_ident(&tok, tok, "pragma");
 
   if (cmp_ident(tok, "once")) {
-    expect_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "once");
 
     PragmaOnceList *pragma = calloc(1, sizeof(PragmaOnceList));
     pragma->filepath = tok->filepath;
@@ -607,7 +597,7 @@ long process_unary(Token **pre, Token *tok) {
   }
 
   if (cmp_ident(tok, "defined")) {
-    consume_kind(&tok, tok, TK_IDENT);
+    expect_ident(&tok, tok, "defined");
 
     long ret;
 

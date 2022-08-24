@@ -78,6 +78,14 @@ int expect_number(Token **rest, Token *token) {
   return val;
 }
 
+void expect_ident(Token **rest, Token *token, char *name) {
+  if (token->kind != TK_IDENT)
+    error_at(token->str, "not ident");
+  if (strcmp(token->ident_str, name) != 0)
+    error_at(token->str, "must be ident \"%s\"", name);
+  *rest = token->next;
+}
+
 char *getname_ident(Token **rest, Token *tok) {
   if (!equal_kind(tok, TK_IDENT))
     error_at(tok->str, "not ident token");
