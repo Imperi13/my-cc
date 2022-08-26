@@ -30,8 +30,6 @@ void warn_token(Token *tok, char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
 
-  fprintf(stderr, "%.*s\n", 10, tok->str);
-
   char *line = tok->str;
   while (tok->file_buf < line && line[-1] != '\n')
     line--;
