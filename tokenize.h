@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #ifndef __STDC__
 
@@ -59,6 +60,7 @@ struct Token {
 
   // for TK_IDENT
   char *ident_str;
+  bool is_recursived;
 
   // for str-literal
   StrLiteral *str_literal;
@@ -93,4 +95,5 @@ bool is_alnum(char c);
 
 Token *tokenize(char *p, char *filepath);
 
+void print_token_seq(FILE *output_stream, Token *tok);
 void debug_token(Token *token);

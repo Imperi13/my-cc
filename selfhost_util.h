@@ -13,4 +13,10 @@ typedef struct _IO_FILE FILE;
 typedef int size_t;
 
 extern FILE *stderr;
+extern FILE *stdin;
+extern FILE *stdout;
 
+extern char *optarg;
+extern int optind;
+extern int opterr;
+extern int optopt;
