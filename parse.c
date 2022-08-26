@@ -101,7 +101,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     consume(rest, tok, ";");
 
     if (ex_decl->decl_specs->has_typedef)
-      error_at(tok->str, "typedef needs def_name");
+      error_token(tok, "typedef needs def_name");
     ex_decl->kind = DECLARATION;
     return ex_decl;
   }
@@ -112,7 +112,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     if (!allow_function)
       error("not allow func-def");
     if (ex_decl->decl_specs->has_typedef)
-      error_at(tok->str, "cannot typedef for FUNC_DEF");
+      error_token(tok, "cannot typedef for FUNC_DEF");
     ex_decl->kind = FUNC_DEF;
     ex_decl->func_body = parse_compound_stmt(&tok, tok, state);
     *rest = tok;
@@ -126,7 +126,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     consume(&tok, tok, "=");
 
     if (ex_decl->decl_specs->has_typedef)
-      error_at(tok->str, "cannot typedef with initialize");
+      error_token(tok, "cannot typedef with initialize");
     ex_decl->declarator->init_expr = parse_assign(&tok, tok, state);
   }
   // TODO multiple declarator
@@ -313,7 +313,7 @@ DeclSpec *parse_declaration_specs(Token **rest, Token *tok, Analyze *state) {
           en_spec->members = head->next;
         }
       } else {
-        not_implemented_at(tok->str);
+        not_implemented_token(tok);
       }
 
       parsed_type = true;
@@ -459,7 +459,7 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
   // parse type-suffix
   declarator->type_suffix_kind = NONE;
   if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
   } else if (equal(tok, "[")) {
     declarator->type_suffix_kind = ARRAY_DECLARATOR;
     while (consume(&tok, tok, "[")) {
@@ -505,7 +505,7 @@ bool is_declarator(Token *tok, Analyze *state) {
   }
 
   if (equal(tok, "(")) {
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
   } else if (equal(tok, "[")) {
     consume(&tok, tok, "[");
     if (!equal_kind(tok, TK_NUM))
@@ -757,7 +757,7 @@ Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state) {
 
 Tree *parse_expr_stmt(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, ";")) {
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
   }
 
   Tree *node = parse_expr(&tok, tok, state);
@@ -1272,7 +1272,7 @@ Tree *parse_builtin(Token **rest, Token *tok, Analyze *state) {
     expect(&tok, tok, ")");
 
   } else
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
 
   *rest = tok;
   return node;

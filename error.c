@@ -4,6 +4,7 @@
 
 #include "error.h"
 #include "file.h"
+#include "tokenize.h"
 
 #ifndef __STDC__
 
@@ -25,26 +26,27 @@ void warn(char *fmt, ...) {
   __builtin_va_end(ap);
 }
 
-void warn_at(char *loc, char *fmt, ...) {
+void warn_token(Token *tok, char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
 
-  char *line = loc;
-  while (user_input < line && line[-1] != '\n')
+  char *line = tok->str;
+  while (tok->file_buf < line && line[-1] != '\n')
     line--;
-  char *end = loc;
+  char *end = tok->str;
   while (*end != '\n')
     end++;
 
   int line_num = 1;
-  for (char *p = user_input; p < line; p++)
+  for (char *p = tok->file_buf; p < line; p++)
     if (*p == '\n')
       line_num++;
 
-  int indent = fprintf(stderr, "\e[33m[warn]\e[m %s:%d: ", filename, line_num);
+  int indent =
+      fprintf(stderr, "\e[33m[warn]\e[m %s:%d: ", tok->filepath, line_num);
   fprintf(stderr, "%.*s\n", (int)(end - line), line);
 
-  int pos = loc - line + indent;
+  int pos = tok->str - line + indent;
   fprintf(stderr, "%*s", pos, "");
 
   char msg[0x100];
@@ -64,26 +66,27 @@ void error(char *fmt, ...) {
   exit(1);
 }
 
-void error_at(char *loc, char *fmt, ...) {
+void error_token(Token *tok, char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
 
-  char *line = loc;
-  while (user_input < line && line[-1] != '\n')
+  char *line = tok->str;
+  while (tok->file_buf < line && line[-1] != '\n')
     line--;
-  char *end = loc;
+  char *end = tok->str;
   while (*end != '\n')
     end++;
 
   int line_num = 1;
-  for (char *p = user_input; p < line; p++)
+  for (char *p = tok->file_buf; p < line; p++)
     if (*p == '\n')
       line_num++;
 
-  int indent = fprintf(stderr, "\e[31m[error]\e[m %s:%d: ", filename, line_num);
+  int indent =
+      fprintf(stderr, "\e[31m[error]\e[m %s:%d: ", tok->filepath, line_num);
   fprintf(stderr, "%.*s\n", (int)(end - line), line);
 
-  int pos = loc - line + indent;
+  int pos = tok->str - line + indent;
   fprintf(stderr, "%*s", pos, "");
 
   char msg[0x100];
@@ -97,5 +100,4 @@ void error_at(char *loc, char *fmt, ...) {
 
 void not_implemented(const char *msg) { error("not implemented: %s", msg); }
 
-void not_implemented_at(char *loc) { error_at(loc, "not implemented"); }
-
+void not_implemented_token(Token *tok) { error_token(tok, "not implemented"); }

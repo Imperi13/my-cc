@@ -59,20 +59,20 @@ Token *consume_kind(Token **rest, Token *token, TokenKind kind) {
 void expect(Token **rest, Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
-    error_at(token->str, "not '%s' op", op);
+    error_token(token, "not '%s' op", op);
   *rest = token->next;
 }
 
 Token *expect_kind(Token **rest, Token *token, TokenKind kind) {
   if (token->kind != kind)
-    error_at(token->str, "not expected TokenKind");
+    error_token(token, "not expected TokenKind");
   *rest = token->next;
   return token;
 }
 
 int expect_number(Token **rest, Token *token) {
   if (token->kind != TK_NUM)
-    error_at(token->str, "not number");
+    error_token(token, "not number");
   int val = token->val;
   *rest = token->next;
   return val;
@@ -80,15 +80,15 @@ int expect_number(Token **rest, Token *token) {
 
 void expect_ident(Token **rest, Token *token, char *name) {
   if (token->kind != TK_IDENT)
-    error_at(token->str, "not ident");
+    error_token(token, "not ident");
   if (strcmp(token->ident_str, name) != 0)
-    error_at(token->str, "must be ident \"%s\"", name);
+    error_token(token, "must be ident \"%s\"", name);
   *rest = token->next;
 }
 
 char *getname_ident(Token **rest, Token *tok) {
   if (!equal_kind(tok, TK_IDENT))
-    error_at(tok->str, "not ident token");
+    error_token(tok, "not ident token");
   *rest = tok->next;
   return tok->ident_str;
 }
@@ -254,7 +254,7 @@ Token *tokenize(char *p, char *filepath) {
       p++;
       char val = consume_char(&p, p);
       if (*p != '\'')
-        error_at(p, "not find '");
+        error("not find ' \n%s", tok_start);
       p++;
 
       cur =
@@ -312,7 +312,7 @@ Token *tokenize(char *p, char *filepath) {
     if (strncmp(p, "/*", 2) == 0) {
       char *q = strstr(p + 2, "*/");
       if (!q)
-        error_at(p, "not found comment end */");
+        error("not found comment end */ \n%s", p);
       p = q + 2;
       continue;
     }
@@ -518,7 +518,7 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
-    error_at(p, "cannot tokenize");
+    error("cannot tokenize \n%s", p);
   }
 
   new_token(TK_EOF, cur, p, 0, filepath, file_buf);
