@@ -19,12 +19,16 @@ static void codegen_function(FILE *codegen_output, Tree *func);
 static void codegen_stmt(FILE *codegen_output, Tree *stmt);
 static void codegen_addr(FILE *codegen_output, Tree *stmt);
 
+static void size_extend_rax(FILE *codegen_output, Type *a);
+
 static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
 static void store2rdiaddr_from_rax(FILE *codegen_output, Type *type);
 
 extern const char *call_register64[6];
 extern const char *call_register32[6];
 extern const char *call_register8[6];
+
+extern const char reg_rax[4];
 
 Obj *current_function;
 
@@ -309,6 +313,10 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
       fprintf(codegen_output, "  setne al\n");
       fprintf(codegen_output, "  pop rdi\n");
       fprintf(codegen_output, "  mov [rdi],al\n");
+    } else if (is_integer(stmt->lhs->type)) {
+      fprintf(codegen_output, "  pop rdi\n");
+      store2rdiaddr_from_rax(codegen_output, stmt->type);
+      size_extend_rax(codegen_output, stmt->lhs->type);
     } else {
       fprintf(codegen_output, "  pop rdi\n");
       store2rdiaddr_from_rax(codegen_output, stmt->type);
@@ -711,6 +719,22 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     error("cannnot codegen binary_op");
     break;
   }
+}
+
+void size_extend_rax(FILE *codegen_output, Type *a) {
+  if (!is_integer(a))
+    error("cannot size-extend");
+
+  if (type_size(a) == 8)
+    return;
+  else if (type_size(a) == 4)
+    fprintf(codegen_output, "  movsx rax, eax\n");
+  else if (type_size(a) == 2)
+    fprintf(codegen_output, "  movsx rax, ax\n");
+  else if (type_size(a) == 1)
+    fprintf(codegen_output, "  movsx rax, al\n");
+  else
+    error("invalid size");
 }
 
 // raxレジスタで指しているアドレスからtype型の値をraxにロードする
