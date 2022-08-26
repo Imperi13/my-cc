@@ -1,8 +1,15 @@
 
+#include <stdbool.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifndef __STDC__
+
+#include "selfhost_util.h"
 void *calloc();
+int getopt();
+int fprintf();
+
 #endif
 
 #include "analyze.h"
@@ -13,6 +20,11 @@ void *calloc();
 #include "preprocess.h"
 #include "tokenize.h"
 #include "type.h"
+
+typedef struct CommandOptions CommandOptions;
+struct CommandOptions {
+  bool only_preprocess;
+};
 
 char *filename;
 char *user_input;
@@ -66,20 +78,38 @@ void init() {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2)
+
+  int c;
+  opterr = 0;
+
+  CommandOptions *cmd_opt = calloc(1, sizeof(CommandOptions));
+
+  while ((c = getopt(argc, argv, "E")) != -1) {
+    if (c == 'E') {
+      cmd_opt->only_preprocess = true;
+    } else {
+      fprintf(stderr, "opt=%c\n", optopt);
+      error("invalid option");
+    }
+  }
+
+  if (optind + 1 != argc)
     error("invalid argv");
 
   init();
 
-  filename = argv[1];
-  user_input = read_file(argv[1]);
+  filename = argv[optind];
+  user_input = read_file(filename);
   Token *token = tokenize(user_input, filename);
 
   // debug_token(token);
 
   token = preprocess(token);
 
-  // debug_token(token);
+  if (cmd_opt->only_preprocess) {
+    print_token_seq(stdout, token);
+    return 0;
+  }
 
   Tree *ast = parse_translation_unit(token);
 

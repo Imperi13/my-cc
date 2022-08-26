@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #ifndef __STDC__
 
@@ -94,4 +95,5 @@ bool is_alnum(char c);
 
 Token *tokenize(char *p, char *filepath);
 
+void print_token_seq(FILE *output_stream, Token *tok);
 void debug_token(Token *token);
