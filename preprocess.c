@@ -466,6 +466,12 @@ void process_text_line(Token **post, Token **pre, Token *tok) {
     tok = tok->next;
   }
 
+  // append TK_NEWLINE
+  if (post) {
+    (*post)->next = tok;
+    (*post) = (*post)->next;
+  }
+
   // skip TK_NEWLINE
   *pre = tok->next;
 }
@@ -771,5 +777,22 @@ Token *preprocess(Token *tok) {
   }
 
   cur->next = tok;
+  return head->next;
+}
+
+Token *remove_newline(Token *tok) {
+  Token *head = calloc(1, sizeof(Token));
+  Token *cur = head;
+
+  while (tok->kind != TK_EOF) {
+    if (tok->kind != TK_NEWLINE) {
+      cur->next = tok;
+      cur = cur->next;
+    }
+    tok = tok->next;
+  }
+
+  cur->next = tok;
+
   return head->next;
 }

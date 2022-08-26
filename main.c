@@ -111,6 +111,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  token = remove_newline(token);
+
   Tree *ast = parse_translation_unit(token);
 
   analyze_translation_unit(ast);
