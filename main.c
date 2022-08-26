@@ -85,6 +85,8 @@ int main(int argc, char **argv) {
 
   analyze_translation_unit(ast);
 
+  codegen_output = stdout;
+
   codegen_translation_unit(ast);
   // codegen_all(stdout);
   return 0;
