@@ -10,6 +10,4 @@
 
 #endif
 
-extern FILE *codegen_output;
-
-void codegen_translation_unit(Tree *head);
+void codegen_translation_unit(FILE *codegen_output,Tree *head);

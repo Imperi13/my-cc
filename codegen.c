@@ -13,35 +13,34 @@ int fprintf();
 
 #endif
 
-static void codegen_str_literal(StrLiteral *sl);
-static void codegen_var_definition(Tree *var);
-static void codegen_function(Tree *func);
-static void codegen_stmt(Tree *stmt);
-static void codegen_addr(Tree *stmt);
+static void codegen_str_literal(FILE *codegen_output, StrLiteral *sl);
+static void codegen_var_definition(FILE *codegen_output, Tree *var);
+static void codegen_function(FILE *codegen_output, Tree *func);
+static void codegen_stmt(FILE *codegen_output, Tree *stmt);
+static void codegen_addr(FILE *codegen_output, Tree *stmt);
 
-static void load2rax_from_raxaddr(Type *type);
-static void store2rdiaddr_from_rax(Type *type);
+static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
+static void store2rdiaddr_from_rax(FILE *codegen_output, Type *type);
 
 extern const char *call_register64[6];
 extern const char *call_register32[6];
 extern const char *call_register8[6];
 
 Obj *current_function;
-FILE *codegen_output;
 
-void codegen_translation_unit(Tree *head) {
+void codegen_translation_unit(FILE *codegen_output, Tree *head) {
 
   fprintf(codegen_output, ".intel_syntax noprefix\n");
 
   for (StrLiteral *now = str_literals; now; now = now->next) {
-    codegen_str_literal(now);
+    codegen_str_literal(codegen_output, now);
   }
 
   Tree *cur = head;
   while (cur) {
     if (cur->kind == DECLARATION && cur->declarator &&
         !cur->decl_specs->has_typedef && cur->def_obj->is_defined) {
-      codegen_var_definition(cur);
+      codegen_var_definition(codegen_output, cur);
     }
     cur = cur->next;
   }
@@ -49,7 +48,7 @@ void codegen_translation_unit(Tree *head) {
   cur = head;
   while (cur) {
     if (cur->kind == FUNC_DEF) {
-      codegen_function(cur);
+      codegen_function(codegen_output, cur);
     }
     cur = cur->next;
   }
@@ -57,7 +56,7 @@ void codegen_translation_unit(Tree *head) {
   fprintf(codegen_output, "  .section	.note.GNU-stack,\"\",@progbits\n");
 }
 
-void codegen_str_literal(StrLiteral *sl) {
+void codegen_str_literal(FILE *codegen_output, StrLiteral *sl) {
   fprintf(codegen_output, "  .local .LC%d\n", sl->id);
   fprintf(codegen_output, "  .data\n");
   fprintf(codegen_output, ".LC%d:\n", sl->id);
@@ -81,7 +80,7 @@ void codegen_str_literal(StrLiteral *sl) {
   fprintf(codegen_output, "\"\n");
 }
 
-void codegen_var_definition(Tree *var) {
+void codegen_var_definition(FILE *codegen_output, Tree *var) {
   Obj *obj = var->def_obj;
   fprintf(codegen_output, "  .globl %.*s\n", obj->obj_len, obj->obj_name);
 
@@ -109,7 +108,7 @@ void codegen_var_definition(Tree *var) {
     fprintf(codegen_output, "  .zero %d\n", type_size(obj->type));
 }
 
-void codegen_function(Tree *func) {
+void codegen_function(FILE *codegen_output, Tree *func) {
 
   current_function = func->def_obj;
 
@@ -151,14 +150,14 @@ void codegen_function(Tree *func) {
     cur = cur->next;
   }
 
-  codegen_stmt(func->func_body);
+  codegen_stmt(codegen_output, func->func_body);
 
   fprintf(codegen_output, "  mov rsp, rbp\n");
   fprintf(codegen_output, "  pop rbp\n");
   fprintf(codegen_output, "  ret\n");
 }
 
-void codegen_addr(Tree *stmt) {
+void codegen_addr(FILE *codegen_output, Tree *stmt) {
   if (stmt->kind == VAR) {
     if (!stmt->var_obj->is_global)
       fprintf(codegen_output, "  lea rax, [rbp - %d]\n",
@@ -170,19 +169,19 @@ void codegen_addr(Tree *stmt) {
       fprintf(codegen_output, "  mov rax, [%.*s@GOTPCREL + rip]\n",
               stmt->var_obj->obj_len, stmt->var_obj->obj_name);
   } else if (stmt->kind == DEREF) {
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
   } else if (stmt->kind == DOT) {
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  add rax, %d\n", stmt->member->offset);
   } else if (stmt->kind == ARROW) {
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  add rax, %d\n", stmt->member->offset);
   } else {
     not_implemented(__func__);
   }
 }
 
-void codegen_stmt(Tree *stmt) {
+void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   Tree *cur;
   switch (stmt->kind) {
   case DECLARATION:
@@ -191,7 +190,7 @@ void codegen_stmt(Tree *stmt) {
       fprintf(codegen_output, "  lea rdi, [rbp - %d]\n",
               stmt->def_obj->rbp_offset);
       fprintf(codegen_output, "  push rdi\n");
-      codegen_stmt(stmt->declarator->init_expr);
+      codegen_stmt(codegen_output, stmt->declarator->init_expr);
       if (stmt->def_obj->type->kind == STRUCT ||
           stmt->def_obj->type->kind == UNION) {
         fprintf(codegen_output, "  pop rdi\n");
@@ -201,27 +200,27 @@ void codegen_stmt(Tree *stmt) {
         fprintf(codegen_output, "  rep movsb\n");
       } else {
         fprintf(codegen_output, "  pop rdi\n");
-        store2rdiaddr_from_rax(stmt->def_obj->type);
+        store2rdiaddr_from_rax(codegen_output, stmt->def_obj->type);
       }
     }
     return;
   case LABEL:
     fprintf(codegen_output, ".Llabel%.*s:\n", stmt->label_len,
             stmt->label_name);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     return;
   case CASE:
     fprintf(codegen_output, ".Lswitch%d_case%d:\n", stmt->label_number,
             stmt->case_num);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     return;
   case DEFAULT:
     fprintf(codegen_output, ".Lswitch%d_default:\n", stmt->label_number);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     return;
   case RETURN:
     if (stmt->lhs)
-      codegen_stmt(stmt->lhs);
+      codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  mov rsp, rbp\n");
     fprintf(codegen_output, "  pop rbp\n");
     fprintf(codegen_output, "  ret\n");
@@ -235,56 +234,56 @@ void codegen_stmt(Tree *stmt) {
   case COMPOUND_STMT:
     cur = stmt->stmts;
     while (cur) {
-      codegen_stmt(cur);
+      codegen_stmt(codegen_output, cur);
       cur = cur->next;
     }
     return;
   case WHILE:
     fprintf(codegen_output, ".Lbegin%d:\n", stmt->label_number);
-    codegen_stmt(stmt->cond);
+    codegen_stmt(codegen_output, stmt->cond);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  je .Lend%d\n", stmt->label_number);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, ".Lloopend%d:\n", stmt->label_number);
     fprintf(codegen_output, "  jmp .Lbegin%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case DO_WHILE:
     fprintf(codegen_output, ".Lbegin%d:\n", stmt->label_number);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, ".Lloopend%d:\n", stmt->label_number);
-    codegen_stmt(stmt->cond);
+    codegen_stmt(codegen_output, stmt->cond);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  jne .Lbegin%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case FOR:
     if (stmt->for_init)
-      codegen_stmt(stmt->for_init);
+      codegen_stmt(codegen_output, stmt->for_init);
     fprintf(codegen_output, ".Lbegin%d:\n", stmt->label_number);
-    codegen_stmt(stmt->cond);
+    codegen_stmt(codegen_output, stmt->cond);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  je .Lend%d\n", stmt->label_number);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, ".Lloopend%d:\n", stmt->label_number);
     if (stmt->for_update)
-      codegen_stmt(stmt->for_update);
+      codegen_stmt(codegen_output, stmt->for_update);
     fprintf(codegen_output, "  jmp .Lbegin%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case IF:
-    codegen_stmt(stmt->cond);
+    codegen_stmt(codegen_output, stmt->cond);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  je .Lelse%d\n", stmt->label_number);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  jmp .Lend%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lelse%d:\n", stmt->label_number);
     if (stmt->rhs)
-      codegen_stmt(stmt->rhs);
+      codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case SWITCH:
-    codegen_stmt(stmt->cond);
+    codegen_stmt(codegen_output, stmt->cond);
     for (Case *cur = stmt->cases; cur; cur = cur->next) {
       fprintf(codegen_output, "  cmp rax, %d\n", cur->case_num);
       fprintf(codegen_output, "  je .Lswitch%d_case%d\n", stmt->label_number,
@@ -293,13 +292,13 @@ void codegen_stmt(Tree *stmt) {
     if (stmt->has_default)
       fprintf(codegen_output, "  jmp .Lswitch%d_default\n", stmt->label_number);
     fprintf(codegen_output, "  jmp .Lend%d\n", stmt->label_number);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     if (stmt->lhs->type->kind == STRUCT || stmt->lhs->type->kind == UNION) {
       fprintf(codegen_output, "  pop rdi\n");
       fprintf(codegen_output, "  mov rsi, rax\n");
@@ -312,17 +311,17 @@ void codegen_stmt(Tree *stmt) {
       fprintf(codegen_output, "  mov [rdi],al\n");
     } else {
       fprintf(codegen_output, "  pop rdi\n");
-      store2rdiaddr_from_rax(stmt->type);
+      store2rdiaddr_from_rax(codegen_output, stmt->type);
     }
     return;
   case ADD_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  mov rax,rsi\n");
-    load2rax_from_raxaddr(stmt->lhs->type);
+    load2rax_from_raxaddr(codegen_output, stmt->lhs->type);
     // lhs:rax, rhs:rdi
     if (stmt->lhs->type->kind == PTR || stmt->lhs->type->kind == ARRAY)
       fprintf(codegen_output, "  imul rdi,%d\n",
@@ -334,16 +333,16 @@ void codegen_stmt(Tree *stmt) {
 
     // store
     fprintf(codegen_output, "  mov rdi,rsi\n");
-    store2rdiaddr_from_rax(stmt->lhs->type);
+    store2rdiaddr_from_rax(codegen_output, stmt->lhs->type);
     return;
   case SUB_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  mov rax,rsi\n");
-    load2rax_from_raxaddr(stmt->lhs->type);
+    load2rax_from_raxaddr(codegen_output, stmt->lhs->type);
     // sub
     if (stmt->lhs->type->kind == PTR && is_integer(stmt->rhs->type))
       fprintf(codegen_output, "  imul rdi, %d\n",
@@ -352,12 +351,12 @@ void codegen_stmt(Tree *stmt) {
 
     // store
     fprintf(codegen_output, "  mov rdi,rsi\n");
-    store2rdiaddr_from_rax(stmt->lhs->type);
+    store2rdiaddr_from_rax(codegen_output, stmt->lhs->type);
     return;
   case MUL_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -365,9 +364,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case DIV_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -376,9 +375,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case MOD_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -388,9 +387,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case AND_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -398,9 +397,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case OR_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -408,9 +407,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case XOR_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -418,9 +417,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case LSHIFT_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -429,9 +428,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case RSHIFT_ASSIGN:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     fprintf(codegen_output, "  pop rsi\n");
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
@@ -440,26 +439,26 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rsi], eax\n");
     return;
   case CONDITIONAL:
-    codegen_stmt(stmt->cond);
+    codegen_stmt(codegen_output, stmt->cond);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  jne .Ltrue%d\n", stmt->label_number);
     fprintf(codegen_output, "  jmp .Lfalse%d\n", stmt->label_number);
     fprintf(codegen_output, ".Ltrue%d:\n", stmt->label_number);
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  jmp .Lend%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lfalse%d:\n", stmt->label_number);
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case COMMA:
-    codegen_stmt(stmt->lhs);
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->lhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     return;
   case LOGICAL_OR:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  jne .Ltrue%d\n", stmt->label_number);
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  jne .Ltrue%d\n", stmt->label_number);
     fprintf(codegen_output, "  mov rax, 0\n");
@@ -469,10 +468,10 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case LOGICAL_AND:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  je .Lfalse%d\n", stmt->label_number);
-    codegen_stmt(stmt->rhs);
+    codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  je .Lfalse%d\n", stmt->label_number);
     fprintf(codegen_output, "  mov rax, 1\n");
@@ -482,34 +481,34 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
     return;
   case LOGICAL_NOT:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  sete al\n");
     fprintf(codegen_output, "  movsx rax,al\n");
     return;
   case BIT_NOT:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  not rax\n");
     return;
   case CAST:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     return;
   case PLUS:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     return;
   case MINUS:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  neg rax\n");
     return;
   case ADDR:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     return;
   case DEREF:
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
         stmt->type->kind == UNION || stmt->type->kind == FUNC)
       return;
-    load2rax_from_raxaddr(stmt->type);
+    load2rax_from_raxaddr(codegen_output, stmt->type);
     return;
   case FUNC_CALL: {
     fprintf(codegen_output, "  mov r10,rsp\n");
@@ -519,14 +518,14 @@ void codegen_stmt(Tree *stmt) {
     int stack_count = 0;
     Tree *cur = stmt->call_args;
     while (cur) {
-      codegen_stmt(cur);
+      codegen_stmt(codegen_output, cur);
       fprintf(codegen_output, "  push rax\n");
       stack_count++;
       cur = cur->next;
     }
     if (stack_count > 6)
       error("more than 6 arguments are not implemented");
-    codegen_stmt(stmt->lhs);
+    codegen_stmt(codegen_output, stmt->lhs);
     for (int i = 0; i < stack_count; i++)
       fprintf(codegen_output, "  pop %s\n", call_register64[i]);
     fprintf(codegen_output, "  call rax\n");
@@ -535,9 +534,9 @@ void codegen_stmt(Tree *stmt) {
   }
     return;
   case POST_INCREMENT:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
-    load2rax_from_raxaddr(stmt->lhs->type);
+    load2rax_from_raxaddr(codegen_output, stmt->lhs->type);
     fprintf(codegen_output, "  mov rsi,rax\n");
     if (stmt->lhs->type->kind == PTR)
       fprintf(codegen_output, "  mov rdx, %d\n",
@@ -548,9 +547,9 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rdi],esi\n");
     return;
   case POST_DECREMENT:
-    codegen_addr(stmt->lhs);
+    codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
-    load2rax_from_raxaddr(stmt->lhs->type);
+    load2rax_from_raxaddr(codegen_output, stmt->lhs->type);
     fprintf(codegen_output, "  mov rsi,rax\n");
     if (stmt->lhs->type->kind == PTR)
       fprintf(codegen_output, "  mov rdx, %d\n",
@@ -561,18 +560,18 @@ void codegen_stmt(Tree *stmt) {
     fprintf(codegen_output, "  mov [rdi],esi\n");
     return;
   case DOT:
-    codegen_addr(stmt);
+    codegen_addr(codegen_output, stmt);
     if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
         stmt->type->kind == UNION)
       return;
-    load2rax_from_raxaddr(stmt->type);
+    load2rax_from_raxaddr(codegen_output, stmt->type);
     return;
   case ARROW:
-    codegen_addr(stmt);
+    codegen_addr(codegen_output, stmt);
     if (stmt->type->kind == ARRAY || stmt->type->kind == STRUCT ||
         stmt->type->kind == UNION)
       return;
-    load2rax_from_raxaddr(stmt->type);
+    load2rax_from_raxaddr(codegen_output, stmt->type);
     return;
   case NUM:
     fprintf(codegen_output, "  mov rax, %d\n", stmt->num);
@@ -582,11 +581,11 @@ void codegen_stmt(Tree *stmt) {
             stmt->str_literal->id);
     return;
   case VAR:
-    codegen_addr(stmt);
+    codegen_addr(codegen_output, stmt);
     if (stmt->type->kind == FUNC || stmt->type->kind == ARRAY ||
         stmt->type->kind == STRUCT || stmt->type->kind == UNION)
       return;
-    load2rax_from_raxaddr(stmt->type);
+    load2rax_from_raxaddr(codegen_output, stmt->type);
     return;
   case BUILTIN_VA_START: {
     Obj *va_obj = stmt->lhs->var_obj;
@@ -621,9 +620,9 @@ void codegen_stmt(Tree *stmt) {
 
   // arithmetic-op
 
-  codegen_stmt(stmt->lhs);
+  codegen_stmt(codegen_output, stmt->lhs);
   fprintf(codegen_output, "  push rax\n");
-  codegen_stmt(stmt->rhs);
+  codegen_stmt(codegen_output, stmt->rhs);
   fprintf(codegen_output, "  mov rdi,rax\n");
   fprintf(codegen_output, "  pop rax\n");
 
@@ -715,7 +714,7 @@ void codegen_stmt(Tree *stmt) {
 }
 
 // raxレジスタで指しているアドレスからtype型の値をraxにロードする
-void load2rax_from_raxaddr(Type *type) {
+void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
   if (type_size(type) == 8)
     fprintf(codegen_output, "  mov rax,[rax]\n");
   else if (type_size(type) == 4)
@@ -726,7 +725,7 @@ void load2rax_from_raxaddr(Type *type) {
     not_implemented(__func__);
 }
 
-void store2rdiaddr_from_rax(Type *type) {
+void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
   if (type_size(type) == 8)
     fprintf(codegen_output, "  mov [rdi],rax\n");
   else if (type_size(type) == 4)
