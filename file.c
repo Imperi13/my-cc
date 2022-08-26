@@ -35,7 +35,7 @@ char *read_file(char *path) {
     error("%s: fseek", path);
   // error("%s: fseek: %s", path, strerror(errno));
 
-  char *buf = calloc(1, size + 2);
+  char *buf = calloc(size + 2, sizeof(char));
   fread(buf, size, 1, fp);
 
   if (size == 0 || buf[size - 1] != '\n')
