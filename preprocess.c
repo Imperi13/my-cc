@@ -302,7 +302,7 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
       char *filepath = calloc(PATH_MAX + 1, sizeof(char));
       snprintf(filepath, PATH_MAX, "/usr/local/musl/include/%s", filename);
       fprintf(stderr, "%s\n", filepath);
-      warn_token(tok, "ignore include");
+      warn_token(filename_start, "ignore include");
 
       /*
       if (!is_included(filepath)) {

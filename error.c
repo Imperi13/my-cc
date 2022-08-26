@@ -30,6 +30,8 @@ void warn_token(Token *tok, char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
 
+  fprintf(stderr, "%.*s\n", 10, tok->str);
+
   char *line = tok->str;
   while (tok->file_buf < line && line[-1] != '\n')
     line--;
@@ -42,11 +44,11 @@ void warn_token(Token *tok, char *fmt, ...) {
     if (*p == '\n')
       line_num++;
 
-  int indent =
-      fprintf(stderr, "\e[33m[warn]\e[m %s:%d: ", tok->filepath, line_num);
+  fprintf(stderr, "\e[33m[warn]\e[m");
+  int indent = fprintf(stderr, " %s:%d: ", tok->filepath, line_num);
   fprintf(stderr, "%.*s\n", (int)(end - line), line);
 
-  int pos = tok->str - line + indent;
+  int pos = tok->str - line + 6 + indent;
   fprintf(stderr, "%*s", pos, "");
 
   char msg[0x100];
@@ -82,11 +84,11 @@ void error_token(Token *tok, char *fmt, ...) {
     if (*p == '\n')
       line_num++;
 
-  int indent =
-      fprintf(stderr, "\e[31m[error]\e[m %s:%d: ", tok->filepath, line_num);
+  fprintf(stderr, "\e[31m[error]\e[m");
+  int indent = fprintf(stderr, " %s:%d: ", tok->filepath, line_num);
   fprintf(stderr, "%.*s\n", (int)(end - line), line);
 
-  int pos = tok->str - line + indent;
+  int pos = tok->str - line + 7 + indent;
   fprintf(stderr, "%*s", pos, "");
 
   char msg[0x100];
