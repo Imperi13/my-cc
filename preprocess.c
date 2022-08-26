@@ -22,6 +22,7 @@ void *calloc();
 void *memcpy();
 int fprintf();
 int snprintf();
+int strcmp();
 char *strcpy();
 
 #endif
@@ -349,6 +350,9 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
   while (expand_define(&tok, tok), tok->kind != TK_NEWLINE) {
     cur->next = tok;
+    if (equal_kind(tok, TK_IDENT) && strcmp(tok->ident_str, define_str) == 0) {
+      tok->is_recursived = true;
+    }
     cur = cur->next;
 
     tok = tok->next;
@@ -386,6 +390,11 @@ void process_undef_line(Token **post, Token **pre, Token *tok) {
 // 最悪でもTK_NEWLINEで止まる
 void expand_define(Token **pre, Token *tok) {
   if (!equal_kind(tok, TK_IDENT)) {
+    *pre = tok;
+    return;
+  }
+
+  if (tok->is_recursived) {
     *pre = tok;
     return;
   }

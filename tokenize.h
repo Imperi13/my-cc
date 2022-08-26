@@ -59,6 +59,7 @@ struct Token {
 
   // for TK_IDENT
   char *ident_str;
+  bool is_recursived;
 
   // for str-literal
   StrLiteral *str_literal;
