@@ -26,9 +26,6 @@ struct CommandOptions {
   bool only_preprocess;
 };
 
-char *filename;
-char *user_input;
-
 char *call_register64[6];
 char *call_register32[6];
 char *call_register8[6];
@@ -98,8 +95,8 @@ int main(int argc, char **argv) {
 
   init();
 
-  filename = argv[optind];
-  user_input = read_file(filename);
+  char *filename = argv[optind];
+  char *user_input = read_file(filename);
   Token *token = tokenize(user_input, filename);
 
   // debug_token(token);

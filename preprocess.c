@@ -110,7 +110,7 @@ bool is_if_group(Token *tok) {
 
 void process_macro_group(Token **post, Token **pre, Token *tok) {
   if (!equal(tok, "#"))
-    error_at(tok->str, "this line is not macro");
+    error_token(tok, "this line is not macro");
 
   if (is_if_group(tok)) {
     process_if_group(post, pre, tok);
@@ -125,7 +125,7 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
   } else {
     // warn("ignore unrecognized macro group");
     // consume_line(pre, tok);
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
   }
 }
 
@@ -217,7 +217,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
 
     *pre = tok;
   } else {
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
   }
 }
 
@@ -302,7 +302,7 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
       char *filepath = calloc(PATH_MAX + 1, sizeof(char));
       snprintf(filepath, PATH_MAX, "/usr/local/musl/include/%s", filename);
       fprintf(stderr, "%s\n", filepath);
-      warn_at(tok->str, "ignore include");
+      warn_token(filename_start, "ignore include");
 
       /*
       if (!is_included(filepath)) {
@@ -450,13 +450,13 @@ void process_pragma_line(Token **post, Token **pre, Token *tok) {
     expect_kind(&tok, tok, TK_NEWLINE);
     *pre = tok;
   } else {
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
   }
 }
 
 void process_text_line(Token **post, Token **pre, Token *tok) {
   if (equal(tok, "#"))
-    error_at(tok->str, "this line is not text line");
+    error_token(tok, "this line is not text line");
 
   while (expand_define(&tok, tok), tok->kind != TK_NEWLINE) {
     if (post) {
@@ -755,7 +755,7 @@ long process_primary(Token **pre, Token *tok) {
     *pre = tok->next;
     return 0;
   } else {
-    not_implemented_at(tok->str);
+    not_implemented_token(tok);
     return 0;
   }
 }
