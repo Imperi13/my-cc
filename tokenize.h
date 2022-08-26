@@ -52,7 +52,9 @@ struct Token {
   char *str;
   int len;
 
+  // for preprocess & error-handling
   char *filepath;
+  char *file_buf;
 
   // for TK_NUM
   long val;
