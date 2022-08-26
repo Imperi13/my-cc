@@ -362,8 +362,10 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   new_def->start = head->next;
 
   if (post) {
-    if (find_str_dict(define_dict, define_str))
-      error("redifine %s", define_str);
+    if (find_str_dict(define_dict, define_str)) {
+      warn("redifine %s", define_str);
+      remove_str_dict(define_dict, define_str);
+    }
     add_str_dict(define_dict, define_str, new_def);
   }
 
@@ -754,6 +756,13 @@ long process_primary(Token **pre, Token *tok) {
   } else if (tok->kind == TK_IDENT) {
     *pre = tok->next;
     return 0;
+  } else if (equal(tok, "(")) {
+    consume(&tok, tok, "(");
+    long ret = process_conditional(&tok, tok);
+    expand_define(&tok, tok);
+    expect(&tok, tok, ")");
+    *pre = tok;
+    return ret;
   } else {
     not_implemented_token(tok);
     return 0;
