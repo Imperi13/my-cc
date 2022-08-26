@@ -522,6 +522,11 @@ Token *tokenize(char *p, char *filepath) {
   return head.next;
 }
 
+void print_token_seq(FILE *output_stream, Token *tok) {
+  for (Token *cur = tok; cur->kind != TK_EOF; cur = cur->next)
+    fprintf(output_stream, "%.*s ", cur->len, cur->str);
+}
+
 void debug_token(Token *token) {
   Token *cur = token;
   while (cur != NULL) {
