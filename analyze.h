@@ -56,7 +56,6 @@ struct Obj {
 
   // for linked-list
   Obj *next;
-  Obj *arg_next;
 };
 
 struct ObjScope {

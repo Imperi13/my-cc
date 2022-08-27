@@ -12,7 +12,7 @@
 
 int fprintf();
 int vfprintf();
-int snprintf();
+int vsnprintf();
 void exit();
 
 #endif
@@ -29,8 +29,6 @@ void warn(char *fmt, ...) {
 void warn_token(Token *tok, char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
-
-  fprintf(stderr, "%.*s\n", 10, tok->str);
 
   char *line = tok->str;
   while (tok->file_buf < line && line[-1] != '\n')
@@ -52,7 +50,7 @@ void warn_token(Token *tok, char *fmt, ...) {
   fprintf(stderr, "%*s", pos, "");
 
   char msg[0x100];
-  snprintf(msg, 0xff, fmt, ap);
+  vsnprintf(msg, 0xff, fmt, ap);
 
   fprintf(stderr, "^ %s\n", msg);
   __builtin_va_end(ap);
@@ -92,7 +90,7 @@ void error_token(Token *tok, char *fmt, ...) {
   fprintf(stderr, "%*s", pos, "");
 
   char msg[0x100];
-  snprintf(msg, 0xff, fmt, ap);
+  vsnprintf(msg, 0xff, fmt, ap);
 
   fprintf(stderr, "^ %s\n", msg);
 

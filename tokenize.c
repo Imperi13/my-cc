@@ -65,7 +65,7 @@ void expect(Token **rest, Token *token, char *op) {
 
 Token *expect_kind(Token **rest, Token *token, TokenKind kind) {
   if (token->kind != kind)
-    error_token(token, "not expected TokenKind");
+    error_token(token, "not expected TokenKind %d", kind);
   *rest = token->next;
   return token;
 }
