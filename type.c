@@ -70,15 +70,15 @@ void builtin_type_init(Analyze *state) {
 }
 
 Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
-  if (decl_spec->has_long) {
+  if (decl_spec->type_spec_kind == TypeSpec_LONG) {
     return type_long;
-  } else if (decl_spec->has_int) {
+  } else if (decl_spec->type_spec_kind == TypeSpec_INT) {
     return type_int;
-  } else if (decl_spec->has_char) {
+  } else if (decl_spec->type_spec_kind == TypeSpec_CHAR) {
     return type_char;
-  } else if (decl_spec->has_void) {
+  } else if (decl_spec->type_spec_kind == TypeSpec_VOID) {
     return type_void;
-  } else if (decl_spec->has_bool) {
+  } else if (decl_spec->type_spec_kind == TypeSpec_BOOL) {
     return type_bool;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);

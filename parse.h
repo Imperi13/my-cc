@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdbool.h>
-
 typedef enum TreeKind {
   FUNC_DEF,
   DECLARATION,
@@ -70,6 +68,20 @@ typedef enum TreeKind {
   BUILTIN_VA_END,
 } TreeKind;
 
+typedef enum TypeSpecKind {
+  // INT = 0 ,this makes the default type of no type-spec obj INT
+  TypeSpec_INT,
+
+  TypeSpec_VOID,
+  TypeSpec_BOOL,
+  TypeSpec_CHAR,
+  TypeSpec_LONG,
+  TypeSpec_TYPEDEF_NAME,
+  TypeSpec_STRUCT,
+  TypeSpec_UNION,
+  TypeSpec_ENUM,
+} TypeSpecKind;
+
 typedef enum TypeSuffixKind {
   NONE,
   ARRAY_DECLARATOR,
@@ -86,6 +98,8 @@ typedef struct EnumVal EnumVal;
 typedef struct Declarator Declarator;
 typedef struct Pointer Pointer;
 typedef struct ArrayDeclarator ArrayDeclarator;
+
+#include <stdbool.h>
 
 #include "analyze.h"
 #include "tokenize.h"
@@ -177,11 +191,8 @@ struct DeclSpec {
   bool has_typedef;
 
   // type_spec
-  bool has_void;
-  bool has_long;
-  bool has_int;
-  bool has_char;
-  bool has_bool;
+  TypeSpecKind type_spec_kind;
+
   StructSpec *st_spec;
   StructDef *st_def;
   UnionSpec *union_spec;

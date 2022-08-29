@@ -20,13 +20,28 @@ int fprintf();
 
 #endif
 
+typedef struct PrimitiveTypeToken PrimitiveTypeToken;
+struct PrimitiveTypeToken {
+  int void_count;
+  int bool_count;
+  int char_count;
+  int int_count;
+  int long_count;
+};
+
 static Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
                                  bool allow_function);
 static DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state);
 
+static void parse_primitive_type_spec(Token **rest, Token *tok,
+                                      PrimitiveTypeToken *primitive_type_token);
 static StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state);
 static UnionSpec *parse_union_spec(Token **rest, Token *tok, Analyze *state);
 static EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state);
+
+static void
+set_primitive_type_spec_kind(DeclSpec *decl_spec,
+                             PrimitiveTypeToken *primitive_type_token);
 
 static Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_parameter_type_list(Token **rest, Token *tok,
@@ -159,9 +174,20 @@ bool is_decl_specs(Token *tok, Analyze *state) {
          (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->ident_str));
 }
 
+bool is_primitive_type_token(Token *tok) {
+  return equal_kind(tok, TK_LONG) || equal_kind(tok, TK_INT) ||
+         equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_VOID) ||
+         equal_kind(tok, TK_BOOL);
+}
+
 DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
   DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
-  bool parsed_type = false;
+  bool is_complete_type_parse = false;
+
+  PrimitiveTypeToken *primitive_type_token =
+      calloc(1, sizeof(PrimitiveTypeToken));
+  bool is_primitive_type = false;
+
   while (is_decl_specs(tok, state)) {
     if (equal_kind(tok, TK_CONST)) {
       consume_kind(&tok, tok, TK_CONST);
@@ -175,67 +201,82 @@ DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
     } else if (equal_kind(tok, TK_TYPEDEF)) {
       consume_kind(&tok, tok, TK_TYPEDEF);
       decl_spec->has_typedef = true;
-    } else if (equal_kind(tok, TK_LONG)) {
-      if (parsed_type)
+    } else if (is_primitive_type_token(tok)) {
+      if (is_complete_type_parse)
         error("dup type");
-      decl_spec->has_long = true;
-      consume_kind(&tok, tok, TK_LONG);
-      parsed_type = true;
-    } else if (equal_kind(tok, TK_INT)) {
-      if (parsed_type)
-        error("dup type");
-      decl_spec->has_int = true;
-      consume_kind(&tok, tok, TK_INT);
-      parsed_type = true;
-    } else if (equal_kind(tok, TK_CHAR)) {
-      if (parsed_type)
-        error("dup type");
-      decl_spec->has_char = true;
-      consume_kind(&tok, tok, TK_CHAR);
-      parsed_type = true;
-    } else if (equal_kind(tok, TK_VOID)) {
-      if (parsed_type)
-        error("dup type");
-      decl_spec->has_void = true;
-      consume_kind(&tok, tok, TK_VOID);
-      parsed_type = true;
-    } else if (equal_kind(tok, TK_BOOL)) {
-      if (parsed_type)
-        error("dup type");
-      decl_spec->has_bool = true;
-      consume_kind(&tok, tok, TK_BOOL);
-      parsed_type = true;
+      parse_primitive_type_spec(&tok, tok, primitive_type_token);
+      is_primitive_type = true;
     } else if (equal_kind(tok, TK_IDENT) &&
                find_typedef(state, tok->ident_str)) {
-      if (parsed_type)
+      if (is_complete_type_parse)
+        error("dup type");
+      if (is_primitive_type)
         error("dup type");
       decl_spec->def_name = getname_ident(&tok, tok);
       decl_spec->def_len = strlen(decl_spec->def_name);
-      parsed_type = true;
+      decl_spec->type_spec_kind = TypeSpec_TYPEDEF_NAME;
+      is_complete_type_parse = true;
     } else if (equal_kind(tok, TK_STRUCT)) {
-      if (parsed_type)
+      if (is_complete_type_parse)
+        error("dup type");
+      if (is_primitive_type)
         error("dup type");
       decl_spec->st_spec = parse_struct_spec(&tok, tok, state);
+      decl_spec->type_spec_kind = TypeSpec_STRUCT;
 
-      parsed_type = true;
+      is_complete_type_parse = true;
     } else if (equal_kind(tok, TK_UNION)) {
-      if (parsed_type)
+      if (is_complete_type_parse)
+        error("dup type");
+      if (is_primitive_type)
         error("dup type");
       decl_spec->union_spec = parse_union_spec(&tok, tok, state);
+      decl_spec->type_spec_kind = TypeSpec_UNION;
 
-      parsed_type = true;
+      is_complete_type_parse = true;
     } else if (equal_kind(tok, TK_ENUM)) {
-      if (parsed_type)
+      if (is_complete_type_parse)
+        error("dup type");
+      if (is_primitive_type)
         error("dup type");
       decl_spec->en_spec = parse_enum_spec(&tok, tok, state);
+      decl_spec->type_spec_kind = TypeSpec_ENUM;
 
-      parsed_type = true;
+      is_complete_type_parse = true;
     } else {
       not_implemented_token(tok);
     }
   }
+
+  if (is_primitive_type)
+    set_primitive_type_spec_kind(decl_spec, primitive_type_token);
+
   *rest = tok;
   return decl_spec;
+}
+
+void parse_primitive_type_spec(Token **rest, Token *tok,
+                               PrimitiveTypeToken *primitive_type_token) {
+  if (equal_kind(tok, TK_VOID)) {
+    consume_kind(&tok, tok, TK_VOID);
+    primitive_type_token->void_count++;
+  } else if (equal_kind(tok, TK_BOOL)) {
+    consume_kind(&tok, tok, TK_BOOL);
+    primitive_type_token->bool_count++;
+  } else if (equal_kind(tok, TK_CHAR)) {
+    consume_kind(&tok, tok, TK_CHAR);
+    primitive_type_token->char_count++;
+  } else if (equal_kind(tok, TK_INT)) {
+    consume_kind(&tok, tok, TK_INT);
+    primitive_type_token->int_count++;
+  } else if (equal_kind(tok, TK_LONG)) {
+    consume_kind(&tok, tok, TK_LONG);
+    primitive_type_token->long_count++;
+  } else {
+    not_implemented_token(tok);
+  }
+
+  *rest = tok;
 }
 
 StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state) {
@@ -343,6 +384,23 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
 
   *rest = tok;
   return en_spec;
+}
+
+void set_primitive_type_spec_kind(DeclSpec *decl_spec,
+                                  PrimitiveTypeToken *primitive_type_token) {
+  if (primitive_type_token->void_count == 1) {
+    decl_spec->type_spec_kind = TypeSpec_VOID;
+  } else if (primitive_type_token->bool_count == 1) {
+    decl_spec->type_spec_kind = TypeSpec_BOOL;
+  } else if (primitive_type_token->char_count == 1) {
+    decl_spec->type_spec_kind = TypeSpec_CHAR;
+  } else if (primitive_type_token->int_count == 1) {
+    decl_spec->type_spec_kind = TypeSpec_INT;
+  } else if (primitive_type_token->long_count == 1) {
+    decl_spec->type_spec_kind = TypeSpec_LONG;
+  } else {
+    not_implemented(__func__);
+  }
 }
 
 Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
