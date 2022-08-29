@@ -301,17 +301,18 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
     if (post) {
       char *filepath = calloc(PATH_MAX + 1, sizeof(char));
       snprintf(filepath, PATH_MAX, "/usr/local/musl/include/%s", filename);
-      fprintf(stderr, "%s\n", filepath);
-      warn_token(filename_start, "ignore include");
 
       /*
+      fprintf(stderr, "%s\n", filepath);
+      warn_token(filename_start, "ignore include");
+      */
+
       if (!is_included(filepath)) {
         char *buf = read_file(filepath);
         Token *inc_tok = tokenize(buf, filepath);
 
         insert_token_seq(tok, inc_tok);
       }
-      */
     }
 
     expect_kind(&tok, tok, TK_NEWLINE);
@@ -339,6 +340,11 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
 void process_define_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "define");
+
+  if (!post) {
+    consume_line(pre, tok);
+    return;
+  }
 
   char *define_str = getname_ident(&tok, tok);
 
@@ -773,6 +779,7 @@ Token *preprocess(Token *tok) {
   define_dict = new_str_dict();
 
   add_predefine("__STDC_VERSION__", "201112L");
+  add_predefine("__STDC__", "1");
 
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;

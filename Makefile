@@ -1,4 +1,4 @@
-CC=gcc
+CC=/usr/local/musl/bin/musl-gcc
 CFLAGS=-std=gnu11 -g -static
 SRCS=$(wildcard *.c)
 OBJS=$(SRCS:.c=.o)

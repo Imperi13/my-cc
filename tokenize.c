@@ -28,6 +28,8 @@ void *memcpy();
 
 #endif
 
+StrLiteral *str_literals;
+
 bool equal(Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
@@ -195,6 +197,8 @@ char consume_char(char **rest, char *p) {
     p++;
     if (*p == 'e') {
       ret = '\e';
+    } else if (*p == 't') {
+      ret = '\t';
     } else if (*p == 'n') {
       ret = '\n';
     } else if (*p == '\\') {
@@ -220,8 +224,6 @@ char consume_char(char **rest, char *p) {
     return ret;
   }
 }
-
-StrLiteral *str_literals = NULL;
 
 Token *tokenize(char *p, char *filepath) {
   char *file_buf = p;
@@ -345,7 +347,8 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
-    if (isdigit(*p)) {
+    // if (isdigit(*p)) {
+    if ((*p) - '0' < 10) {
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);
@@ -356,6 +359,12 @@ Token *tokenize(char *p, char *filepath) {
       }
 
       cur->len = p - prev;
+      continue;
+    }
+
+    if (strncmp(p, "inline", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_INLINE, cur, p, 6, filepath, file_buf);
+      p += 6;
       continue;
     }
 

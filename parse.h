@@ -186,6 +186,7 @@ struct DeclSpec {
   bool has_typedef;
 
   // func-spec
+  bool has_inline;   // unused
   bool has_noreturn; // unused;
 
   // type_spec
@@ -268,6 +269,7 @@ struct Pointer {
 };
 
 struct ArrayDeclarator {
+  bool is_null_size;
   Tree *size;
 
   // for linked-list

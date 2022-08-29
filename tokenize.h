@@ -43,6 +43,7 @@ typedef enum TokenKind {
   TK_EXTERN,
   TK_STATIC,
   TK_TYPEDEF,
+  TK_INLINE,
   TK_NORETURN,
   TK_NUM,
   TK_STR,

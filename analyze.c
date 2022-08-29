@@ -155,18 +155,18 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
 void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
   if (decl_spec->type_spec_kind == TypeSpec_STRUCT) {
+    StructDef *st_defs = NULL;
 
-    if (!decl_spec->st_spec->st_name) {
-      not_implemented(__func__);
-    }
-
-    StructDef *st_defs = find_struct(state, decl_spec->st_spec->st_name);
+    if (decl_spec->st_spec->st_name)
+      st_defs = find_struct(state, decl_spec->st_spec->st_name);
 
     if (!st_defs) {
       st_defs = calloc(1, sizeof(StructDef));
-      st_defs->st_name = decl_spec->st_spec->st_name;
 
-      add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
+      if (decl_spec->st_spec->st_name) {
+        st_defs->st_name = decl_spec->st_spec->st_name;
+        add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
+      }
     }
 
     if (st_defs->is_defined && decl_spec->st_spec->has_decl)
@@ -674,12 +674,18 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == CAST) {
     analyze_decl_spec(ast->type_name->decl_specs, state, false);
     Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs, state);
-    cast_type = gettype_declarator(ast->type_name->declarator, cast_type);
+    if (ast->type_name->declarator)
+      cast_type = gettype_declarator(ast->type_name->declarator, cast_type);
 
     analyze_stmt(ast->lhs, state);
 
+    if (!is_compatible(cast_type, ast->lhs))
+      error("cannot cast");
+
+    /*
     if (!is_integer(cast_type) || !is_integer(ast->lhs->type))
       not_implemented("not integer cast");
+      */
 
     ast->type = cast_type;
 

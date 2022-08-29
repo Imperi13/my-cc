@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
   char *user_input = read_file(filename);
   Token *token = tokenize(user_input, filename);
 
-  // debug_token(token);
+  //  debug_token(token);
 
   token = preprocess(token);
 
