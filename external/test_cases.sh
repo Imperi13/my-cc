@@ -22,7 +22,7 @@ run_test() {
   rm -f ./tmp
   echo -e "$2" > ./external/tmp.in
 	$MYCC ./external/tmp.in > tmp.s
-  ${cc} ${cc_option} -o tmp tmp.s util/ten.o util/add.o util/many_arg.o util/alloc4.o
+  ${cc} ${cc_option} -o tmp tmp.s
 	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
