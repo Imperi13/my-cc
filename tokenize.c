@@ -359,6 +359,12 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
+    if (strncmp(p, "_Noreturn", 9) == 0 && !is_alnum(p[9])) {
+      cur = new_token(TK_NORETURN, cur, p, 9, filepath, file_buf);
+      p += 9;
+      continue;
+    }
+
     if (strncmp(p, "unsigned", 8) == 0 && !is_alnum(p[8])) {
       cur = new_token(TK_UNSIGNED, cur, p, 8, filepath, file_buf);
       p += 8;
@@ -367,6 +373,18 @@ Token *tokenize(char *p, char *filepath) {
 
     if (strncmp(p, "signed", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_SIGNED, cur, p, 6, filepath, file_buf);
+      p += 6;
+      continue;
+    }
+
+    if (strncmp(p, "float", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_FLOAT, cur, p, 5, filepath, file_buf);
+      p += 5;
+      continue;
+    }
+
+    if (strncmp(p, "double", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_DOUBLE, cur, p, 6, filepath, file_buf);
       p += 6;
       continue;
     }

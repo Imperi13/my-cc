@@ -41,7 +41,7 @@ void codegen_translation_unit(FILE *codegen_output, Tree *head) {
   Tree *cur = head;
   while (cur) {
     if (cur->kind == DECLARATION && cur->declarator &&
-        !cur->decl_specs->has_typedef && cur->def_obj->is_defined) {
+        !cur->decl_specs->has_typedef && cur->declarator->def_obj->is_defined) {
       codegen_var_definition(codegen_output, cur);
     }
     cur = cur->next;
@@ -83,8 +83,8 @@ void codegen_str_literal(FILE *codegen_output, StrLiteral *sl) {
 }
 
 void codegen_var_definition(FILE *codegen_output, Tree *var) {
-  Obj *obj = var->def_obj;
-  fprintf(codegen_output, "  .globl %.*s\n", obj->obj_len, obj->obj_name);
+  Obj *obj = var->declarator->def_obj;
+  fprintf(codegen_output, "  .globl %s\n", obj->obj_name);
 
   if (var->declarator->init_expr)
     fprintf(codegen_output, "  .data\n");
@@ -92,7 +92,7 @@ void codegen_var_definition(FILE *codegen_output, Tree *var) {
     fprintf(codegen_output, "  .bss\n");
 
   fprintf(codegen_output, "  .align %d\n", type_alignment(obj->type));
-  fprintf(codegen_output, "%.*s:\n", obj->obj_len, obj->obj_name);
+  fprintf(codegen_output, "%s:\n", obj->obj_name);
 
   if (var->declarator->init_expr) {
     if (type_size(obj->type) == 1) {
@@ -112,21 +112,18 @@ void codegen_var_definition(FILE *codegen_output, Tree *var) {
 
 void codegen_function(FILE *codegen_output, Tree *func) {
 
-  current_function = func->def_obj;
+  current_function = func->declarator->def_obj;
 
   fprintf(codegen_output, "  .text\n");
   if (func->decl_specs->has_static)
-    fprintf(codegen_output, ".local %.*s\n", func->def_obj->obj_len,
-            func->def_obj->obj_name);
+    fprintf(codegen_output, ".local %s\n", current_function->obj_name);
   else
-    fprintf(codegen_output, ".globl %.*s\n", func->def_obj->obj_len,
-            func->def_obj->obj_name);
-  fprintf(codegen_output, "%.*s:\n", func->def_obj->obj_len,
-          func->def_obj->obj_name);
+    fprintf(codegen_output, ".globl %s\n", current_function->obj_name);
+  fprintf(codegen_output, "%s:\n", current_function->obj_name);
 
   fprintf(codegen_output, "  push rbp\n");
   fprintf(codegen_output, "  mov rbp, rsp\n");
-  fprintf(codegen_output, "  sub rsp, %d\n", func->def_obj->stack_size);
+  fprintf(codegen_output, "  sub rsp, %d\n", current_function->stack_size);
 
   if (func->declarator->has_variable_arg) {
     for (int i = 5; i >= 0; i--) {
@@ -137,34 +134,32 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   Tree *cur = getargs_declarator(func->declarator);
   int count = 0;
   while (cur) {
+    Obj *cur_obj = cur->declarator->def_obj;
     if (count < 6) {
-      if (type_size(cur->def_obj->type) == 8)
-        fprintf(codegen_output, "  mov [rbp - %d], %s\n",
-                cur->def_obj->rbp_offset, call_register64[count]);
-      else if (type_size(cur->def_obj->type) == 4)
-        fprintf(codegen_output, "  mov [rbp - %d], %s\n",
-                cur->def_obj->rbp_offset, call_register32[count]);
-      else if (type_size(cur->def_obj->type) == 1)
-        fprintf(codegen_output, "  mov [rbp - %d], %s\n",
-                cur->def_obj->rbp_offset, call_register8[count]);
+      if (type_size(cur_obj->type) == 8)
+        fprintf(codegen_output, "  mov [rbp - %d], %s\n", cur_obj->rbp_offset,
+                call_register64[count]);
+      else if (type_size(cur_obj->type) == 4)
+        fprintf(codegen_output, "  mov [rbp - %d], %s\n", cur_obj->rbp_offset,
+                call_register32[count]);
+      else if (type_size(cur_obj->type) == 1)
+        fprintf(codegen_output, "  mov [rbp - %d], %s\n", cur_obj->rbp_offset,
+                call_register8[count]);
       else
         not_implemented(__func__);
     } else {
-      if (type_size(cur->def_obj->type) == 8) {
+      if (type_size(cur_obj->type) == 8) {
         fprintf(codegen_output, "  mov rax, [rbp + %d]\n",
                 0x10 + 0x8 * (count - 6));
-        fprintf(codegen_output, "  mov [rbp - %d], rax\n",
-                cur->def_obj->rbp_offset);
-      } else if (type_size(cur->def_obj->type) == 4) {
+        fprintf(codegen_output, "  mov [rbp - %d], rax\n", cur_obj->rbp_offset);
+      } else if (type_size(cur_obj->type) == 4) {
         fprintf(codegen_output, "  mov eax, [rbp + %d]\n",
                 0x10 + 0x8 * (count - 6));
-        fprintf(codegen_output, "  mov [rbp - %d], eax\n",
-                cur->def_obj->rbp_offset);
-      } else if (type_size(cur->def_obj->type) == 1) {
+        fprintf(codegen_output, "  mov [rbp - %d], eax\n", cur_obj->rbp_offset);
+      } else if (type_size(cur_obj->type) == 1) {
         fprintf(codegen_output, "  mov al, [rbp + %d]\n",
                 0x10 + 0x8 * (count - 6));
-        fprintf(codegen_output, "  mov [rbp - %d], al\n",
-                cur->def_obj->rbp_offset);
+        fprintf(codegen_output, "  mov [rbp - %d], al\n", cur_obj->rbp_offset);
       } else
         not_implemented(__func__);
     }
@@ -185,11 +180,11 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
       fprintf(codegen_output, "  lea rax, [rbp - %d]\n",
               stmt->var_obj->rbp_offset);
     else if (stmt->var_obj->is_defined)
-      fprintf(codegen_output, "  lea rax, [rip + %.*s]\n",
-              stmt->var_obj->obj_len, stmt->var_obj->obj_name);
+      fprintf(codegen_output, "  lea rax, [rip + %s]\n",
+              stmt->var_obj->obj_name);
     else
-      fprintf(codegen_output, "  mov rax, [%.*s@GOTPCREL + rip]\n",
-              stmt->var_obj->obj_len, stmt->var_obj->obj_name);
+      fprintf(codegen_output, "  mov rax, [%s@GOTPCREL + rip]\n",
+              stmt->var_obj->obj_name);
   } else if (stmt->kind == DEREF) {
     codegen_stmt(codegen_output, stmt->lhs);
   } else if (stmt->kind == DOT) {
@@ -210,25 +205,24 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     if (stmt->declarator && stmt->declarator->init_expr) {
       fprintf(codegen_output, "  nop\n");
       fprintf(codegen_output, "  lea rdi, [rbp - %d]\n",
-              stmt->def_obj->rbp_offset);
+              stmt->declarator->def_obj->rbp_offset);
       fprintf(codegen_output, "  push rdi\n");
       codegen_stmt(codegen_output, stmt->declarator->init_expr);
-      if (stmt->def_obj->type->kind == STRUCT ||
-          stmt->def_obj->type->kind == UNION) {
+      if (stmt->declarator->def_obj->type->kind == STRUCT ||
+          stmt->declarator->def_obj->type->kind == UNION) {
         fprintf(codegen_output, "  pop rdi\n");
         fprintf(codegen_output, "  mov rsi, rax\n");
         fprintf(codegen_output, "  mov rcx, %d\n",
-                type_size(stmt->def_obj->type));
+                type_size(stmt->declarator->def_obj->type));
         fprintf(codegen_output, "  rep movsb\n");
       } else {
         fprintf(codegen_output, "  pop rdi\n");
-        store2rdiaddr_from_rax(codegen_output, stmt->def_obj->type);
+        store2rdiaddr_from_rax(codegen_output, stmt->declarator->def_obj->type);
       }
     }
     return;
   case LABEL:
-    fprintf(codegen_output, ".Llabel%.*s:\n", stmt->label_len,
-            stmt->label_name);
+    fprintf(codegen_output, ".Llabel%s:\n", stmt->label_name);
     codegen_stmt(codegen_output, stmt->lhs);
     return;
   case CASE:
