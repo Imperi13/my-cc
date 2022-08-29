@@ -434,9 +434,17 @@ run_test more_6_args_2 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%
 run_test more_6_args_3 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d,%d\n",1,2,3,4,5,6,7,8,9);return 174; }' 174
 run_test more_6_args_4 'int add8(int a,int b,int c,int d,int e,int f,int g,int h){return a+b+c+d+e+f+g+h;} int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
 
-run_test type_spec 'int main(){unsigned long n = 10; return 164+n;}' 174
+run_test type_spec_1 'int main(){unsigned long n = 10; return 164+n;}' 174
+run_test type_spec_2 'int main(){unsigned n = 10; return 164+n;}' 174
 
 run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
+
+run_test multiple_declarator_1 'int a,b; int main(){a = 164;b = 10;return a+b;}' 174
+run_test multiple_declarator_2 'int a,b,c,d; int main(){a = 114;b = 10;c = 20;d = 30;return a+b+c+d;}' 174
+run_test multiple_declarator_3 'int main(){int a,b;a = 164;b = 10;return a+b;}' 174
+run_test multiple_declarator_4 'int main(){int a,b,c,d;a = 114;b = 10;c = 20;d = 30;return a+b+c+d;}' 174
+run_test multiple_declarator_5 'struct Test{int a,b;};int main(){return 166 + sizeof(struct Test);}' 174
+run_test multiple_declarator_6 'struct Test{int a,b;};int main(){struct Test t;t.a = 10;t.b = 20; return 144+t.a+t.b;}' 174
 
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174

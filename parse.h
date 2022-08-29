@@ -253,6 +253,13 @@ struct Declarator {
 
   // for init-expr
   Tree *init_expr;
+
+  // for struct-declarator
+  bool has_bit_field;
+  int bit_field;
+
+  // for linked-list
+  Declarator *next;
 };
 
 struct Pointer {

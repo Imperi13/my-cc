@@ -83,31 +83,30 @@ void codegen_str_literal(FILE *codegen_output, StrLiteral *sl) {
 }
 
 void codegen_var_definition(FILE *codegen_output, Tree *var) {
-  Obj *obj = var->declarator->def_obj;
-  fprintf(codegen_output, "  .globl %s\n", obj->obj_name);
+  for (Declarator *cur = var->declarator; cur; cur = cur->next) {
+    Obj *obj = cur->def_obj;
+    fprintf(codegen_output, "  .globl %s\n", obj->obj_name);
 
-  if (var->declarator->init_expr)
-    fprintf(codegen_output, "  .data\n");
-  else
-    fprintf(codegen_output, "  .bss\n");
+    if (cur->init_expr)
+      fprintf(codegen_output, "  .data\n");
+    else
+      fprintf(codegen_output, "  .bss\n");
 
-  fprintf(codegen_output, "  .align %d\n", type_alignment(obj->type));
-  fprintf(codegen_output, "%s:\n", obj->obj_name);
+    fprintf(codegen_output, "  .align %d\n", type_alignment(obj->type));
+    fprintf(codegen_output, "%s:\n", obj->obj_name);
 
-  if (var->declarator->init_expr) {
-    if (type_size(obj->type) == 1) {
-      fprintf(codegen_output, "  .byte %d\n",
-              eval_constexpr(var->declarator->init_expr));
-    } else if (type_size(obj->type) == 4) {
-      fprintf(codegen_output, "  .long %d\n",
-              eval_constexpr(var->declarator->init_expr));
-    } else if (type_size(obj->type) == 8) {
-      fprintf(codegen_output, "  .quad %d\n",
-              eval_constexpr(var->declarator->init_expr));
+    if (cur->init_expr) {
+      if (type_size(obj->type) == 1) {
+        fprintf(codegen_output, "  .byte %d\n", eval_constexpr(cur->init_expr));
+      } else if (type_size(obj->type) == 4) {
+        fprintf(codegen_output, "  .long %d\n", eval_constexpr(cur->init_expr));
+      } else if (type_size(obj->type) == 8) {
+        fprintf(codegen_output, "  .quad %d\n", eval_constexpr(cur->init_expr));
+      } else
+        not_implemented(__func__);
     } else
-      not_implemented(__func__);
-  } else
-    fprintf(codegen_output, "  .zero %d\n", type_size(obj->type));
+      fprintf(codegen_output, "  .zero %d\n", type_size(obj->type));
+  }
 }
 
 void codegen_function(FILE *codegen_output, Tree *func) {
@@ -201,25 +200,28 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
 void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   Tree *cur;
   switch (stmt->kind) {
-  case DECLARATION:
-    if (stmt->declarator && stmt->declarator->init_expr) {
-      fprintf(codegen_output, "  nop\n");
-      fprintf(codegen_output, "  lea rdi, [rbp - %d]\n",
-              stmt->declarator->def_obj->rbp_offset);
-      fprintf(codegen_output, "  push rdi\n");
-      codegen_stmt(codegen_output, stmt->declarator->init_expr);
-      if (stmt->declarator->def_obj->type->kind == STRUCT ||
-          stmt->declarator->def_obj->type->kind == UNION) {
-        fprintf(codegen_output, "  pop rdi\n");
-        fprintf(codegen_output, "  mov rsi, rax\n");
-        fprintf(codegen_output, "  mov rcx, %d\n",
-                type_size(stmt->declarator->def_obj->type));
-        fprintf(codegen_output, "  rep movsb\n");
-      } else {
-        fprintf(codegen_output, "  pop rdi\n");
-        store2rdiaddr_from_rax(codegen_output, stmt->declarator->def_obj->type);
+  case DECLARATION: {
+    for (Declarator *cur = stmt->declarator; cur; cur = cur->next) {
+      if (cur && cur->init_expr) {
+        fprintf(codegen_output, "  nop\n");
+        fprintf(codegen_output, "  lea rdi, [rbp - %d]\n",
+                cur->def_obj->rbp_offset);
+        fprintf(codegen_output, "  push rdi\n");
+        codegen_stmt(codegen_output, cur->init_expr);
+        if (cur->def_obj->type->kind == STRUCT ||
+            cur->def_obj->type->kind == UNION) {
+          fprintf(codegen_output, "  pop rdi\n");
+          fprintf(codegen_output, "  mov rsi, rax\n");
+          fprintf(codegen_output, "  mov rcx, %d\n",
+                  type_size(cur->def_obj->type));
+          fprintf(codegen_output, "  rep movsb\n");
+        } else {
+          fprintf(codegen_output, "  pop rdi\n");
+          store2rdiaddr_from_rax(codegen_output, cur->def_obj->type);
+        }
       }
     }
+  }
     return;
   case LABEL:
     fprintf(codegen_output, ".Llabel%s:\n", stmt->label_name);
