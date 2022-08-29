@@ -526,17 +526,29 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     int stack_count = 0;
     Tree *cur = stmt->call_args;
     while (cur) {
-      codegen_stmt(codegen_output, cur);
-      fprintf(codegen_output, "  push rax\n");
       stack_count++;
       cur = cur->next;
     }
-    if (stack_count > 6)
-      error("more than 6 arguments are not implemented");
+
+    bool need_padding = (stack_count > 6) && (stack_count % 2 == 1);
+    if (need_padding)
+      fprintf(codegen_output, "  push 0\n");
+
+    cur = stmt->call_args;
+    while (cur) {
+      codegen_stmt(codegen_output, cur);
+      fprintf(codegen_output, "  push rax\n");
+      cur = cur->next;
+    }
+
     codegen_stmt(codegen_output, stmt->lhs);
-    for (int i = 0; i < stack_count; i++)
+    for (int i = 0; i < ((stack_count > 6) ? 6 : stack_count); i++)
       fprintf(codegen_output, "  pop %s\n", call_register64[i]);
     fprintf(codegen_output, "  call rax\n");
+
+    if (need_padding)
+      fprintf(codegen_output, "  pop r10\n");
+
     fprintf(codegen_output, "  pop r10\n");
     fprintf(codegen_output, "  pop rsp\n");
   }
