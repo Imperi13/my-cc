@@ -154,7 +154,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 }
 
 void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
-  if (decl_spec->st_spec) {
+  if (decl_spec->type_spec_kind == TypeSpec_STRUCT) {
 
     if (!decl_spec->st_spec->st_name) {
       not_implemented(__func__);
@@ -216,7 +216,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     }
 
     decl_spec->st_def = st_defs;
-  } else if (decl_spec->union_spec) {
+  } else if (decl_spec->type_spec_kind == TypeSpec_UNION) {
 
     if (!decl_spec->union_spec->union_name) {
       not_implemented(__func__);
@@ -278,7 +278,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
     decl_spec->union_def = union_def;
 
-  } else if (decl_spec->en_spec) {
+  } else if (decl_spec->type_spec_kind == TypeSpec_ENUM) {
     if (!decl_spec->en_spec->en_name)
       not_implemented(__func__);
 
