@@ -23,6 +23,11 @@ int fprintf();
 static Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
                                  bool allow_function);
 static DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state);
+
+static StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state);
+static UnionSpec *parse_union_spec(Token **rest, Token *tok, Analyze *state);
+static EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state);
+
 static Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_parameter_type_list(Token **rest, Token *tok,
                                        Analyze *state);
@@ -157,7 +162,7 @@ bool is_decl_specs(Token *tok, Analyze *state) {
 DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
   DeclSpec *decl_spec = calloc(1, sizeof(DeclSpec));
   bool parsed_type = false;
-  while (1) {
+  while (is_decl_specs(tok, state)) {
     if (equal_kind(tok, TK_CONST)) {
       consume_kind(&tok, tok, TK_CONST);
       decl_spec->has_const = true;
@@ -210,118 +215,134 @@ DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
     } else if (equal_kind(tok, TK_STRUCT)) {
       if (parsed_type)
         error("dup type");
-      consume_kind(&tok, tok, TK_STRUCT);
-      StructSpec *st_spec = calloc(1, sizeof(StructSpec));
-      decl_spec->st_spec = st_spec;
-      if (equal_kind(tok, TK_IDENT)) {
-        st_spec->st_name = getname_ident(&tok, tok);
-
-        if (consume(&tok, tok, "{")) {
-          st_spec->has_decl = true;
-          Tree *head = calloc(1, sizeof(Tree));
-          Tree *cur = head;
-          while (!consume(&tok, tok, "}")) {
-            cur->next = parse_external_decl(&tok, tok, state, false);
-            cur = cur->next;
-            consume(&tok, tok, ",");
-          }
-
-          st_spec->members = head->next;
-        }
-      } else {
-        expect(&tok, tok, "{");
-        st_spec->has_decl = true;
-        Tree *head = calloc(1, sizeof(Tree));
-        Tree *cur = head;
-        while (!consume(&tok, tok, "}")) {
-          cur->next = parse_external_decl(&tok, tok, state, false);
-          cur = cur->next;
-          consume(&tok, tok, ",");
-        }
-
-        st_spec->members = head->next;
-      }
+      decl_spec->st_spec = parse_struct_spec(&tok, tok, state);
 
       parsed_type = true;
-
     } else if (equal_kind(tok, TK_UNION)) {
       if (parsed_type)
         error("dup type");
-      consume_kind(&tok, tok, TK_UNION);
-      UnionSpec *union_spec = calloc(1, sizeof(UnionSpec));
-      decl_spec->union_spec = union_spec;
-      if (equal_kind(tok, TK_IDENT)) {
-        union_spec->union_name = getname_ident(&tok, tok);
+      decl_spec->union_spec = parse_union_spec(&tok, tok, state);
 
-        if (consume(&tok, tok, "{")) {
-          union_spec->has_decl = true;
-          Tree *head = calloc(1, sizeof(Tree));
-          Tree *cur = head;
-          while (!consume(&tok, tok, "}")) {
-            cur->next = parse_external_decl(&tok, tok, state, false);
-            cur = cur->next;
-            consume(&tok, tok, ",");
-          }
-
-          union_spec->members = head->next;
-        }
-      } else {
-        expect(&tok, tok, "{");
-        union_spec->has_decl = true;
-        Tree *head = calloc(1, sizeof(Tree));
-        Tree *cur = head;
-        while (!consume(&tok, tok, "}")) {
-          cur->next = parse_external_decl(&tok, tok, state, false);
-          cur = cur->next;
-          consume(&tok, tok, ",");
-        }
-
-        union_spec->members = head->next;
-      }
       parsed_type = true;
     } else if (equal_kind(tok, TK_ENUM)) {
       if (parsed_type)
         error("dup type");
-      consume_kind(&tok, tok, TK_ENUM);
-
-      EnumSpec *en_spec = calloc(1, sizeof(EnumSpec));
-      decl_spec->en_spec = en_spec;
-
-      if (equal_kind(tok, TK_IDENT)) {
-
-        en_spec->en_name = getname_ident(&tok, tok);
-        en_spec->en_len = strlen(en_spec->en_name);
-
-        if (equal(tok, "{")) {
-          consume(&tok, tok, "{");
-          en_spec->has_decl = true;
-
-          EnumVal *head = calloc(1, sizeof(EnumVal));
-          EnumVal *cur = head;
-          while (!consume(&tok, tok, "}")) {
-            EnumVal *en_val = calloc(1, sizeof(EnumVal));
-
-            en_val->name = getname_ident(&tok, tok);
-            en_val->len = strlen(en_val->name);
-
-            cur->next = en_val;
-            cur = cur->next;
-            consume(&tok, tok, ",");
-          }
-
-          en_spec->members = head->next;
-        }
-      } else {
-        not_implemented_token(tok);
-      }
+      decl_spec->en_spec = parse_enum_spec(&tok, tok, state);
 
       parsed_type = true;
     } else {
-      break;
+      not_implemented_token(tok);
     }
   }
   *rest = tok;
   return decl_spec;
+}
+
+StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state) {
+  consume_kind(&tok, tok, TK_STRUCT);
+  StructSpec *st_spec = calloc(1, sizeof(StructSpec));
+  if (equal_kind(tok, TK_IDENT)) {
+    st_spec->st_name = getname_ident(&tok, tok);
+
+    if (consume(&tok, tok, "{")) {
+      st_spec->has_decl = true;
+      Tree *head = calloc(1, sizeof(Tree));
+      Tree *cur = head;
+      while (!consume(&tok, tok, "}")) {
+        cur->next = parse_external_decl(&tok, tok, state, false);
+        cur = cur->next;
+        consume(&tok, tok, ",");
+      }
+
+      st_spec->members = head->next;
+    }
+  } else {
+    expect(&tok, tok, "{");
+    st_spec->has_decl = true;
+    Tree *head = calloc(1, sizeof(Tree));
+    Tree *cur = head;
+    while (!consume(&tok, tok, "}")) {
+      cur->next = parse_external_decl(&tok, tok, state, false);
+      cur = cur->next;
+      consume(&tok, tok, ",");
+    }
+
+    st_spec->members = head->next;
+  }
+  *rest = tok;
+  return st_spec;
+}
+
+UnionSpec *parse_union_spec(Token **rest, Token *tok, Analyze *state) {
+  consume_kind(&tok, tok, TK_UNION);
+  UnionSpec *union_spec = calloc(1, sizeof(UnionSpec));
+  if (equal_kind(tok, TK_IDENT)) {
+    union_spec->union_name = getname_ident(&tok, tok);
+
+    if (consume(&tok, tok, "{")) {
+      union_spec->has_decl = true;
+      Tree *head = calloc(1, sizeof(Tree));
+      Tree *cur = head;
+      while (!consume(&tok, tok, "}")) {
+        cur->next = parse_external_decl(&tok, tok, state, false);
+        cur = cur->next;
+        consume(&tok, tok, ",");
+      }
+
+      union_spec->members = head->next;
+    }
+  } else {
+    expect(&tok, tok, "{");
+    union_spec->has_decl = true;
+    Tree *head = calloc(1, sizeof(Tree));
+    Tree *cur = head;
+    while (!consume(&tok, tok, "}")) {
+      cur->next = parse_external_decl(&tok, tok, state, false);
+      cur = cur->next;
+      consume(&tok, tok, ",");
+    }
+
+    union_spec->members = head->next;
+  }
+  *rest = tok;
+  return union_spec;
+}
+
+EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
+  consume_kind(&tok, tok, TK_ENUM);
+
+  EnumSpec *en_spec = calloc(1, sizeof(EnumSpec));
+
+  if (equal_kind(tok, TK_IDENT)) {
+
+    en_spec->en_name = getname_ident(&tok, tok);
+    en_spec->en_len = strlen(en_spec->en_name);
+
+    if (equal(tok, "{")) {
+      consume(&tok, tok, "{");
+      en_spec->has_decl = true;
+
+      EnumVal *head = calloc(1, sizeof(EnumVal));
+      EnumVal *cur = head;
+      while (!consume(&tok, tok, "}")) {
+        EnumVal *en_val = calloc(1, sizeof(EnumVal));
+
+        en_val->name = getname_ident(&tok, tok);
+        en_val->len = strlen(en_val->name);
+
+        cur->next = en_val;
+        cur = cur->next;
+        consume(&tok, tok, ",");
+      }
+
+      en_spec->members = head->next;
+    }
+  } else {
+    not_implemented_token(tok);
+  }
+
+  *rest = tok;
+  return en_spec;
 }
 
 Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
