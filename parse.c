@@ -502,11 +502,15 @@ void set_primitive_type_spec_kind(DeclSpec *decl_spec,
     // int
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 0,
+                                        0, 1, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 0,
                                         0, 1, 0, 0)) {
     // unsigned
     // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 1,
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 1,
                                         0, 0, 0, 0)) {
     // long
     decl_spec->type_spec_kind = TypeSpec_LONG;
@@ -544,6 +548,17 @@ void set_primitive_type_spec_kind(DeclSpec *decl_spec,
     // _Bool
     decl_spec->type_spec_kind = TypeSpec_BOOL;
   } else {
+    /*
+    error("void: %d\nbool: %d\nchar: %d\nshort: %d\nint %d\nlong: %d\nsigned: "
+          "%d\nunsigned: %d\n float: %d\ndouble: %d\n",
+          primitive_type_token->void_count, primitive_type_token->bool_count,
+          primitive_type_token->char_count, primitive_type_token->short_count,
+          primitive_type_token->int_count, primitive_type_token->long_count,
+          primitive_type_token->signed_count,
+          primitive_type_token->unsigned_count,
+          primitive_type_token->float_count,
+          primitive_type_token->double_count);
+          */
     not_implemented(__func__);
   }
 }
@@ -554,7 +569,13 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   Pointer **cur = &declarator->pointer;
   while (equal(tok, "*")) {
     consume(&tok, tok, "*");
-    consume_kind(&tok, tok, TK_CONST);
+
+    // ignore const,restrict
+    if (equal_kind(tok, TK_CONST)) {
+      consume_kind(&tok, tok, TK_CONST);
+    } else if (equal_kind(tok, TK_RESTRICT)) {
+      consume_kind(&tok, tok, TK_RESTRICT);
+    }
 
     *cur = calloc(1, sizeof(Pointer));
     cur = &(*cur)->nest;
@@ -667,6 +688,13 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
   Pointer **cur = &declarator->pointer;
   while (equal(tok, "*")) {
     consume(&tok, tok, "*");
+
+    // ignore const
+    if (equal_kind(tok, TK_CONST)) {
+      consume_kind(&tok, tok, TK_CONST);
+    } else if (equal_kind(tok, TK_RESTRICT)) {
+      consume_kind(&tok, tok, TK_RESTRICT);
+    }
 
     *cur = calloc(1, sizeof(Pointer));
     cur = &(*cur)->nest;
