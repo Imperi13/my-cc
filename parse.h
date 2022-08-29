@@ -253,6 +253,9 @@ struct Declarator {
 
   // for init-expr
   Tree *init_expr;
+
+  // for linked-list
+  Declarator *next;
 };
 
 struct Pointer {

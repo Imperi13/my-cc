@@ -151,7 +151,20 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
       error_token(tok, "cannot typedef with initialize");
     ex_decl->declarator->init_expr = parse_assign(&tok, tok, state);
   }
-  // TODO multiple declarator
+
+  Declarator *cur = ex_decl->declarator;
+  while (equal(tok, ",")) {
+    consume(&tok, tok, ",");
+    cur->next = parse_declarator(&tok, tok, state);
+
+    if (equal(tok, "=")) {
+      consume(&tok, tok, "=");
+
+      if (ex_decl->decl_specs->has_typedef)
+        error_token(tok, "cannot typedef with initialize");
+      cur->next->init_expr = parse_assign(&tok, tok, state);
+    }
+  }
 
   expect(&tok, tok, ";");
 

@@ -110,39 +110,42 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type);
+    Type *base_type = gettype_decl_spec(ast->decl_specs, state);
 
-    char *obj_name = getname_declarator(ast->declarator);
+    for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
+      Type *obj_type = gettype_declarator(cur, base_type);
 
-    if (ast->decl_specs->has_typedef) {
-      Typedef *new_def = calloc(1, sizeof(Typedef));
-      new_def->name = obj_name;
-      new_def->type = obj_type;
+      char *obj_name = getname_declarator(cur);
 
-      add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
-    } else {
+      if (ast->decl_specs->has_typedef) {
+        Typedef *new_def = calloc(1, sizeof(Typedef));
+        new_def->name = obj_name;
+        new_def->type = obj_type;
 
-      if (ast->declarator->init_expr) {
-        analyze_stmt(ast->declarator->init_expr, state);
-        if (!is_constexpr(ast->declarator->init_expr))
-          error("not constexpr");
-        if (!is_compatible(obj_type, ast->declarator->init_expr))
-          error("not compatible type");
+        add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+      } else {
+
+        if (cur->init_expr) {
+          analyze_stmt(cur->init_expr, state);
+          if (!is_constexpr(cur->init_expr))
+            error("not constexpr");
+          if (!is_compatible(obj_type, cur->init_expr))
+            error("not compatible type");
+        }
+
+        Obj *obj = calloc(1, sizeof(Obj));
+        obj->obj_name = obj_name;
+        obj->type = obj_type;
+        obj->is_global = true;
+
+        if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
+          obj->is_defined = true;
+
+        obj->next = state->glb_objs;
+        state->glb_objs = obj;
+
+        cur->def_obj = obj;
       }
-
-      Obj *obj = calloc(1, sizeof(Obj));
-      obj->obj_name = obj_name;
-      obj->type = obj_type;
-      obj->is_global = true;
-
-      if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
-        obj->is_defined = true;
-
-      obj->next = state->glb_objs;
-      state->glb_objs = obj;
-
-      ast->declarator->def_obj = obj;
     }
 
   } else {
@@ -363,25 +366,28 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type);
+    Type *base_type = gettype_decl_spec(ast->decl_specs, state);
 
-    char *obj_name = getname_declarator(ast->declarator);
+    for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
+      Type *obj_type = gettype_declarator(cur, base_type);
 
-    Obj *lvar = calloc(1, sizeof(Obj));
-    lvar->obj_name = obj_name;
-    lvar->type = obj_type;
-    lvar->rbp_offset =
-        calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
-                        type_alignment(obj_type));
-    state->current_func->stack_size = lvar->rbp_offset;
+      char *obj_name = getname_declarator(cur);
 
-    ast->declarator->def_obj = lvar;
+      Obj *lvar = calloc(1, sizeof(Obj));
+      lvar->obj_name = obj_name;
+      lvar->type = obj_type;
+      lvar->rbp_offset =
+          calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
+                          type_alignment(obj_type));
+      state->current_func->stack_size = lvar->rbp_offset;
 
-    push_lvar(state->current_func->locals, lvar);
+      cur->def_obj = lvar;
 
-    if (ast->declarator->init_expr) {
-      analyze_stmt(ast->declarator->init_expr, state);
+      push_lvar(state->current_func->locals, lvar);
+
+      if (cur->init_expr) {
+        analyze_stmt(cur->init_expr, state);
+      }
     }
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
