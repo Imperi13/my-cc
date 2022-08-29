@@ -34,6 +34,7 @@ struct PrimitiveTypeToken {
 
 static Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
                                  bool allow_function);
+static Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state);
 static DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state);
 
 static void parse_primitive_type_spec(Token **rest, Token *tok,
@@ -164,6 +165,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
         error_token(tok, "cannot typedef with initialize");
       cur->next->init_expr = parse_assign(&tok, tok, state);
     }
+    cur = cur->next;
   }
 
   expect(&tok, tok, ";");
@@ -317,6 +319,34 @@ void parse_primitive_type_spec(Token **rest, Token *tok,
   *rest = tok;
 }
 
+Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
+  Tree *st_decl = calloc(1, sizeof(Tree));
+  st_decl->kind = DECLARATION;
+  st_decl->decl_specs = parse_decl_specs(&tok, tok, state);
+
+  if (equal(tok, ";"))
+    not_implemented_token(tok);
+
+  st_decl->declarator = parse_declarator(&tok, tok, state);
+  if (equal(tok, ":"))
+    not_implemented_token(tok);
+
+  Declarator *cur = st_decl->declarator;
+  while (equal(tok, ",")) {
+    consume(&tok, tok, ",");
+
+    cur->next = parse_declarator(&tok, tok, state);
+    if (equal(tok, ":"))
+      not_implemented_token(tok);
+
+    cur = cur->next;
+  }
+
+  expect(&tok, tok, ";");
+  *rest = tok;
+  return st_decl;
+}
+
 StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state) {
   consume_kind(&tok, tok, TK_STRUCT);
   StructSpec *st_spec = calloc(1, sizeof(StructSpec));
@@ -328,7 +358,7 @@ StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state) {
       Tree *head = calloc(1, sizeof(Tree));
       Tree *cur = head;
       while (!consume(&tok, tok, "}")) {
-        cur->next = parse_external_decl(&tok, tok, state, false);
+        cur->next = parse_struct_declaration(&tok, tok, state);
         cur = cur->next;
         consume(&tok, tok, ",");
       }
@@ -341,7 +371,7 @@ StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state) {
     Tree *head = calloc(1, sizeof(Tree));
     Tree *cur = head;
     while (!consume(&tok, tok, "}")) {
-      cur->next = parse_external_decl(&tok, tok, state, false);
+      cur->next = parse_struct_declaration(&tok, tok, state);
       cur = cur->next;
       consume(&tok, tok, ",");
     }
@@ -363,7 +393,7 @@ UnionSpec *parse_union_spec(Token **rest, Token *tok, Analyze *state) {
       Tree *head = calloc(1, sizeof(Tree));
       Tree *cur = head;
       while (!consume(&tok, tok, "}")) {
-        cur->next = parse_external_decl(&tok, tok, state, false);
+        cur->next = parse_struct_declaration(&tok, tok, state);
         cur = cur->next;
         consume(&tok, tok, ",");
       }
@@ -376,7 +406,7 @@ UnionSpec *parse_union_spec(Token **rest, Token *tok, Analyze *state) {
     Tree *head = calloc(1, sizeof(Tree));
     Tree *cur = head;
     while (!consume(&tok, tok, "}")) {
-      cur->next = parse_external_decl(&tok, tok, state, false);
+      cur->next = parse_struct_declaration(&tok, tok, state);
       cur = cur->next;
       consume(&tok, tok, ",");
     }
