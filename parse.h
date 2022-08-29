@@ -190,6 +190,9 @@ struct DeclSpec {
   bool has_static;
   bool has_typedef;
 
+  // func-spec
+  bool has_noreturn; // unused;
+
   // type_spec
   TypeSpecKind type_spec_kind;
 
