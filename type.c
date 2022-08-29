@@ -33,7 +33,6 @@ void builtin_type_init(Analyze *state) {
   Member *cur = st_def->members;
 
   cur->member_name = "gp_offset";
-  cur->member_len = strlen(cur->member_name);
   cur->type = type_int;
   cur->offset = 0x0;
 
@@ -41,7 +40,6 @@ void builtin_type_init(Analyze *state) {
   cur = cur->next;
 
   cur->member_name = "fp_offset";
-  cur->member_len = strlen(cur->member_name);
   cur->type = type_int;
   cur->offset = 0x4;
 
@@ -49,7 +47,6 @@ void builtin_type_init(Analyze *state) {
   cur = cur->next;
 
   cur->member_name = "overflow_arg_area";
-  cur->member_len = strlen(cur->member_name);
   cur->type = newtype_ptr(type_void);
   cur->offset = 0x8;
 
@@ -57,7 +54,6 @@ void builtin_type_init(Analyze *state) {
   cur = cur->next;
 
   cur->member_name = "reg_save_area";
-  cur->member_len = strlen(cur->member_name);
   cur->type = newtype_ptr(type_void);
   cur->offset = 0x10;
 
@@ -136,10 +132,7 @@ char *getname_declarator(Declarator *declarator) {
   if (declarator->nest)
     return getname_declarator(declarator->nest);
 
-  char *ret = calloc(1, declarator->len + 1);
-  strncpy(ret, declarator->name, declarator->len);
-
-  return ret;
+  return declarator->name;
 }
 
 Tree *getargs_declarator(Declarator *declarator) {

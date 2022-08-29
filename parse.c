@@ -14,8 +14,6 @@
 
 void *calloc();
 
-size_t strlen();
-
 int fprintf();
 
 #endif
@@ -226,7 +224,6 @@ DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
       if (is_primitive_type)
         error("dup type");
       decl_spec->def_name = getname_ident(&tok, tok);
-      decl_spec->def_len = strlen(decl_spec->def_name);
       decl_spec->type_spec_kind = TypeSpec_TYPEDEF_NAME;
       is_complete_type_parse = true;
     } else if (equal_kind(tok, TK_STRUCT)) {
@@ -385,7 +382,6 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
   if (equal_kind(tok, TK_IDENT)) {
 
     en_spec->en_name = getname_ident(&tok, tok);
-    en_spec->en_len = strlen(en_spec->en_name);
 
     if (equal(tok, "{")) {
       consume(&tok, tok, "{");
@@ -397,7 +393,6 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
         EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
         en_val->name = getname_ident(&tok, tok);
-        en_val->len = strlen(en_val->name);
 
         cur->next = en_val;
         cur = cur->next;
@@ -525,7 +520,6 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   // parse ident or nest-declarator
   if (equal_kind(tok, TK_IDENT)) {
     declarator->name = getname_ident(&tok, tok);
-    declarator->len = strlen(declarator->name);
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
     declarator->nest = parse_declarator(&tok, tok, state);
@@ -750,7 +744,6 @@ Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
     Tree *lhs = parse_stmt(&tok, tok, state);
     Tree *node = new_binary_node(LABEL, lhs, NULL);
     node->label_name = label_str;
-    node->label_len = strlen(label_str);
 
     *rest = tok;
     return node;
@@ -1383,7 +1376,6 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
       node->kind = DOT;
       node->lhs = lhs;
       node->member_name = getname_ident(&tok, tok);
-      node->member_len = strlen(node->member_name);
 
       lhs = node;
     } else if (equal(tok, "->")) {
@@ -1393,7 +1385,6 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
       node->kind = ARROW;
       node->lhs = lhs;
       node->member_name = getname_ident(&tok, tok);
-      node->member_len = strlen(node->member_name);
 
       lhs = node;
     } else if (equal(tok, "++")) {
@@ -1435,7 +1426,6 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
     primary = calloc(1, sizeof(Tree));
     primary->kind = VAR;
     primary->var_name = getname_ident(&tok, tok);
-    primary->var_len = strlen(primary->var_name);
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
     primary = parse_expr(&tok, tok, state);

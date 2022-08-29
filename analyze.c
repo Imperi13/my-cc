@@ -15,6 +15,7 @@ void *calloc();
 size_t strlen();
 int memcmp();
 void *memcpy();
+int strcmp();
 
 #endif
 
@@ -27,8 +28,8 @@ static void analyze_stmt(Tree *ast, Analyze *state);
 static void push_lvar_scope(ObjScope **lscope);
 static void pop_lvar_scope(ObjScope **lscope);
 static void push_lvar(ObjScope *locals, Obj *lvar);
-static Obj *find_lvar(ObjScope *locals, char *lvar_name, int lvar_len);
-static Obj *find_global(Obj *globals, char *var_name, int var_len);
+static Obj *find_lvar(ObjScope *locals, char *lvar_name);
+static Obj *find_global(Obj *globals, char *var_name);
 
 static void push_label(LabelScope **lscope, int label_number);
 static void pop_label(LabelScope **lscope);
@@ -38,13 +39,11 @@ static void pop_switch(SwitchScope **switch_scope);
 
 static StructDef *find_struct(Analyze *state, char *struct_name);
 static UnionDef *find_union(Analyze *state, char *union_name);
-static Member *find_struct_member(StructDef *st_def, char *mem_name,
-                                  int mem_len);
-static Member *find_union_member(UnionDef *union_def, char *mem_name,
-                                 int mem_len);
-static EnumDef *find_enum(EnumDef *en_defs, char *en_name, int en_len);
+static Member *find_struct_member(StructDef *st_def, char *mem_name);
+static Member *find_union_member(UnionDef *union_def, char *mem_name);
+static EnumDef *find_enum(EnumDef *en_defs, char *en_name);
 
-static EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len);
+static EnumVal *find_enum_val(EnumDef *en_defs, char *name);
 
 Analyze *new_analyze_state() {
   Analyze *state = calloc(1, sizeof(Analyze));
@@ -80,7 +79,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     Obj *func = calloc(1, sizeof(Obj));
     func->obj_name = obj_name;
-    func->obj_len = strlen(obj_name);
     func->type = obj_type;
     func->locals = calloc(1, sizeof(ObjScope));
     func->is_defined = true;
@@ -135,7 +133,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
       Obj *obj = calloc(1, sizeof(Obj));
       obj->obj_name = obj_name;
-      obj->obj_len = strlen(obj_name);
       obj->type = obj_type;
       obj->is_global = true;
 
@@ -190,7 +187,6 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         char *obj_name = getname_declarator(cur->declarator);
 
         mem->member_name = obj_name;
-        mem->member_len = strlen(obj_name);
         mem->type = obj_type;
         mem->offset = (st_defs->size % type_alignment(obj_type) == 0)
                           ? st_defs->size
@@ -253,7 +249,6 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         char *obj_name = getname_declarator(cur->declarator);
 
         mem->member_name = obj_name;
-        mem->member_len = strlen(obj_name);
         mem->type = obj_type;
         mem->offset = 0;
 
@@ -282,13 +277,11 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     if (!decl_spec->en_spec->en_name)
       not_implemented(__func__);
 
-    EnumDef *en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name,
-                                decl_spec->en_spec->en_len);
+    EnumDef *en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name);
 
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
       en_def->en_name = decl_spec->en_spec->en_name;
-      en_def->en_len = decl_spec->en_spec->en_len;
 
       en_def->next = state->glb_endefs;
       state->glb_endefs = en_def;
@@ -335,7 +328,6 @@ void analyze_parameter(Tree *ast, Analyze *state) {
 
       Obj *lvar = calloc(1, sizeof(Obj));
       lvar->obj_name = obj_name;
-      lvar->obj_len = strlen(obj_name);
       lvar->type = obj_type;
       lvar->nth_arg = ast->nth_arg;
       lvar->rbp_offset =
@@ -378,7 +370,6 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     Obj *lvar = calloc(1, sizeof(Obj));
     lvar->obj_name = obj_name;
-    lvar->obj_len = strlen(obj_name);
     lvar->type = obj_type;
     lvar->rbp_offset =
         calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
@@ -763,11 +754,9 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     Member *member;
     if (ast->lhs->type->kind == STRUCT)
-      member = find_struct_member(ast->lhs->type->st_def, ast->member_name,
-                                  ast->member_len);
+      member = find_struct_member(ast->lhs->type->st_def, ast->member_name);
     else
-      member = find_union_member(ast->lhs->type->union_def, ast->member_name,
-                                 ast->member_len);
+      member = find_union_member(ast->lhs->type->union_def, ast->member_name);
 
     if (!member)
       error("not find member");
@@ -784,11 +773,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     Member *member;
     if (ast->lhs->type->ptr_to->kind == STRUCT)
-      member = find_struct_member(ast->lhs->type->ptr_to->st_def,
-                                  ast->member_name, ast->member_len);
+      member =
+          find_struct_member(ast->lhs->type->ptr_to->st_def, ast->member_name);
     else
       member = find_union_member(ast->lhs->type->ptr_to->union_def,
-                                 ast->member_name, ast->member_len);
+                                 ast->member_name);
 
     if (!member)
       error("not find member");
@@ -810,8 +799,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
       // make str-literal for func-name
       StrLiteral *func_name = calloc(1, sizeof(StrLiteral));
-      func_name->str = calloc(state->current_func->obj_len + 1, sizeof(char));
-      func_name->len = state->current_func->obj_len;
+      func_name->len = strlen(state->current_func->obj_name);
+      func_name->str = calloc(func_name->len + 1, sizeof(char));
       memcpy(func_name->str, state->current_func->obj_name, func_name->len);
 
       if (!str_literals) {
@@ -830,8 +819,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    EnumVal *en_val =
-        find_enum_val(state->glb_endefs, ast->var_name, ast->var_len);
+    EnumVal *en_val = find_enum_val(state->glb_endefs, ast->var_name);
     if (en_val) {
       ast->kind = NUM;
       ast->num = en_val->val;
@@ -839,13 +827,12 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Obj *var =
-        find_lvar(state->current_func->locals, ast->var_name, ast->var_len);
+    Obj *var = find_lvar(state->current_func->locals, ast->var_name);
 
     if (!var) {
-      var = find_global(state->glb_objs, ast->var_name, ast->var_len);
+      var = find_global(state->glb_objs, ast->var_name);
       if (!var)
-        error("cannot find var: %.*s", ast->var_len, ast->var_name);
+        error("cannot find var: %s", ast->var_name);
     }
 
     ast->var_obj = var;
@@ -878,18 +865,17 @@ void push_lvar(ObjScope *locals, Obj *lvar) {
   locals->obj = lvar;
 }
 
-Obj *find_lvar(ObjScope *locals, char *lvar_name, int lvar_len) {
+Obj *find_lvar(ObjScope *locals, char *lvar_name) {
   for (ObjScope *cur_scope = locals; cur_scope; cur_scope = cur_scope->next)
     for (Obj *cur = cur_scope->obj; cur; cur = cur->next)
-      if (cur->obj_len == lvar_len &&
-          !memcmp(lvar_name, cur->obj_name, lvar_len))
+      if (strcmp(lvar_name, cur->obj_name) == 0)
         return cur;
   return NULL;
 }
 
-Obj *find_global(Obj *globals, char *var_name, int var_len) {
+Obj *find_global(Obj *globals, char *var_name) {
   for (Obj *cur = globals; cur; cur = cur->next)
-    if (cur->obj_len == var_len && !memcmp(var_name, cur->obj_name, var_len))
+    if (strcmp(var_name, cur->obj_name) == 0)
       return cur;
   return NULL;
 }
@@ -926,33 +912,31 @@ UnionDef *find_union(Analyze *state, char *union_name) {
   return find_str_dict(state->glb_union_def_dict, union_name);
 }
 
-Member *find_struct_member(StructDef *st_def, char *mem_name, int mem_len) {
+Member *find_struct_member(StructDef *st_def, char *mem_name) {
   for (Member *cur = st_def->members; cur; cur = cur->next)
-    if (cur->member_len == mem_len &&
-        !memcmp(mem_name, cur->member_name, mem_len))
+    if (strcmp(mem_name, cur->member_name) == 0)
       return cur;
   return NULL;
 }
 
-Member *find_union_member(UnionDef *union_def, char *mem_name, int mem_len) {
+Member *find_union_member(UnionDef *union_def, char *mem_name) {
   for (Member *cur = union_def->members; cur; cur = cur->next)
-    if (cur->member_len == mem_len &&
-        !memcmp(mem_name, cur->member_name, mem_len))
+    if (strcmp(mem_name, cur->member_name) == 0)
       return cur;
   return NULL;
 }
 
-EnumDef *find_enum(EnumDef *en_defs, char *en_name, int en_len) {
+EnumDef *find_enum(EnumDef *en_defs, char *en_name) {
   for (EnumDef *cur = en_defs; cur; cur = cur->next)
-    if (cur->en_len == en_len && !memcmp(en_name, cur->en_name, en_len))
+    if (strcmp(en_name, cur->en_name) == 0)
       return cur;
   return NULL;
 }
 
-EnumVal *find_enum_val(EnumDef *en_defs, char *name, int len) {
+EnumVal *find_enum_val(EnumDef *en_defs, char *name) {
   for (EnumDef *cur_def = en_defs; cur_def; cur_def = cur_def->next)
     for (EnumVal *cur = cur_def->members; cur; cur = cur->next)
-      if (cur->len == len && !memcmp(name, cur->name, len))
+      if (strcmp(name, cur->name) == 0)
         return cur;
   return NULL;
 }

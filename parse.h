@@ -129,7 +129,6 @@ struct Tree {
 
   // for LABEL
   char *label_name;
-  int label_len;
 
   // for CASE
   Tree *case_num_node;
@@ -164,13 +163,11 @@ struct Tree {
 
   // for member
   char *member_name;
-  int member_len;
 
   Member *member;
 
   // for var
   char *var_name;
-  int var_len;
 
   Obj *var_obj;
 
@@ -205,7 +202,6 @@ struct DeclSpec {
 
   // for defined_type
   char *def_name;
-  int def_len;
 };
 
 struct StructSpec {
@@ -225,7 +221,6 @@ struct UnionSpec {
 
 struct EnumSpec {
   char *en_name;
-  int en_len;
 
   bool has_decl;
   EnumVal *members;
@@ -233,7 +228,6 @@ struct EnumSpec {
 
 struct EnumVal {
   char *name;
-  int len;
 
   int val;
   // for linked-list
@@ -243,7 +237,6 @@ struct EnumVal {
 struct Declarator {
   Pointer *pointer;
   char *name;
-  int len;
 
   // for nested-declarator
   Declarator *nest;

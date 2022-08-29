@@ -34,7 +34,6 @@ struct Analyze {
 struct Obj {
 
   char *obj_name;
-  int obj_len;
 
   Type *type;
 
@@ -87,7 +86,6 @@ struct UnionDef {
 
 struct Member {
   char *member_name;
-  int member_len;
 
   Type *type;
   int offset;
@@ -98,7 +96,6 @@ struct Member {
 
 struct EnumDef {
   char *en_name;
-  int en_len;
 
   bool is_defined;
   EnumVal *members;

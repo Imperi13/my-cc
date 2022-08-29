@@ -84,7 +84,7 @@ void codegen_str_literal(FILE *codegen_output, StrLiteral *sl) {
 
 void codegen_var_definition(FILE *codegen_output, Tree *var) {
   Obj *obj = var->def_obj;
-  fprintf(codegen_output, "  .globl %.*s\n", obj->obj_len, obj->obj_name);
+  fprintf(codegen_output, "  .globl %s\n", obj->obj_name);
 
   if (var->declarator->init_expr)
     fprintf(codegen_output, "  .data\n");
@@ -92,7 +92,7 @@ void codegen_var_definition(FILE *codegen_output, Tree *var) {
     fprintf(codegen_output, "  .bss\n");
 
   fprintf(codegen_output, "  .align %d\n", type_alignment(obj->type));
-  fprintf(codegen_output, "%.*s:\n", obj->obj_len, obj->obj_name);
+  fprintf(codegen_output, "%s:\n", obj->obj_name);
 
   if (var->declarator->init_expr) {
     if (type_size(obj->type) == 1) {
@@ -116,13 +116,10 @@ void codegen_function(FILE *codegen_output, Tree *func) {
 
   fprintf(codegen_output, "  .text\n");
   if (func->decl_specs->has_static)
-    fprintf(codegen_output, ".local %.*s\n", func->def_obj->obj_len,
-            func->def_obj->obj_name);
+    fprintf(codegen_output, ".local %s\n", func->def_obj->obj_name);
   else
-    fprintf(codegen_output, ".globl %.*s\n", func->def_obj->obj_len,
-            func->def_obj->obj_name);
-  fprintf(codegen_output, "%.*s:\n", func->def_obj->obj_len,
-          func->def_obj->obj_name);
+    fprintf(codegen_output, ".globl %s\n", func->def_obj->obj_name);
+  fprintf(codegen_output, "%s:\n", func->def_obj->obj_name);
 
   fprintf(codegen_output, "  push rbp\n");
   fprintf(codegen_output, "  mov rbp, rsp\n");
@@ -185,11 +182,11 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
       fprintf(codegen_output, "  lea rax, [rbp - %d]\n",
               stmt->var_obj->rbp_offset);
     else if (stmt->var_obj->is_defined)
-      fprintf(codegen_output, "  lea rax, [rip + %.*s]\n",
-              stmt->var_obj->obj_len, stmt->var_obj->obj_name);
+      fprintf(codegen_output, "  lea rax, [rip + %s]\n",
+              stmt->var_obj->obj_name);
     else
-      fprintf(codegen_output, "  mov rax, [%.*s@GOTPCREL + rip]\n",
-              stmt->var_obj->obj_len, stmt->var_obj->obj_name);
+      fprintf(codegen_output, "  mov rax, [%s@GOTPCREL + rip]\n",
+              stmt->var_obj->obj_name);
   } else if (stmt->kind == DEREF) {
     codegen_stmt(codegen_output, stmt->lhs);
   } else if (stmt->kind == DOT) {
@@ -227,8 +224,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     }
     return;
   case LABEL:
-    fprintf(codegen_output, ".Llabel%.*s:\n", stmt->label_len,
-            stmt->label_name);
+    fprintf(codegen_output, ".Llabel%s:\n", stmt->label_name);
     codegen_stmt(codegen_output, stmt->lhs);
     return;
   case CASE:
