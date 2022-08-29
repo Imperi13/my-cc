@@ -8,16 +8,6 @@
 #include "parse.h"
 #include "tokenize.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-void *calloc();
-
-int fprintf();
-
-#endif
-
 typedef struct PrimitiveTypeToken PrimitiveTypeToken;
 struct PrimitiveTypeToken {
   int void_count;

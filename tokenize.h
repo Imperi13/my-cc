@@ -3,12 +3,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-#endif
-
 typedef enum TokenKind {
   TK_RESERVED,
   TK_RETURN,

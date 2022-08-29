@@ -8,19 +8,6 @@
 #include "error.h"
 #include "file.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-FILE *fopen();
-int fseek();
-int ftell();
-void *calloc();
-size_t fread();
-int fclose();
-
-#endif
-
 char *read_file(char *path) {
   FILE *fp = fopen(path, "r");
   if (!fp)

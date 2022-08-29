@@ -5,15 +5,6 @@
 #include "error.h"
 #include "str_dict.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-void *calloc();
-int strcmp();
-
-#endif
-
 // implementation of string_dictionary (key:string to value:"void *")
 // currently,using linked-list
 //

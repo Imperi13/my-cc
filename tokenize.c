@@ -7,27 +7,6 @@
 #include "error.h"
 #include "tokenize.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-int strlen();
-int memcmp();
-void *calloc();
-int isblank();
-int strncmp();
-int strcmp();
-char *strstr();
-char *strchr();
-int isdigit();
-
-size_t strspn();
-
-int fprintf();
-void *memcpy();
-
-#endif
-
 StrLiteral *str_literals;
 
 bool equal(Token *token, char *op) {

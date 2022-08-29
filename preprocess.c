@@ -11,22 +11,6 @@
 
 #define PATH_MAX 4096
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-int strncmp();
-size_t strlen();
-int memcmp();
-void *calloc();
-void *memcpy();
-int fprintf();
-int snprintf();
-int strcmp();
-char *strcpy();
-
-#endif
-
 // when post == NULL, the line is just consumed, not executed
 
 static void process_macro_group(Token **post, Token **pre, Token *tok);

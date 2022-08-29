@@ -6,13 +6,6 @@
 #include "parse.h"
 #include "type.h"
 
-#ifndef __STDC__
-
-int printf();
-int fprintf();
-
-#endif
-
 static void codegen_str_literal(FILE *codegen_output, StrLiteral *sl);
 static void codegen_var_definition(FILE *codegen_output, Tree *var);
 static void codegen_function(FILE *codegen_output, Tree *func);

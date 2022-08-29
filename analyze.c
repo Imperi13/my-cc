@@ -7,18 +7,6 @@
 #include "parse.h"
 #include "type.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-void *calloc();
-size_t strlen();
-int memcmp();
-void *memcpy();
-int strcmp();
-
-#endif
-
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);

@@ -6,17 +6,6 @@
 #include "file.h"
 #include "tokenize.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-int fprintf();
-int vfprintf();
-int vsnprintf();
-void exit();
-
-#endif
-
 void warn(char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);

@@ -3,15 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-void *calloc();
-int getopt();
-int fprintf();
-
-#endif
-
 #include "analyze.h"
 #include "codegen.h"
 #include "error.h"
