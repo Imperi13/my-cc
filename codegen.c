@@ -28,8 +28,6 @@ extern const char *call_register64[6];
 extern const char *call_register32[6];
 extern const char *call_register8[6];
 
-extern const char reg_rax[4];
-
 Obj *current_function;
 
 void codegen_translation_unit(FILE *codegen_output, Tree *head) {
@@ -139,17 +137,37 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   Tree *cur = getargs_declarator(func->declarator);
   int count = 0;
   while (cur) {
-    if (type_size(cur->def_obj->type) == 8)
-      fprintf(codegen_output, "  mov [rbp - %d], %s\n",
-              cur->def_obj->rbp_offset, call_register64[count]);
-    else if (type_size(cur->def_obj->type) == 4)
-      fprintf(codegen_output, "  mov [rbp - %d], %s\n",
-              cur->def_obj->rbp_offset, call_register32[count]);
-    else if (type_size(cur->def_obj->type) == 1)
-      fprintf(codegen_output, "  mov [rbp - %d], %s\n",
-              cur->def_obj->rbp_offset, call_register8[count]);
-    else
-      not_implemented(__func__);
+    if (count < 6) {
+      if (type_size(cur->def_obj->type) == 8)
+        fprintf(codegen_output, "  mov [rbp - %d], %s\n",
+                cur->def_obj->rbp_offset, call_register64[count]);
+      else if (type_size(cur->def_obj->type) == 4)
+        fprintf(codegen_output, "  mov [rbp - %d], %s\n",
+                cur->def_obj->rbp_offset, call_register32[count]);
+      else if (type_size(cur->def_obj->type) == 1)
+        fprintf(codegen_output, "  mov [rbp - %d], %s\n",
+                cur->def_obj->rbp_offset, call_register8[count]);
+      else
+        not_implemented(__func__);
+    } else {
+      if (type_size(cur->def_obj->type) == 8) {
+        fprintf(codegen_output, "  mov rax, [rbp + %d]\n",
+                0x10 + 0x8 * (count - 6));
+        fprintf(codegen_output, "  mov [rbp - %d], rax\n",
+                cur->def_obj->rbp_offset);
+      } else if (type_size(cur->def_obj->type) == 4) {
+        fprintf(codegen_output, "  mov eax, [rbp + %d]\n",
+                0x10 + 0x8 * (count - 6));
+        fprintf(codegen_output, "  mov [rbp - %d], eax\n",
+                cur->def_obj->rbp_offset);
+      } else if (type_size(cur->def_obj->type) == 1) {
+        fprintf(codegen_output, "  mov al, [rbp + %d]\n",
+                0x10 + 0x8 * (count - 6));
+        fprintf(codegen_output, "  mov [rbp - %d], al\n",
+                cur->def_obj->rbp_offset);
+      } else
+        not_implemented(__func__);
+    }
     count++;
     cur = cur->next;
   }

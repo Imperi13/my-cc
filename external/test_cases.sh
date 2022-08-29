@@ -432,6 +432,7 @@ run_test long_3 'int main(){ long n = 10L; return 164 + n;}' 174
 run_test_with_supplement0 more_6_args_1 'int add8(); int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
 run_test more_6_args_2 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d\n",1,2,3,4,5,6,7,8);return 174; }' 174
 run_test more_6_args_3 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d,%d\n",1,2,3,4,5,6,7,8,9);return 174; }' 174
+run_test more_6_args_4 'int add8(int a,int b,int c,int d,int e,int f,int g,int h){return a+b+c+d+e+f+g+h;} int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
 
 run_test global_init 'int test = 10; int main(){int a = 164;return a+test;}' 174
 
