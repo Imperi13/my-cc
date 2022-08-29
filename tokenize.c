@@ -359,6 +359,12 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
+    if (strncmp(p, "unsigned", 8) == 0 && !is_alnum(p[8])) {
+      cur = new_token(TK_UNSIGNED, cur, p, 8, filepath, file_buf);
+      p += 8;
+      continue;
+    }
+
     if (strncmp(p, "_Bool", 5) == 0 && !is_alnum(p[5])) {
       cur = new_token(TK_BOOL, cur, p, 5, filepath, file_buf);
       p += 5;

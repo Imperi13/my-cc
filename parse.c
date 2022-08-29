@@ -27,6 +27,7 @@ struct PrimitiveTypeToken {
   int char_count;
   int int_count;
   int long_count;
+  int unsigned_count;
 };
 
 static Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
@@ -167,17 +168,18 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 bool is_decl_specs(Token *tok, Analyze *state) {
   return equal_kind(tok, TK_LONG) || equal_kind(tok, TK_INT) ||
          equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_VOID) ||
-         equal_kind(tok, TK_BOOL) || equal_kind(tok, TK_STRUCT) ||
-         equal_kind(tok, TK_UNION) || equal_kind(tok, TK_ENUM) ||
-         equal_kind(tok, TK_CONST) || equal_kind(tok, TK_EXTERN) ||
-         equal_kind(tok, TK_STATIC) || equal_kind(tok, TK_TYPEDEF) ||
+         equal_kind(tok, TK_BOOL) || equal_kind(tok, TK_UNSIGNED) ||
+         equal_kind(tok, TK_STRUCT) || equal_kind(tok, TK_UNION) ||
+         equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
+         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC) ||
+         equal_kind(tok, TK_TYPEDEF) ||
          (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->ident_str));
 }
 
 bool is_primitive_type_token(Token *tok) {
   return equal_kind(tok, TK_LONG) || equal_kind(tok, TK_INT) ||
          equal_kind(tok, TK_CHAR) || equal_kind(tok, TK_VOID) ||
-         equal_kind(tok, TK_BOOL);
+         equal_kind(tok, TK_BOOL) || equal_kind(tok, TK_UNSIGNED);
 }
 
 DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
@@ -272,6 +274,9 @@ void parse_primitive_type_spec(Token **rest, Token *tok,
   } else if (equal_kind(tok, TK_LONG)) {
     consume_kind(&tok, tok, TK_LONG);
     primitive_type_token->long_count++;
+  } else if (equal_kind(tok, TK_UNSIGNED)) {
+    consume_kind(&tok, tok, TK_UNSIGNED);
+    primitive_type_token->unsigned_count++;
   } else {
     not_implemented_token(tok);
   }
@@ -386,17 +391,43 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
   return en_spec;
 }
 
+bool check_primitive_type_token(PrimitiveTypeToken *primitive_type_token,
+                                int void_count, int bool_count, int char_count,
+                                int int_count, int long_count,
+                                int unsigned_count) {
+  return primitive_type_token->void_count == void_count &&
+         primitive_type_token->bool_count == bool_count &&
+         primitive_type_token->char_count == char_count &&
+         primitive_type_token->int_count == int_count &&
+         primitive_type_token->long_count == long_count &&
+         primitive_type_token->unsigned_count == unsigned_count;
+}
+
 void set_primitive_type_spec_kind(DeclSpec *decl_spec,
                                   PrimitiveTypeToken *primitive_type_token) {
-  if (primitive_type_token->void_count == 1) {
+  if (check_primitive_type_token(primitive_type_token, 1, 0, 0, 0, 0, 0)) {
+    // void
     decl_spec->type_spec_kind = TypeSpec_VOID;
-  } else if (primitive_type_token->bool_count == 1) {
+  } else if (check_primitive_type_token(primitive_type_token, 0, 1, 0, 0, 0,
+                                        0)) {
+    // _Bool
     decl_spec->type_spec_kind = TypeSpec_BOOL;
-  } else if (primitive_type_token->char_count == 1) {
+  } else if (check_primitive_type_token(primitive_type_token, 0, 0, 1, 0, 0,
+                                        0)) {
+    // char
     decl_spec->type_spec_kind = TypeSpec_CHAR;
-  } else if (primitive_type_token->int_count == 1) {
+  } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 0,
+                                        0)) {
+    // int
     decl_spec->type_spec_kind = TypeSpec_INT;
-  } else if (primitive_type_token->long_count == 1) {
+  } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1,
+                                        0)) {
+    // long
+    decl_spec->type_spec_kind = TypeSpec_LONG;
+  } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1,
+                                        1)) {
+    // unsigned long
+    // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_LONG;
   } else {
     not_implemented(__func__);
@@ -1322,8 +1353,7 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
     primary = parse_expr(&tok, tok, state);
     expect(&tok, tok, ")");
   } else {
-    fprintf(stderr, "%.*s", tok->len, tok->str);
-    error("cannot parse primary");
+    error_token(tok, "cannot parse primary");
   }
 
   *rest = tok;

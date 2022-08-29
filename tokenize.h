@@ -33,6 +33,7 @@ typedef enum TokenKind {
   TK_INT,
   TK_CHAR,
   TK_BOOL,
+  TK_UNSIGNED,
   TK_CONST,
   TK_EXTERN,
   TK_STATIC,
