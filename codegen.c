@@ -564,6 +564,10 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
       fprintf(codegen_output, "  pop %s\n", call_register64[i]);
     fprintf(codegen_output, "  call rax\n");
 
+    // clean stack_arg
+    for (int i = 0; i < ((stack_count > 6) ? stack_count - 6 : 0); i++)
+      fprintf(codegen_output, " pop r10\n");
+
     if (need_padding)
       fprintf(codegen_output, "  pop r10\n");
 
