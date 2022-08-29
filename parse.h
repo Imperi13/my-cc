@@ -112,8 +112,6 @@ struct Tree {
   DeclSpec *decl_specs;
   Declarator *declarator;
 
-  Obj *def_obj;
-
   // for FUNC_DEF
   Tree *func_body;
 
@@ -237,6 +235,8 @@ struct EnumVal {
 struct Declarator {
   Pointer *pointer;
   char *name;
+
+  Obj *def_obj;
 
   // for nested-declarator
   Declarator *nest;

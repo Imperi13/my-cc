@@ -90,7 +90,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     func->next = state->glb_objs;
     state->glb_objs = func;
 
-    ast->def_obj = func;
+    ast->declarator->def_obj = func;
 
     Tree *cur = args;
     while (cur) {
@@ -142,7 +142,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       obj->next = state->glb_objs;
       state->glb_objs = obj;
 
-      ast->def_obj = obj;
+      ast->declarator->def_obj = obj;
     }
 
   } else {
@@ -335,7 +335,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
                           type_alignment(obj_type));
       state->current_func->stack_size = lvar->rbp_offset;
 
-      ast->def_obj = lvar;
+      ast->declarator->def_obj = lvar;
 
       push_lvar(state->current_func->locals, lvar);
     }
@@ -376,7 +376,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
                         type_alignment(obj_type));
     state->current_func->stack_size = lvar->rbp_offset;
 
-    ast->def_obj = lvar;
+    ast->declarator->def_obj = lvar;
 
     push_lvar(state->current_func->locals, lvar);
 
