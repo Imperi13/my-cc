@@ -17,7 +17,7 @@ typedef struct EnumDef EnumDef;
 
 struct Analyze {
   // global scope
-  Obj *glb_objs;
+  StrDict *glb_obj_dict;
   StrDict *glb_struct_def_dict;
   StrDict *glb_union_def_dict;
   StrDict *glb_typedef_dict;
@@ -25,6 +25,7 @@ struct Analyze {
   Obj *current_func;
 
   // local scope
+  ObjScope *locals;
   LabelScope *break_labels;
   LabelScope *continue_labels;
   SwitchScope *switch_stmts;
@@ -38,7 +39,6 @@ struct Obj {
   Type *type;
 
   // for function
-  ObjScope *locals;
   int stack_size;
 
   Obj *args;
@@ -52,13 +52,10 @@ struct Obj {
 
   // for local-var
   int rbp_offset;
-
-  // for linked-list
-  Obj *next;
 };
 
 struct ObjScope {
-  Obj *obj;
+  StrDict *local_obj_dict;
 
   // for linked-list
   ObjScope *next;

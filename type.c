@@ -235,8 +235,8 @@ bool is_same_type(Type *a, Type *b) {
     return a->st_def == b->st_def;
   else if (a->kind == UNION)
     return a->union_def == b->union_def;
-  else if (a->kind == FUNC || b->kind == FUNC)
-    error("type comp FUNC");
+  else if (a->kind == FUNC)
+    return is_same_type(a->return_type, b->return_type);
   return false;
 }
 

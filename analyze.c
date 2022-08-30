@@ -13,11 +13,11 @@ static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
 static void analyze_parameter(Tree *arg, Analyze *state);
 static void analyze_stmt(Tree *ast, Analyze *state);
 
-static void push_lvar_scope(ObjScope **lscope);
-static void pop_lvar_scope(ObjScope **lscope);
+static void push_lvar_scope(Analyze *state);
+static void pop_lvar_scope(Analyze *state);
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name);
-static Obj *find_global(Obj *globals, char *var_name);
+static Obj *find_global(Analyze *state, char *var_name);
 
 static void push_label(LabelScope **lscope, int label_number);
 static void pop_label(LabelScope **lscope);
@@ -35,11 +35,18 @@ static EnumVal *find_enum_val(EnumDef *en_defs, char *name);
 
 Analyze *new_analyze_state() {
   Analyze *state = calloc(1, sizeof(Analyze));
+  state->glb_obj_dict = new_str_dict();
   state->glb_struct_def_dict = new_str_dict();
   state->glb_union_def_dict = new_str_dict();
   state->glb_typedef_dict = new_str_dict();
   state->label_cnt = 0;
   return state;
+}
+
+ObjScope *new_obj_scope() {
+  ObjScope *scope = calloc(1, sizeof(ObjScope));
+  scope->local_obj_dict = new_str_dict();
+  return scope;
 }
 
 void analyze_translation_unit(Tree *ast) {
@@ -63,24 +70,31 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
-    Tree *args = getargs_declarator(ast->declarator);
 
-    Obj *func = calloc(1, sizeof(Obj));
-    func->obj_name = obj_name;
-    func->type = obj_type;
-    func->locals = calloc(1, sizeof(ObjScope));
+    Obj *func = find_global(state, obj_name);
+    if (func) {
+      if (func->is_defined)
+        error("redefined: %s", obj_name);
+      if (!is_same_type(func->type, obj_type))
+        error("conflict type: %s", obj_name);
+    } else {
+      func = calloc(1, sizeof(Obj));
+      func->obj_name = obj_name;
+      func->type = obj_type;
+      add_str_dict(state->glb_obj_dict, obj_name, func);
+    }
+
     func->is_defined = true;
     func->is_global = true;
 
     func->stack_size = 0x0;
 
     state->current_func = func;
-    func->next = state->glb_objs;
-    state->glb_objs = func;
+    state->locals = new_obj_scope();
 
     ast->declarator->def_obj = func;
 
-    Tree *cur = args;
+    Tree *cur = getargs_declarator(ast->declarator);
     while (cur) {
       analyze_parameter(cur, state);
       cur = cur->next;
@@ -88,7 +102,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     analyze_stmt(ast->func_body, state);
 
+    // finalize
     func->stack_size = calc_rbp_offset(0, func->stack_size, 8);
+    state->locals = NULL;
 
   } else if (ast->kind == DECLARATION) {
 
@@ -113,6 +129,25 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
         add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
       } else {
 
+        Obj *obj = find_global(state, obj_name);
+        if (obj) {
+          if (obj->is_defined &&
+              (obj_type->kind != FUNC && !ast->decl_specs->has_extern))
+            error("redefined: %s", obj_name);
+          if (!is_same_type(obj->type, obj_type))
+            error("conflict type: %s", obj_name);
+        } else {
+          obj = calloc(1, sizeof(Obj));
+          obj->obj_name = obj_name;
+          obj->type = obj_type;
+          add_str_dict(state->glb_obj_dict, obj_name, obj);
+        }
+
+        obj->is_global = true;
+
+        if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
+          obj->is_defined = true;
+
         if (cur->init_expr) {
           analyze_stmt(cur->init_expr, state);
           if (!is_constexpr(cur->init_expr))
@@ -120,17 +155,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
           if (!is_compatible(obj_type, cur->init_expr))
             error("not compatible type");
         }
-
-        Obj *obj = calloc(1, sizeof(Obj));
-        obj->obj_name = obj_name;
-        obj->type = obj_type;
-        obj->is_global = true;
-
-        if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
-          obj->is_defined = true;
-
-        obj->next = state->glb_objs;
-        state->glb_objs = obj;
 
         cur->def_obj = obj;
       }
@@ -333,7 +357,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
 
       ast->declarator->def_obj = lvar;
 
-      push_lvar(state->current_func->locals, lvar);
+      push_lvar(state->locals, lvar);
     }
 
   } else
@@ -342,7 +366,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
 
 void analyze_stmt(Tree *ast, Analyze *state) {
   if (ast->kind == COMPOUND_STMT) {
-    push_lvar_scope(&state->current_func->locals);
+    push_lvar_scope(state);
 
     Tree *cur = ast->stmts;
     while (cur) {
@@ -350,7 +374,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       cur = cur->next;
     }
 
-    pop_lvar_scope(&state->current_func->locals);
+    pop_lvar_scope(state);
   } else if (ast->kind == DECLARATION) {
 
     analyze_decl_spec(ast->decl_specs, state, false);
@@ -376,7 +400,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
       cur->def_obj = lvar;
 
-      push_lvar(state->current_func->locals, lvar);
+      push_lvar(state->locals, lvar);
 
       if (cur->init_expr) {
         analyze_stmt(cur->init_expr, state);
@@ -464,7 +488,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
-    push_lvar_scope(&state->current_func->locals);
+    push_lvar_scope(state);
 
     if (ast->for_init)
       analyze_stmt(ast->for_init, state);
@@ -480,7 +504,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
 
-    pop_lvar_scope(&state->current_func->locals);
+    pop_lvar_scope(state);
 
   } else if (ast->kind == IF) {
     ast->label_number = state->label_cnt;
@@ -832,10 +856,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Obj *var = find_lvar(state->current_func->locals, ast->var_name);
+    Obj *var = find_lvar(state->locals, ast->var_name);
 
     if (!var) {
-      var = find_global(state->glb_objs, ast->var_name);
+      var = find_global(state, ast->var_name);
       if (!var)
         error("cannot find var: %s", ast->var_name);
     }
@@ -857,32 +881,31 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   }
 }
 
-void push_lvar_scope(ObjScope **lscope) {
-  ObjScope *lsc = calloc(1, sizeof(ObjScope));
-  lsc->next = *lscope;
-  *lscope = lsc;
+void push_lvar_scope(Analyze *state) {
+  ObjScope *lsc = new_obj_scope();
+  lsc->next = state->locals;
+  state->locals = lsc;
 }
 
-void pop_lvar_scope(ObjScope **lscope) { *lscope = (*lscope)->next; }
+void pop_lvar_scope(Analyze *state) { state->locals = state->locals->next; }
 
 void push_lvar(ObjScope *locals, Obj *lvar) {
-  lvar->next = locals->obj;
-  locals->obj = lvar;
+  if (!lvar->obj_name)
+    error("lvar name is null");
+  add_str_dict(locals->local_obj_dict, lvar->obj_name, lvar);
 }
 
 Obj *find_lvar(ObjScope *locals, char *lvar_name) {
+  if (!lvar_name)
+    error("lvar name is null");
   for (ObjScope *cur_scope = locals; cur_scope; cur_scope = cur_scope->next)
-    for (Obj *cur = cur_scope->obj; cur; cur = cur->next)
-      if (strcmp(lvar_name, cur->obj_name) == 0)
-        return cur;
+    if (find_str_dict(cur_scope->local_obj_dict, lvar_name))
+      return find_str_dict(cur_scope->local_obj_dict, lvar_name);
   return NULL;
 }
 
-Obj *find_global(Obj *globals, char *var_name) {
-  for (Obj *cur = globals; cur; cur = cur->next)
-    if (strcmp(var_name, cur->obj_name) == 0)
-      return cur;
-  return NULL;
+Obj *find_global(Analyze *state, char *var_name) {
+  return find_str_dict(state->glb_obj_dict, var_name);
 }
 
 void push_label(LabelScope **lscope, int label_number) {
