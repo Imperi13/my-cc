@@ -17,7 +17,7 @@ clean:
 
 donuts: mycc
 	./mycc ./sample/donuts.c > ./donuts.s
-	gcc -o donuts ./donuts.s
+	$(CC) -o donuts ./donuts.s
 
 franken:
 	./franken_test.sh
