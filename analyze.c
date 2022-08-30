@@ -13,8 +13,8 @@ static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
 static void analyze_parameter(Tree *arg, Analyze *state);
 static void analyze_stmt(Tree *ast, Analyze *state);
 
-static void push_lvar_scope(ObjScope **lscope);
-static void pop_lvar_scope(ObjScope **lscope);
+static void push_lvar_scope(Analyze *state);
+static void pop_lvar_scope(Analyze *state);
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name);
 static Obj *find_global(Obj *globals, char *var_name);
@@ -345,7 +345,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
 
 void analyze_stmt(Tree *ast, Analyze *state) {
   if (ast->kind == COMPOUND_STMT) {
-    push_lvar_scope(&state->locals);
+    push_lvar_scope(state);
 
     Tree *cur = ast->stmts;
     while (cur) {
@@ -353,7 +353,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       cur = cur->next;
     }
 
-    pop_lvar_scope(&state->locals);
+    pop_lvar_scope(state);
   } else if (ast->kind == DECLARATION) {
 
     analyze_decl_spec(ast->decl_specs, state, false);
@@ -467,7 +467,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
-    push_lvar_scope(&state->locals);
+    push_lvar_scope(state);
 
     if (ast->for_init)
       analyze_stmt(ast->for_init, state);
@@ -483,7 +483,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
 
-    pop_lvar_scope(&state->locals);
+    pop_lvar_scope(state);
 
   } else if (ast->kind == IF) {
     ast->label_number = state->label_cnt;
@@ -860,13 +860,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   }
 }
 
-void push_lvar_scope(ObjScope **lscope) {
+void push_lvar_scope(Analyze *state) {
   ObjScope *lsc = calloc(1, sizeof(ObjScope));
-  lsc->next = *lscope;
-  *lscope = lsc;
+  lsc->next = state->locals;
+  state->locals = lsc;
 }
 
-void pop_lvar_scope(ObjScope **lscope) { *lscope = (*lscope)->next; }
+void pop_lvar_scope(Analyze *state) { state->locals = state->locals->next; }
 
 void push_lvar(ObjScope *locals, Obj *lvar) {
   lvar->next = locals->obj;
