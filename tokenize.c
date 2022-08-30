@@ -7,26 +7,7 @@
 #include "error.h"
 #include "tokenize.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-int strlen();
-int memcmp();
-void *calloc();
-int isblank();
-int strncmp();
-int strcmp();
-char *strstr();
-char *strchr();
-int isdigit();
-
-size_t strspn();
-
-int fprintf();
-void *memcpy();
-
-#endif
+StrLiteral *str_literals;
 
 bool equal(Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
@@ -195,6 +176,8 @@ char consume_char(char **rest, char *p) {
     p++;
     if (*p == 'e') {
       ret = '\e';
+    } else if (*p == 't') {
+      ret = '\t';
     } else if (*p == 'n') {
       ret = '\n';
     } else if (*p == '\\') {
@@ -220,8 +203,6 @@ char consume_char(char **rest, char *p) {
     return ret;
   }
 }
-
-StrLiteral *str_literals = NULL;
 
 Token *tokenize(char *p, char *filepath) {
   char *file_buf = p;
@@ -345,7 +326,8 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
-    if (isdigit(*p)) {
+    // if (isdigit(*p)) {
+    if ((*p) - '0' < 10) {
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);
@@ -356,6 +338,12 @@ Token *tokenize(char *p, char *filepath) {
       }
 
       cur->len = p - prev;
+      continue;
+    }
+
+    if (strncmp(p, "inline", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_INLINE, cur, p, 6, filepath, file_buf);
+      p += 6;
       continue;
     }
 
@@ -506,6 +494,12 @@ Token *tokenize(char *p, char *filepath) {
     if (strncmp(p, "const", 5) == 0 && !is_alnum(p[5])) {
       cur = new_token(TK_CONST, cur, p, 5, filepath, file_buf);
       p += 5;
+      continue;
+    }
+
+    if (strncmp(p, "restrict", 8) == 0 && !is_alnum(p[8])) {
+      cur = new_token(TK_RESTRICT, cur, p, 8, filepath, file_buf);
+      p += 8;
       continue;
     }
 

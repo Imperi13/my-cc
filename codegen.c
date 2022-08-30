@@ -6,13 +6,6 @@
 #include "parse.h"
 #include "type.h"
 
-#ifndef __STDC__
-
-int printf();
-int fprintf();
-
-#endif
-
 static void codegen_str_literal(FILE *codegen_output, StrLiteral *sl);
 static void codegen_var_definition(FILE *codegen_output, Tree *var);
 static void codegen_function(FILE *codegen_output, Tree *func);
@@ -55,7 +48,7 @@ void codegen_translation_unit(FILE *codegen_output, Tree *head) {
     cur = cur->next;
   }
 
-  fprintf(codegen_output, "  .section	.note.GNU-stack,\"\",@progbits\n");
+  fprintf(codegen_output, "  .section .note.GNU-stack,\"\",@progbits\n");
 }
 
 void codegen_str_literal(FILE *codegen_output, StrLiteral *sl) {
@@ -67,6 +60,8 @@ void codegen_str_literal(FILE *codegen_output, StrLiteral *sl) {
   for (int i = 0; i < sl->len; i++) {
     if (sl->str[i] == '\e') {
       fprintf(codegen_output, "\\033");
+    } else if (sl->str[i] == '\t') {
+      fprintf(codegen_output, "\\e");
     } else if (sl->str[i] == '\n') {
       fprintf(codegen_output, "\\n");
     } else if (sl->str[i] == '\\') {

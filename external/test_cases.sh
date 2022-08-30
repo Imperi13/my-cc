@@ -4,12 +4,15 @@
 # https://github.com/hsjoihs/c-compiler/blob/master/test_cases.sh
 #
 
+cc=/usr/local/musl/bin/musl-gcc
+cc_option="-std=gnu11 -g -static"
+
 run_test_with_supplement0() {
   rm -f ./tmp
   echo -e "$2" > ./external/tmp.in
   $MYCC ./external/tmp.in > tmp.s
-	gcc ./external/misc/supplement0.c -S -o supplement0.s
-	gcc tmp.s supplement0.s -o tmp
+	${cc} ${cc_option} ./external/misc/supplement0.c -S -o supplement0.s
+	${cc} ${cc_option} tmp.s supplement0.s -o tmp
 	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
@@ -19,7 +22,7 @@ run_test() {
   rm -f ./tmp
   echo -e "$2" > ./external/tmp.in
 	$MYCC ./external/tmp.in > tmp.s
-  gcc -o tmp tmp.s util/ten.o util/add.o util/many_arg.o util/alloc4.o
+  ${cc} ${cc_option} -o tmp tmp.s
 	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
@@ -29,8 +32,8 @@ run_test_with_supplement1() {
   rm -f ./tmp
   echo -e "$2" > ./external/tmp.in
   $MYCC ./external/tmp.in > tmp.s
-	gcc ./external/misc/supplement1.c -S -o supplement1.s
-	gcc tmp.s supplement1.s -o tmp
+	${cc} ${cc_option} ./external/misc/supplement1.c -S -o supplement1.s
+	${cc} ${cc_option} tmp.s supplement1.s -o tmp
 	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (mixed)" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS (mixed)\033[m"; fi
@@ -39,7 +42,7 @@ run_test_with_supplement1() {
   echo -e "$2" > ./external/tmp.in
   $MYCC ./external/tmp.in > tmp.s
   $MYCC ./external/misc/supplement1.c > supplement1.s
-	gcc tmp.s supplement1.s -o tmp
+	${cc} ${cc_option} tmp.s supplement1.s -o tmp
 	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (pure)" $1: "$2"; }; else echo -e "\033[32mPASS (pure)\033[m"; fi

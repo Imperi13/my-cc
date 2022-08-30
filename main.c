@@ -3,15 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-void *calloc();
-int getopt();
-int fprintf();
-
-#endif
-
 #include "analyze.h"
 #include "codegen.h"
 #include "error.h"
@@ -99,7 +90,7 @@ int main(int argc, char **argv) {
   char *user_input = read_file(filename);
   Token *token = tokenize(user_input, filename);
 
-  // debug_token(token);
+  //  debug_token(token);
 
   token = preprocess(token);
 

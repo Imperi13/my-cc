@@ -8,16 +8,6 @@
 #include "str_dict.h"
 #include "type.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-void *calloc();
-char *strncpy();
-size_t strlen();
-
-#endif
-
 void builtin_type_init(Analyze *state) {
 
   // struct __builtin_va_list

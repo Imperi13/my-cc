@@ -18,12 +18,6 @@ typedef struct Type Type;
 #include "analyze.h"
 #include "parse.h"
 
-#ifndef __STDC__
-
-#include "selfhost_util.h"
-
-#endif
-
 struct Type {
   TypeKind kind;
 
