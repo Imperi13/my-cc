@@ -68,13 +68,14 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     Obj *func = calloc(1, sizeof(Obj));
     func->obj_name = obj_name;
     func->type = obj_type;
-    func->locals = calloc(1, sizeof(ObjScope));
     func->is_defined = true;
     func->is_global = true;
 
     func->stack_size = 0x0;
 
     state->current_func = func;
+    state->locals = calloc(1, sizeof(ObjScope));
+
     func->next = state->glb_objs;
     state->glb_objs = func;
 
@@ -88,7 +89,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     analyze_stmt(ast->func_body, state);
 
+    // finalize
     func->stack_size = calc_rbp_offset(0, func->stack_size, 8);
+    state->locals = NULL;
 
   } else if (ast->kind == DECLARATION) {
 
@@ -333,7 +336,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
 
       ast->declarator->def_obj = lvar;
 
-      push_lvar(state->current_func->locals, lvar);
+      push_lvar(state->locals, lvar);
     }
 
   } else
@@ -342,7 +345,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
 
 void analyze_stmt(Tree *ast, Analyze *state) {
   if (ast->kind == COMPOUND_STMT) {
-    push_lvar_scope(&state->current_func->locals);
+    push_lvar_scope(&state->locals);
 
     Tree *cur = ast->stmts;
     while (cur) {
@@ -350,7 +353,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       cur = cur->next;
     }
 
-    pop_lvar_scope(&state->current_func->locals);
+    pop_lvar_scope(&state->locals);
   } else if (ast->kind == DECLARATION) {
 
     analyze_decl_spec(ast->decl_specs, state, false);
@@ -376,7 +379,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
       cur->def_obj = lvar;
 
-      push_lvar(state->current_func->locals, lvar);
+      push_lvar(state->locals, lvar);
 
       if (cur->init_expr) {
         analyze_stmt(cur->init_expr, state);
@@ -464,7 +467,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
-    push_lvar_scope(&state->current_func->locals);
+    push_lvar_scope(&state->locals);
 
     if (ast->for_init)
       analyze_stmt(ast->for_init, state);
@@ -480,7 +483,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
 
-    pop_lvar_scope(&state->current_func->locals);
+    pop_lvar_scope(&state->locals);
 
   } else if (ast->kind == IF) {
     ast->label_number = state->label_cnt;
@@ -832,7 +835,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Obj *var = find_lvar(state->current_func->locals, ast->var_name);
+    Obj *var = find_lvar(state->locals, ast->var_name);
 
     if (!var) {
       var = find_global(state->glb_objs, ast->var_name);

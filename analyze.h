@@ -25,6 +25,7 @@ struct Analyze {
   Obj *current_func;
 
   // local scope
+  ObjScope *locals;
   LabelScope *break_labels;
   LabelScope *continue_labels;
   SwitchScope *switch_stmts;
@@ -38,7 +39,6 @@ struct Obj {
   Type *type;
 
   // for function
-  ObjScope *locals;
   int stack_size;
 
   Obj *args;
