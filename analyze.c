@@ -42,6 +42,12 @@ Analyze *new_analyze_state() {
   return state;
 }
 
+ObjScope *new_obj_scope() {
+  ObjScope *scope = calloc(1, sizeof(ObjScope));
+  scope->local_obj_dict = new_str_dict();
+  return scope;
+}
+
 void analyze_translation_unit(Tree *ast) {
   Analyze *state = new_analyze_state();
 
@@ -74,7 +80,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     func->stack_size = 0x0;
 
     state->current_func = func;
-    state->locals = calloc(1, sizeof(ObjScope));
+    state->locals = new_obj_scope();
 
     func->next = state->glb_objs;
     state->glb_objs = func;
@@ -861,7 +867,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 }
 
 void push_lvar_scope(Analyze *state) {
-  ObjScope *lsc = calloc(1, sizeof(ObjScope));
+  ObjScope *lsc = new_obj_scope();
   lsc->next = state->locals;
   state->locals = lsc;
 }
@@ -869,15 +875,17 @@ void push_lvar_scope(Analyze *state) {
 void pop_lvar_scope(Analyze *state) { state->locals = state->locals->next; }
 
 void push_lvar(ObjScope *locals, Obj *lvar) {
-  lvar->next = locals->obj;
-  locals->obj = lvar;
+  if (!lvar->obj_name)
+    error("lvar name is null");
+  add_str_dict(locals->local_obj_dict, lvar->obj_name, lvar);
 }
 
 Obj *find_lvar(ObjScope *locals, char *lvar_name) {
+  if (!lvar_name)
+    error("lvar name is null");
   for (ObjScope *cur_scope = locals; cur_scope; cur_scope = cur_scope->next)
-    for (Obj *cur = cur_scope->obj; cur; cur = cur->next)
-      if (strcmp(lvar_name, cur->obj_name) == 0)
-        return cur;
+    if (find_str_dict(cur_scope->local_obj_dict, lvar_name))
+      return find_str_dict(cur_scope->local_obj_dict, lvar_name);
   return NULL;
 }
 

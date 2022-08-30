@@ -58,7 +58,7 @@ struct Obj {
 };
 
 struct ObjScope {
-  Obj *obj;
+  StrDict *local_obj_dict;
 
   // for linked-list
   ObjScope *next;
