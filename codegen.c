@@ -34,7 +34,7 @@ void codegen_translation_unit(FILE *codegen_output, Tree *head) {
   Tree *cur = head;
   while (cur) {
     if (cur->kind == DECLARATION && cur->declarator &&
-        !cur->decl_specs->has_typedef && cur->declarator->def_obj->is_defined) {
+        !cur->decl_specs->has_typedef && !cur->decl_specs->has_extern) {
       codegen_var_definition(codegen_output, cur);
     }
     cur = cur->next;
@@ -80,6 +80,11 @@ void codegen_str_literal(FILE *codegen_output, StrLiteral *sl) {
 void codegen_var_definition(FILE *codegen_output, Tree *var) {
   for (Declarator *cur = var->declarator; cur; cur = cur->next) {
     Obj *obj = cur->def_obj;
+
+    // ignore function prototype
+    if (obj->type->kind == FUNC)
+      continue;
+
     fprintf(codegen_output, "  .globl %s\n", obj->obj_name);
 
     if (cur->init_expr)
