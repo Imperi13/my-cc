@@ -151,7 +151,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
         if (cur->init_expr) {
           analyze_stmt(cur->init_expr, state);
-          if (!is_constexpr(cur->init_expr))
+          if (!is_constexpr_integer(cur->init_expr))
             error("not constexpr");
           if (!is_compatible(obj_type, cur->init_expr))
             error("not compatible type");
@@ -411,7 +411,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
   } else if (ast->kind == CASE) {
     analyze_stmt(ast->case_num_node, state);
-    int case_num = eval_constexpr(ast->case_num_node);
+    int case_num = eval_constexpr_integer(ast->case_num_node);
 
     ast->case_num = case_num;
 

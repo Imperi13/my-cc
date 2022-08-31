@@ -98,11 +98,14 @@ void codegen_var_definition(FILE *codegen_output, Tree *var) {
 
     if (cur->init_expr) {
       if (type_size(obj->type) == 1) {
-        fprintf(codegen_output, "  .byte %d\n", eval_constexpr(cur->init_expr));
+        fprintf(codegen_output, "  .byte %d\n",
+                eval_constexpr_integer(cur->init_expr));
       } else if (type_size(obj->type) == 4) {
-        fprintf(codegen_output, "  .long %d\n", eval_constexpr(cur->init_expr));
+        fprintf(codegen_output, "  .long %d\n",
+                eval_constexpr_integer(cur->init_expr));
       } else if (type_size(obj->type) == 8) {
-        fprintf(codegen_output, "  .quad %d\n", eval_constexpr(cur->init_expr));
+        fprintf(codegen_output, "  .quad %d\n",
+                eval_constexpr_integer(cur->init_expr));
       } else
         not_implemented(__func__);
     } else
