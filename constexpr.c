@@ -6,8 +6,21 @@
 #include "parse.h"
 
 bool is_constexpr_integer(Tree *expr) {
-  if (expr->kind == ADD || expr->kind == SUB || expr->kind == MUL ||
-      expr->kind == DIV || expr->kind == MOD)
+  if (expr->kind == CONDITIONAL)
+    return is_constexpr_integer(expr->cond) &&
+           (!is_constexpr_zero(expr->cond) ? is_constexpr_integer(expr->lhs)
+                                           : is_constexpr_integer(expr->rhs));
+  else if (expr->kind == LOGICAL_OR)
+    return !is_constexpr_zero(expr->lhs) || is_constexpr_integer(expr->rhs);
+  else if (expr->kind == LOGICAL_AND)
+    return is_constexpr_zero(expr->lhs) || is_constexpr_integer(expr->rhs);
+  else if (expr->kind == BIT_AND || expr->kind == BIT_XOR ||
+           expr->kind == BIT_OR || expr->kind == EQUAL ||
+           expr->kind == NOT_EQUAL || expr->kind == SMALLER ||
+           expr->kind == SMALLER_EQUAL || expr->kind == GREATER ||
+           expr->kind == GREATER_EQUAL || expr->kind == LSHIFT ||
+           expr->kind == RSHIFT || expr->kind == ADD || expr->kind == SUB ||
+           expr->kind == MUL || expr->kind == DIV || expr->kind == MOD)
     return is_constexpr_integer(expr->lhs) && is_constexpr_integer(expr->rhs);
   else if (expr->kind == PLUS || expr->kind == MINUS || expr->kind == BIT_NOT)
     return is_constexpr_integer(expr->lhs);
@@ -26,7 +39,47 @@ bool is_constexpr_zero(Tree *expr) {
 }
 
 int eval_constexpr_integer(Tree *expr) {
-  if (expr->kind == ADD)
+  if (expr->kind == CONDITIONAL)
+    return !is_constexpr_zero(expr->cond) ? eval_constexpr_integer(expr->lhs)
+                                          : eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == LOGICAL_OR)
+    return !is_constexpr_zero(expr->lhs) ? 1 : !is_constexpr_zero(expr->rhs);
+  else if (expr->kind == LOGICAL_AND)
+    return is_constexpr_zero(expr->lhs) ? 0 : !is_constexpr_zero(expr->rhs);
+  else if (expr->kind == BIT_AND)
+    return eval_constexpr_integer(expr->lhs) &
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == BIT_XOR)
+    return eval_constexpr_integer(expr->lhs) ^
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == BIT_OR)
+    return eval_constexpr_integer(expr->lhs) |
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == EQUAL)
+    return eval_constexpr_integer(expr->lhs) ==
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == NOT_EQUAL)
+    return eval_constexpr_integer(expr->lhs) !=
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == SMALLER)
+    return eval_constexpr_integer(expr->lhs) <
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == SMALLER_EQUAL)
+    return eval_constexpr_integer(expr->lhs) <=
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == GREATER)
+    return eval_constexpr_integer(expr->lhs) >
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == GREATER_EQUAL)
+    return eval_constexpr_integer(expr->lhs) >=
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == LSHIFT)
+    return eval_constexpr_integer(expr->lhs)
+           << eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == RSHIFT)
+    return eval_constexpr_integer(expr->lhs) >>
+           eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == ADD)
     return eval_constexpr_integer(expr->lhs) +
            eval_constexpr_integer(expr->rhs);
   else if (expr->kind == SUB)
