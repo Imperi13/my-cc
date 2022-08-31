@@ -827,6 +827,9 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     // predefined ident
     if (!memcmp(ast->var_name, "__func__", 8)) {
 
+      if (!state->current_func)
+        error("__func__ is not in function");
+
       // make str-literal for func-name
       StrLiteral *func_name = calloc(1, sizeof(StrLiteral));
       func_name->len = strlen(state->current_func->obj_name);
