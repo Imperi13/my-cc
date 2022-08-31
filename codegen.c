@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "codegen.h"
+#include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "type.h"

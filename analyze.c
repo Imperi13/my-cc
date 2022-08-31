@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analyze.h"
+#include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "type.h"
@@ -971,19 +972,4 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name) {
 
 Typedef *find_typedef(Analyze *state, char *typedef_name) {
   return find_str_dict(state->glb_typedef_dict, typedef_name);
-}
-
-bool is_constexpr(Tree *expr) {
-  if (expr->kind == NUM)
-    return true;
-  else
-    return false;
-}
-
-int eval_constexpr(Tree *expr) {
-  if (expr->kind == NUM)
-    return expr->num;
-  else
-    not_implemented(__func__);
-  return 0;
 }

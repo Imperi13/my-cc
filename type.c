@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analyze.h"
+#include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "str_dict.h"
