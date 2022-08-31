@@ -449,6 +449,9 @@ run_test multiple_declarator_4 'int main(){int a,b,c,d;a = 114;b = 10;c = 20;d =
 run_test multiple_declarator_5 'struct Test{int a,b;};int main(){return 166 + sizeof(struct Test);}' 174
 run_test multiple_declarator_6 'struct Test{int a,b;};int main(){struct Test t;t.a = 10;t.b = 20; return 144+t.a+t.b;}' 174
 
+run_test constexpr_1 'int n = 6+4; int main(){return 164+n;}' 174
+run_test constexpr_2 'int n = 2*3 + 1*4; int main(){return 164+n;}' 174
+
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 #run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
