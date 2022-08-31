@@ -1,9 +1,24 @@
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "constexpr.h"
 #include "error.h"
 #include "parse.h"
+#include "type.h"
+
+void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
+                               Tree *expr) {
+  if (is_integer(obj_type)) {
+    if (type_size(obj_type) == 1)
+      fprintf(codegen_output, "  .byte %d\n", eval_constexpr_integer(expr));
+    else if (type_size(obj_type) == 4)
+      fprintf(codegen_output, "  .long %d\n", eval_constexpr_integer(expr));
+    else if (type_size(obj_type) == 8)
+      fprintf(codegen_output, "  .quad %d\n", eval_constexpr_integer(expr));
+  } else
+    not_implemented(__func__);
+}
 
 bool is_constexpr_integer(Tree *expr) {
   if (expr->kind == CONDITIONAL)
@@ -22,6 +37,8 @@ bool is_constexpr_integer(Tree *expr) {
            expr->kind == RSHIFT || expr->kind == ADD || expr->kind == SUB ||
            expr->kind == MUL || expr->kind == DIV || expr->kind == MOD)
     return is_constexpr_integer(expr->lhs) && is_constexpr_integer(expr->rhs);
+  else if (expr->kind == CAST)
+    return is_integer(expr->type) && is_constexpr_integer(expr->lhs);
   else if (expr->kind == PLUS || expr->kind == MINUS || expr->kind == BIT_NOT)
     return is_constexpr_integer(expr->lhs);
   else if (expr->kind == LOGICAL_NOT)
@@ -94,6 +111,8 @@ int eval_constexpr_integer(Tree *expr) {
   else if (expr->kind == MOD)
     return eval_constexpr_integer(expr->lhs) %
            eval_constexpr_integer(expr->rhs);
+  else if (expr->kind == CAST)
+    return eval_constexpr_integer(expr->lhs);
   else if (expr->kind == PLUS)
     return eval_constexpr_integer(expr->lhs);
   else if (expr->kind == MINUS)
