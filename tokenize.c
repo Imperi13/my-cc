@@ -173,6 +173,26 @@ long num_literal(char *p, char **rest) {
   return num;
 }
 
+void consume_num_suffix(char **rest, char *p, Token *num_tok) {
+  while ((*p == 'l' || *p == 'L') ||
+         (strncmp(p, "ll", 2) == 0 || strncmp(p, "LL", 2) == 0) ||
+         (*p == 'u' || *p == 'U')) {
+    if (*p == 'l' || *p == 'L') {
+      num_tok->is_long = true;
+      p++;
+    } else if (strncmp(p, "ll", 2) == 0 || strncmp(p, "LL", 2) == 0) {
+      num_tok->is_longlong = true;
+      p += 2;
+    } else if (*p == 'u' || *p == 'U') {
+      num_tok->is_unsigned = true;
+      p++;
+    } else
+      error("invalid num_suffix");
+  }
+
+  *rest = p;
+}
+
 char consume_char(char **rest, char *p) {
   if (*p == '\\') {
     char ret;
@@ -354,10 +374,7 @@ Token *tokenize(char *p, char *filepath) {
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);
 
-      if (*p == 'L') {
-        cur->is_long = true;
-        p++;
-      }
+      consume_num_suffix(&p, p, cur);
 
       cur->len = p - prev;
       continue;
