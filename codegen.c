@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "codegen.h"
+#include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "type.h"
@@ -21,7 +22,7 @@ extern const char *call_register64[6];
 extern const char *call_register32[6];
 extern const char *call_register8[6];
 
-Obj *current_function;
+Obj *current_function = NULL;
 
 void codegen_translation_unit(FILE *codegen_output, Tree *head) {
 
@@ -96,14 +97,7 @@ void codegen_var_definition(FILE *codegen_output, Tree *var) {
     fprintf(codegen_output, "%s:\n", obj->obj_name);
 
     if (cur->init_expr) {
-      if (type_size(obj->type) == 1) {
-        fprintf(codegen_output, "  .byte %d\n", eval_constexpr(cur->init_expr));
-      } else if (type_size(obj->type) == 4) {
-        fprintf(codegen_output, "  .long %d\n", eval_constexpr(cur->init_expr));
-      } else if (type_size(obj->type) == 8) {
-        fprintf(codegen_output, "  .quad %d\n", eval_constexpr(cur->init_expr));
-      } else
-        not_implemented(__func__);
+      codegen_global_initialize(codegen_output, obj->type, cur->init_expr);
     } else
       fprintf(codegen_output, "  .zero %d\n", type_size(obj->type));
   }
@@ -171,6 +165,8 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   fprintf(codegen_output, "  mov rsp, rbp\n");
   fprintf(codegen_output, "  pop rbp\n");
   fprintf(codegen_output, "  ret\n");
+
+  current_function = NULL;
 }
 
 void codegen_addr(FILE *codegen_output, Tree *stmt) {

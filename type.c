@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analyze.h"
+#include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "str_dict.h"
@@ -98,7 +99,7 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
     while (cur) {
       Type *ty = calloc(1, sizeof(Type));
       ty->kind = ARRAY;
-      ty->arr_size = eval_constexpr(cur->size);
+      ty->arr_size = eval_constexpr_integer(cur->size);
       ty->ptr_to = base_type;
       base_type = ty;
 
@@ -257,7 +258,7 @@ bool is_compatible(Type *a, Tree *b) {
     return true;
   // TODO end
 
-  else if (a->kind == PTR && is_constexpr(b) && eval_constexpr(b) == 0)
+  else if (a->kind == PTR && is_constexpr_zero(b))
     return true;
 
   return false;

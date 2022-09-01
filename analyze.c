@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analyze.h"
+#include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "type.h"
@@ -410,7 +411,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
   } else if (ast->kind == CASE) {
     analyze_stmt(ast->case_num_node, state);
-    int case_num = eval_constexpr(ast->case_num_node);
+    int case_num = eval_constexpr_integer(ast->case_num_node);
 
     ast->case_num = case_num;
 
@@ -826,6 +827,9 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     // predefined ident
     if (!memcmp(ast->var_name, "__func__", 8)) {
 
+      if (!state->current_func)
+        error("__func__ is not in function");
+
       // make str-literal for func-name
       StrLiteral *func_name = calloc(1, sizeof(StrLiteral));
       func_name->len = strlen(state->current_func->obj_name);
@@ -856,7 +860,9 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Obj *var = find_lvar(state->locals, ast->var_name);
+    Obj *var = NULL;
+    if (state->locals)
+      var = find_lvar(state->locals, ast->var_name);
 
     if (!var) {
       var = find_global(state, ast->var_name);
@@ -971,19 +977,4 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name) {
 
 Typedef *find_typedef(Analyze *state, char *typedef_name) {
   return find_str_dict(state->glb_typedef_dict, typedef_name);
-}
-
-bool is_constexpr(Tree *expr) {
-  if (expr->kind == NUM)
-    return true;
-  else
-    return false;
-}
-
-int eval_constexpr(Tree *expr) {
-  if (expr->kind == NUM)
-    return expr->num;
-  else
-    not_implemented(__func__);
-  return 0;
 }

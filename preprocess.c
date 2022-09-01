@@ -63,8 +63,8 @@ struct DefineList {
   Token *start;
 };
 
-PragmaOnceList *pragma_list;
-StrDict *define_dict;
+PragmaOnceList *pragma_list = NULL;
+StrDict *define_dict = NULL;
 
 bool is_included(char *filepath) {
   for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
@@ -761,6 +761,7 @@ long process_primary(Token **pre, Token *tok) {
 
 Token *preprocess(Token *tok) {
   define_dict = new_str_dict();
+  pragma_list = NULL;
 
   add_predefine("__STDC_VERSION__", "201112L");
   add_predefine("__STDC__", "1");
@@ -775,6 +776,8 @@ Token *preprocess(Token *tok) {
       process_text_line(&cur, &tok, tok);
     }
   }
+
+  define_dict = NULL;
 
   cur->next = tok;
   return head->next;

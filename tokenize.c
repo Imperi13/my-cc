@@ -7,7 +7,9 @@
 #include "error.h"
 #include "tokenize.h"
 
-StrLiteral *str_literals;
+StrLiteral *str_literals = NULL;
+const char *variable_letters =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
 bool equal(Token *token, char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
@@ -93,8 +95,6 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len, char *filepath,
   cur->next = tok;
   return tok;
 }
-
-const char *variable_letters;
 
 bool is_alnum(char c) {
   for (const char *p = variable_letters; *p != '\0'; p++)

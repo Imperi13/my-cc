@@ -122,6 +122,4 @@ void analyze_translation_unit(Tree *ast);
 
 Typedef *find_typedef(Analyze *state, char *typedef_name);
 
-bool is_constexpr(Tree *expr);
-int eval_constexpr(Tree *expr);
 int calc_rbp_offset(int start, int data_size, int alignment);

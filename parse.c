@@ -57,6 +57,8 @@ static Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_expr_stmt(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_expr(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_assign(Token **rest, Token *tok, Analyze *state);
+
+static Tree *parse_constant_expr(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_conditional(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_logical_or(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_logical_and(Token **rest, Token *tok, Analyze *state);
@@ -430,6 +432,8 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
         EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
         en_val->name = getname_ident(&tok, tok);
+        if (equal(tok, "="))
+          not_implemented_token(tok);
 
         cur->next = en_val;
         cur = cur->next;
@@ -822,7 +826,7 @@ Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
     return node;
   } else if (equal_kind(tok, TK_CASE)) {
     consume_kind(&tok, tok, TK_CASE);
-    Tree *expr = parse_expr(&tok, tok, state);
+    Tree *expr = parse_constant_expr(&tok, tok, state);
     consume(&tok, tok, ":");
     Tree *lhs = parse_stmt(&tok, tok, state);
 
@@ -1093,6 +1097,10 @@ Tree *parse_assign(Token **rest, Token *tok, Analyze *state) {
 
   *rest = tok;
   return lhs;
+}
+
+Tree *parse_constant_expr(Token **rest, Token *tok, Analyze *state) {
+  return parse_conditional(rest, tok, state);
 }
 
 Tree *parse_conditional(Token **rest, Token *tok, Analyze *state) {
