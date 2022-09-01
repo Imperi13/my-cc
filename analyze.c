@@ -407,6 +407,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
         analyze_stmt(cur->init_expr, state);
       }
     }
+  } else if (ast->kind == INITIALIZE_LIST) {
+    for (InitializeList *cur = ast->init_list; cur; cur = cur->next) {
+      analyze_stmt(cur->init_val, state);
+    }
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
   } else if (ast->kind == CASE) {
