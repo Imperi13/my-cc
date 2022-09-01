@@ -82,6 +82,9 @@ bool cmp_ident(Token *tok, const char *name) {
   return strcmp(tok->ident_str, name) == 0;
 }
 
+// instead of isdigit(char) in ctype.h
+bool is_digit(char c) { return '0' <= c && c <= '9'; }
+
 bool at_eof(Token *token) { return token->kind == TK_EOF; }
 
 Token *new_token(TokenKind kind, Token *cur, char *str, int len, char *filepath,
@@ -176,22 +179,41 @@ char consume_char(char **rest, char *p) {
     p++;
     if (*p == 'e') {
       ret = '\e';
+      p++;
     } else if (*p == 't') {
       ret = '\t';
+      p++;
     } else if (*p == 'n') {
       ret = '\n';
+      p++;
     } else if (*p == '\\') {
       ret = '\\';
+      p++;
     } else if (*p == '\'') {
       ret = '\'';
+      p++;
     } else if (*p == '\"') {
       ret = '\"';
+      p++;
     } else if (*p == '0') {
       ret = '\0';
+      p++;
+    } else if (*p == 'x') {
+      p++;
+      long num = 0;
+      while (digit_base(*p, 16) >= 0) {
+        num *= 16;
+        num += digit_base(*p, 16);
+        p++;
+
+        if (num >= 256)
+          error("overflow char-literal");
+      }
+
+      ret = num;
     } else {
       not_implemented(__func__);
     }
-    p++;
 
     *rest = p;
     return ret;
@@ -327,7 +349,7 @@ Token *tokenize(char *p, char *filepath) {
     }
 
     // if (isdigit(*p)) {
-    if ((*p) - '0' < 10) {
+    if (is_digit(*p)) {
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);
