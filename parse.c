@@ -24,6 +24,7 @@ struct PrimitiveTypeToken {
 
 static Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
                                  bool allow_function);
+static Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state);
 static DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state);
 
@@ -155,7 +156,11 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 
       if (ex_decl->decl_specs->has_typedef)
         error_token(tok, "cannot typedef with initialize");
-      cur->next->init_expr = parse_assign(&tok, tok, state);
+
+      if (equal(tok, "{"))
+        cur->next->init_expr = parse_initialize_list(&tok, tok, state);
+      else
+        cur->next->init_expr = parse_assign(&tok, tok, state);
     }
     cur = cur->next;
   }
@@ -172,6 +177,38 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 
   *rest = tok;
   return ex_decl;
+}
+
+Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
+  expect(&tok, tok, "{");
+
+  InitializeList *head = calloc(1, sizeof(InitializeList));
+  InitializeList *cur = head;
+
+  while (!(equal(tok, "}") || (equal(tok, ",") && equal(tok->next, "}")))) {
+    InitializeList *now = calloc(1, sizeof(InitializeList));
+
+    if (equal(tok, "[")) {
+      not_implemented_token(tok);
+    } else if (equal(tok, ".")) {
+      not_implemented_token(tok);
+    }
+
+    if (equal(tok, "{")) {
+      not_implemented_token(tok);
+    } else {
+      now->init_val = parse_assign(&tok, tok, state);
+    }
+
+    cur->next = now;
+    cur = now;
+  }
+  consume(&tok, tok, "}");
+
+  Tree *init_list = calloc(1, sizeof(Tree));
+  init_list->kind = INITIALIZE_LIST;
+  init_list->init_list = head->next;
+  return init_list;
 }
 
 bool is_decl_specs(Token *tok, Analyze *state) {
