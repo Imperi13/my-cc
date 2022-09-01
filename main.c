@@ -40,9 +40,6 @@ void init() {
   type_bool = calloc(1, sizeof(Type));
   type_bool->kind = BOOL;
 
-  variable_letters =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
-
   call_register64[0] = "rdi";
   call_register64[1] = "rsi";
   call_register64[2] = "rdx";

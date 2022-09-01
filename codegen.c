@@ -22,7 +22,7 @@ extern const char *call_register64[6];
 extern const char *call_register32[6];
 extern const char *call_register8[6];
 
-Obj *current_function;
+Obj *current_function = NULL;
 
 void codegen_translation_unit(FILE *codegen_output, Tree *head) {
 
@@ -165,6 +165,8 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   fprintf(codegen_output, "  mov rsp, rbp\n");
   fprintf(codegen_output, "  pop rbp\n");
   fprintf(codegen_output, "  ret\n");
+
+  current_function = NULL;
 }
 
 void codegen_addr(FILE *codegen_output, Tree *stmt) {
