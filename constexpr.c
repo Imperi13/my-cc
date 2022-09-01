@@ -16,8 +16,46 @@ void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
       fprintf(codegen_output, "  .long %d\n", eval_constexpr_integer(expr));
     else if (type_size(obj_type) == 8)
       fprintf(codegen_output, "  .quad %d\n", eval_constexpr_integer(expr));
+  } else if (obj_type->kind == PTR) {
+    // only impl NULL and STR
+    if (expr->kind == STR) {
+      fprintf(codegen_output, "  .quad .LC%d\n", expr->str_literal->id);
+    } else if (expr->kind == CAST) {
+      fprintf(codegen_output, "  .quad %d\n",
+              eval_constexpr_integer(expr->lhs));
+    } else
+      not_implemented(__func__);
   } else
     not_implemented(__func__);
+}
+
+bool is_constexpr(Tree *expr) {
+  if (expr->kind == CONDITIONAL)
+    return is_constexpr_integer(expr->cond) &&
+           (!is_constexpr_zero(expr->cond) ? is_constexpr(expr->lhs)
+                                           : is_constexpr(expr->rhs));
+  else if (expr->kind == LOGICAL_OR)
+    return !is_constexpr(expr->lhs) || is_constexpr(expr->rhs);
+  else if (expr->kind == LOGICAL_AND)
+    return is_constexpr(expr->lhs) || is_constexpr(expr->rhs);
+  else if (expr->kind == BIT_AND || expr->kind == BIT_XOR ||
+           expr->kind == BIT_OR || expr->kind == EQUAL ||
+           expr->kind == NOT_EQUAL || expr->kind == SMALLER ||
+           expr->kind == SMALLER_EQUAL || expr->kind == GREATER ||
+           expr->kind == GREATER_EQUAL || expr->kind == LSHIFT ||
+           expr->kind == RSHIFT || expr->kind == ADD || expr->kind == SUB ||
+           expr->kind == MUL || expr->kind == DIV || expr->kind == MOD)
+    return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+  else if (expr->kind == CAST)
+    return is_constexpr(expr->lhs);
+  else if (expr->kind == PLUS || expr->kind == MINUS || expr->kind == BIT_NOT)
+    return is_constexpr(expr->lhs);
+  else if (expr->kind == LOGICAL_NOT)
+    return is_constexpr(expr->lhs);
+  else if (expr->kind == NUM || expr->kind == STR)
+    return true;
+  else
+    return false;
 }
 
 bool is_constexpr_integer(Tree *expr) {
