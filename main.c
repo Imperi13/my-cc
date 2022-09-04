@@ -17,26 +17,6 @@ struct CommandOptions {
   bool only_preprocess;
 };
 
-Type *type_void;
-Type *type_long;
-Type *type_int;
-Type *type_char;
-Type *type_bool;
-
-// for avoiding global-var init
-void init() {
-  type_void = calloc(1, sizeof(Type));
-  type_void->kind = VOID;
-  type_long = calloc(1, sizeof(Type));
-  type_long->kind = LONG;
-  type_int = calloc(1, sizeof(Type));
-  type_int->kind = INT;
-  type_char = calloc(1, sizeof(Type));
-  type_char->kind = CHAR;
-  type_bool = calloc(1, sizeof(Type));
-  type_bool->kind = BOOL;
-}
-
 int main(int argc, char **argv) {
 
   int c;
@@ -55,8 +35,6 @@ int main(int argc, char **argv) {
 
   if (optind + 1 != argc)
     error("invalid argv");
-
-  init();
 
   char *filename = argv[optind];
   char *user_input = read_file(filename);
