@@ -18,9 +18,9 @@ static void size_extend_rax(FILE *codegen_output, Type *a);
 static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
 static void store2rdiaddr_from_rax(FILE *codegen_output, Type *type);
 
-extern const char *call_register64[6];
-extern const char *call_register32[6];
-extern const char *call_register8[6];
+const char *call_register64[6] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+const char *call_register32[6] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
+const char *call_register8[6] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 
 Obj *current_function = NULL;
 
