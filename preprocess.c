@@ -1,4 +1,5 @@
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,8 +9,6 @@
 #include "preprocess.h"
 #include "str_dict.h"
 #include "tokenize.h"
-
-#define PATH_MAX 4096
 
 // when post == NULL, the line is just consumed, not executed
 

@@ -3,6 +3,7 @@
 typedef enum TreeKind {
   FUNC_DEF,
   DECLARATION,
+  INITIALIZE_LIST,
   TYPE_NAME,
   COMPOUND_STMT,
   LABEL,
@@ -89,6 +90,7 @@ typedef enum TypeSuffixKind {
 } TypeSuffixKind;
 
 typedef struct Tree Tree;
+typedef struct InitializeList InitializeList;
 typedef struct Case Case;
 typedef struct DeclSpec DeclSpec;
 typedef struct StructSpec StructSpec;
@@ -111,6 +113,9 @@ struct Tree {
   // for FUNC_DEF,DECLARATION
   DeclSpec *decl_specs;
   Declarator *declarator;
+
+  // for INITIALIZE_LIST
+  InitializeList *init_list;
 
   // for FUNC_DEF
   Tree *func_body;
@@ -171,6 +176,14 @@ struct Tree {
 
   // for linked-list
   Tree *next;
+};
+
+struct InitializeList {
+  int nth;
+  char *member_name;
+  Tree *init_val;
+  // for linked-list
+  InitializeList *next;
 };
 
 struct Case {

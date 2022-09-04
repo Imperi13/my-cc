@@ -82,6 +82,9 @@ bool cmp_ident(Token *tok, const char *name) {
   return strcmp(tok->ident_str, name) == 0;
 }
 
+// instead of isdigit(char) in ctype.h
+bool is_digit(char c) { return '0' <= c && c <= '9'; }
+
 bool at_eof(Token *token) { return token->kind == TK_EOF; }
 
 Token *new_token(TokenKind kind, Token *cur, char *str, int len, char *filepath,
@@ -170,28 +173,67 @@ long num_literal(char *p, char **rest) {
   return num;
 }
 
+void consume_num_suffix(char **rest, char *p, Token *num_tok) {
+  while ((*p == 'l' || *p == 'L') ||
+         (strncmp(p, "ll", 2) == 0 || strncmp(p, "LL", 2) == 0) ||
+         (*p == 'u' || *p == 'U')) {
+    if (*p == 'l' || *p == 'L') {
+      num_tok->is_long = true;
+      p++;
+    } else if (strncmp(p, "ll", 2) == 0 || strncmp(p, "LL", 2) == 0) {
+      num_tok->is_longlong = true;
+      p += 2;
+    } else if (*p == 'u' || *p == 'U') {
+      num_tok->is_unsigned = true;
+      p++;
+    } else
+      error("invalid num_suffix");
+  }
+
+  *rest = p;
+}
+
 char consume_char(char **rest, char *p) {
   if (*p == '\\') {
     char ret;
     p++;
     if (*p == 'e') {
       ret = '\e';
+      p++;
     } else if (*p == 't') {
       ret = '\t';
+      p++;
     } else if (*p == 'n') {
       ret = '\n';
+      p++;
     } else if (*p == '\\') {
       ret = '\\';
+      p++;
     } else if (*p == '\'') {
       ret = '\'';
+      p++;
     } else if (*p == '\"') {
       ret = '\"';
+      p++;
     } else if (*p == '0') {
       ret = '\0';
+      p++;
+    } else if (*p == 'x') {
+      p++;
+      long num = 0;
+      while (digit_base(*p, 16) >= 0) {
+        num *= 16;
+        num += digit_base(*p, 16);
+        p++;
+
+        if (num >= 256)
+          error("overflow char-literal");
+      }
+
+      ret = num;
     } else {
       not_implemented(__func__);
     }
-    p++;
 
     *rest = p;
     return ret;
@@ -327,15 +369,12 @@ Token *tokenize(char *p, char *filepath) {
     }
 
     // if (isdigit(*p)) {
-    if ((*p) - '0' < 10) {
+    if (is_digit(*p)) {
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);
 
-      if (*p == 'L') {
-        cur->is_long = true;
-        p++;
-      }
+      consume_num_suffix(&p, p, cur);
 
       cur->len = p - prev;
       continue;

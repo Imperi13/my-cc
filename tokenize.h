@@ -60,7 +60,9 @@ struct Token {
 
   // for TK_NUM
   long val;
+  bool is_unsigned;
   bool is_long;
+  bool is_longlong;
 
   // for TK_IDENT
   char *ident_str;

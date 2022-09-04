@@ -153,7 +153,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
           analyze_stmt(cur->init_expr, state);
           if (!is_constexpr(cur->init_expr))
             error("not constexpr");
-          if (!is_compatible(obj_type, cur->init_expr))
+          if (cur->init_expr->kind != INITIALIZE_LIST &&
+              !is_compatible(obj_type, cur->init_expr))
             error("not compatible type");
         }
 
@@ -407,6 +408,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
         analyze_stmt(cur->init_expr, state);
       }
     }
+  } else if (ast->kind == INITIALIZE_LIST) {
+    for (InitializeList *cur = ast->init_list; cur; cur = cur->next) {
+      analyze_stmt(cur->init_val, state);
+    }
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
   } else if (ast->kind == CASE) {
@@ -588,13 +593,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == LOGICAL_AND) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == BIT_OR) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
@@ -610,27 +615,27 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == NOT_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == SMALLER) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == SMALLER_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == GREATER) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == GREATER_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == LSHIFT) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
@@ -651,7 +656,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       rtype = newtype_ptr(rtype->ptr_to);
 
     if (is_integer(ltype) && is_integer(rtype))
-      ast->type = type_int;
+      ast->type = &type_int;
     else if (ltype->kind == PTR && is_integer(rtype))
       ast->type = ltype;
     else if (rtype->kind == PTR && is_integer(ltype))
@@ -664,11 +669,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->rhs, state);
 
     if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type))
-      ast->type = type_int;
+      ast->type = &type_int;
     else if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type))
       ast->type = ast->lhs->type;
     else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR)
-      ast->type = type_int;
+      ast->type = &type_int;
     else
       error("unexpected type pair");
 
@@ -724,7 +729,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == LOGICAL_NOT) {
     analyze_stmt(ast->lhs, state);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == BIT_NOT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
@@ -737,14 +742,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       // replace "sizeof" -> num
       ast->kind = NUM;
       ast->num = type_size(base_type);
-      ast->type = type_int;
+      ast->type = &type_int;
     } else {
       analyze_stmt(ast->lhs, state);
 
       // replace "sizeof" -> num
       ast->kind = NUM;
       ast->num = type_size(ast->lhs->type);
-      ast->type = type_int;
+      ast->type = &type_int;
     }
   } else if (ast->kind == ALIGNOF) {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
@@ -754,7 +759,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     // replace "sizeof" -> num
     ast->kind = NUM;
     ast->num = type_alignment(base_type);
-    ast->type = type_int;
+    ast->type = &type_int;
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
     Tree *cur = ast->call_args;
@@ -817,11 +822,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == NUM) {
     if (ast->is_long)
-      ast->type = type_long;
+      ast->type = &type_long;
     else
-      ast->type = type_int;
+      ast->type = &type_int;
   } else if (ast->kind == STR) {
-    ast->type = newtype_ptr(type_char);
+    ast->type = newtype_ptr(&type_char);
   } else if (ast->kind == VAR) {
 
     // predefined ident
@@ -848,7 +853,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       // replace ast type
       ast->kind = STR;
       ast->str_literal = func_name;
-      ast->type = newtype_ptr(type_char);
+      ast->type = newtype_ptr(&type_char);
       return;
     }
 
@@ -856,7 +861,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (en_val) {
       ast->kind = NUM;
       ast->num = en_val->val;
-      ast->type = type_int;
+      ast->type = &type_int;
       return;
     }
 

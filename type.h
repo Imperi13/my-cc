@@ -40,11 +40,11 @@ struct Type {
   Type *next;
 };
 
-extern Type *type_void;
-extern Type *type_long;
-extern Type *type_int;
-extern Type *type_char;
-extern Type *type_bool;
+extern Type type_void;
+extern Type type_long;
+extern Type type_int;
+extern Type type_char;
+extern Type type_bool;
 
 void builtin_type_init(Analyze *state);
 
