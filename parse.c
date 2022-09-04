@@ -143,7 +143,11 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 
     if (ex_decl->decl_specs->has_typedef)
       error_token(tok, "cannot typedef with initialize");
-    ex_decl->declarator->init_expr = parse_assign(&tok, tok, state);
+
+    if (equal(tok, "{"))
+      ex_decl->declarator->init_expr = parse_initialize_list(&tok, tok, state);
+    else
+      ex_decl->declarator->init_expr = parse_assign(&tok, tok, state);
   }
 
   Declarator *cur = ex_decl->declarator;
@@ -202,8 +206,11 @@ Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
 
     cur->next = now;
     cur = now;
+
+    consume(&tok, tok, ",");
   }
   consume(&tok, tok, "}");
+  *rest = tok;
 
   Tree *init_list = calloc(1, sizeof(Tree));
   init_list->kind = INITIALIZE_LIST;

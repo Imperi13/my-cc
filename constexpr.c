@@ -25,12 +25,38 @@ void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
               eval_constexpr_integer(expr->lhs));
     } else
       not_implemented(__func__);
-  } else
+  } else if (obj_type->kind == ARRAY && obj_type->ptr_to->kind == CHAR &&
+             expr->kind == STR) {
+    // TODO str_literal initialize
     not_implemented(__func__);
+  } else if (obj_type->kind == ARRAY) {
+    int cnt = 0;
+    for (InitializeList *cur = expr->init_list; cur; cur = cur->next) {
+      codegen_global_initialize(codegen_output, obj_type->ptr_to,
+                                cur->init_val);
+      cnt++;
+    }
+
+    if (cnt > obj_type->arr_size)
+      error("excess elements");
+
+    if (cnt < obj_type->arr_size)
+      fprintf(codegen_output, "  .zero %d\n",
+              type_size(obj_type->ptr_to) * (obj_type->arr_size - cnt));
+
+  } else if (obj_type->kind == STRUCT) {
+    not_implemented(__func__);
+  } else
+    error("invalid global_initialize");
 }
 
 bool is_constexpr(Tree *expr) {
-  if (expr->kind == CONDITIONAL)
+  if (expr->kind == INITIALIZE_LIST) {
+    for (InitializeList *cur = expr->init_list; cur; cur = cur->next)
+      if (!is_constexpr(cur->init_val))
+        return false;
+    return true;
+  } else if (expr->kind == CONDITIONAL)
     return is_constexpr_integer(expr->cond) &&
            (!is_constexpr_zero(expr->cond) ? is_constexpr(expr->lhs)
                                            : is_constexpr(expr->rhs));

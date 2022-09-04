@@ -153,7 +153,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
           analyze_stmt(cur->init_expr, state);
           if (!is_constexpr(cur->init_expr))
             error("not constexpr");
-          if (!is_compatible(obj_type, cur->init_expr))
+          if (cur->init_expr->kind != INITIALIZE_LIST &&
+              !is_compatible(obj_type, cur->init_expr))
             error("not compatible type");
         }
 

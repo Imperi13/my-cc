@@ -455,6 +455,9 @@ run_test constexpr_3 'int n = (3 | 8) ^ 1; int main(){return 164+n;}' 174
 run_test constexpr_4 'char *str = "0123456789"; int main(){return str[0] - 0x30 + 174;}' 174
 run_test constexpr_5 'char *str = (void *) 0; int main(){if(str)return 164;else return 174;}' 174
 
+run_test initialize_list_1 'int a[4] = {1,2,3,4}; int main(){return 164+a[0]+a[1]+a[2]+a[3];}' 174
+run_test initialize_list_2 'char *a[4] = {"a","b","c","d"}; int main(){return 174 + (a[0][0] - '\''a'\'' ) + (a[1][0] - '\''b'\'');}' 174
+
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 #run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
