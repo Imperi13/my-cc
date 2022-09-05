@@ -1,9 +1,11 @@
 
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "error.h"
 #include "file.h"
@@ -27,4 +29,23 @@ char *read_file(char *path) {
   buf[size] = '\0';
   fclose(fp);
   return buf;
+}
+
+char *get_caronical_path(char *path) {
+  char abs_path[2 * PATH_MAX + 1];
+  if (path[0] == '/') {
+    strncpy(abs_path, path, strlen(path));
+  } else {
+    char cwd[PATH_MAX + 1];
+    if (!getcwd(cwd, PATH_MAX + 1))
+      error("cannot get cwd");
+
+    snprintf(abs_path, 2 * PATH_MAX, "%s/%s", cwd, path);
+  }
+  char *caronical_path = calloc(PATH_MAX + 1, sizeof(char));
+
+  if (!realpath(abs_path, caronical_path))
+    error("cannot normalized path: %s", strerror(errno));
+
+  return caronical_path;
 }

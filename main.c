@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   if (optind + 1 != argc)
     error("invalid argv");
 
-  char *filename = argv[optind];
+  char *filename = get_caronical_path(argv[optind]);
   char *user_input = read_file(filename);
   Token *token = tokenize(user_input, filename);
 
