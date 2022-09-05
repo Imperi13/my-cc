@@ -312,6 +312,18 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
   }
 }
 
+// compare token_seq (until TK_NEWLINE)
+bool is_same_define_seq(Token *a, Token *b) {
+  while (a->kind != TK_NEWLINE) {
+    if (!is_same_token(a, b))
+      return false;
+    a = a->next;
+    b = b->next;
+  }
+
+  return is_same_token(a, b);
+}
+
 void process_define_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "define");
@@ -344,10 +356,16 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
   if (post) {
     if (find_str_dict(define_dict, define_str)) {
-      warn("redifine %s", define_str);
-      remove_str_dict(define_dict, define_str);
+      DefineList *define_list = find_str_dict(define_dict, define_str);
+
+      if (!is_same_define_seq(new_def->start, define_list->start)) {
+        warn("redifine %s", define_str);
+        remove_str_dict(define_dict, define_str);
+        add_str_dict(define_dict, define_str, new_def);
+      }
+    } else {
+      add_str_dict(define_dict, define_str, new_def);
     }
-    add_str_dict(define_dict, define_str, new_def);
   }
 
   expect_kind(&tok, tok, TK_NEWLINE);
