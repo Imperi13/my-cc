@@ -46,14 +46,6 @@ static long process_unary(Token **pre, Token *tok);
 static long process_postfix(Token **pre, Token *tok);
 static long process_primary(Token **pre, Token *tok);
 
-typedef struct PragmaOnceList PragmaOnceList;
-struct PragmaOnceList {
-  char *filepath;
-
-  // for linked-list
-  PragmaOnceList *next;
-};
-
 typedef struct DefineList DefineList;
 struct DefineList {
   char *name;
@@ -62,14 +54,14 @@ struct DefineList {
   Token *start;
 };
 
-PragmaOnceList *pragma_list = NULL;
+StrDict *pragma_once_dict = NULL;
 StrDict *define_dict = NULL;
 
 bool is_included(char *filepath) {
-  for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
-    if (strncmp(cur->filepath, filepath, strlen(filepath)) == 0)
-      return true;
-  return false;
+  if (find_str_dict(pragma_once_dict, filepath))
+    return true;
+  else
+    return false;
 }
 
 // insert token sequence
@@ -432,10 +424,7 @@ void process_pragma_line(Token **post, Token **pre, Token *tok) {
     expect_ident(&tok, tok, "once");
     if (post) {
 
-      PragmaOnceList *pragma = calloc(1, sizeof(PragmaOnceList));
-      pragma->filepath = tok->filepath;
-      pragma->next = pragma_list;
-      pragma_list = pragma;
+      add_str_dict(pragma_once_dict, tok->filepath, tok->filepath);
     }
 
     expect_kind(&tok, tok, TK_NEWLINE);
@@ -760,7 +749,7 @@ long process_primary(Token **pre, Token *tok) {
 
 Token *preprocess(Token *tok) {
   define_dict = new_str_dict();
-  pragma_list = NULL;
+  pragma_once_dict = new_str_dict();
 
   add_predefine("__STDC_VERSION__", "201112L");
   add_predefine("__STDC__", "1");
