@@ -329,7 +329,7 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
 
-  while (expand_define(&tok, tok), tok->kind != TK_NEWLINE) {
+  while (tok->kind != TK_NEWLINE) {
     cur->next = tok;
     if (equal_kind(tok, TK_IDENT) && strcmp(tok->ident_str, define_str) == 0) {
       tok->is_recursived = true;
