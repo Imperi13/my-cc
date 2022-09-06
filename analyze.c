@@ -152,6 +152,24 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
         if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
           obj->is_defined = true;
 
+        // get size for null-size array []
+        if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
+          if (!cur->init_expr)
+            error("tentative array def must have initialize value");
+
+          if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
+            not_implemented(__func__);
+          } else if (cur->init_expr->kind == INITIALIZE_LIST) {
+            obj_type->arr_size = 0;
+            for (InitializeList *init_list_cur = cur->init_expr->init_list;
+                 init_list_cur; init_list_cur = init_list_cur->next)
+              obj_type->arr_size++;
+          } else {
+            error(
+                "tentative array def must have initialize-list or str-literal");
+          }
+        }
+
         if (cur->init_expr)
           analyze_variable_initialize(obj_type, cur->init_expr, state, true);
 
