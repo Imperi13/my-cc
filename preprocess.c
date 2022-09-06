@@ -46,14 +46,6 @@ static long process_unary(Token **pre, Token *tok);
 static long process_postfix(Token **pre, Token *tok);
 static long process_primary(Token **pre, Token *tok);
 
-typedef struct PragmaOnceList PragmaOnceList;
-struct PragmaOnceList {
-  char *filepath;
-
-  // for linked-list
-  PragmaOnceList *next;
-};
-
 typedef struct DefineList DefineList;
 struct DefineList {
   char *name;
@@ -62,14 +54,14 @@ struct DefineList {
   Token *start;
 };
 
-PragmaOnceList *pragma_list = NULL;
+StrDict *pragma_once_dict = NULL;
 StrDict *define_dict = NULL;
 
 bool is_included(char *filepath) {
-  for (PragmaOnceList *cur = pragma_list; cur; cur = cur->next)
-    if (strncmp(cur->filepath, filepath, strlen(filepath)) == 0)
-      return true;
-  return false;
+  if (find_str_dict(pragma_once_dict, filepath))
+    return true;
+  else
+    return false;
 }
 
 // insert token sequence
@@ -320,6 +312,18 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
   }
 }
 
+// compare token_seq (until TK_NEWLINE)
+bool is_same_define_seq(Token *a, Token *b) {
+  while (a->kind != TK_NEWLINE) {
+    if (!is_same_token(a, b))
+      return false;
+    a = a->next;
+    b = b->next;
+  }
+
+  return is_same_token(a, b);
+}
+
 void process_define_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "define");
@@ -337,7 +341,7 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
 
-  while (expand_define(&tok, tok), tok->kind != TK_NEWLINE) {
+  while (tok->kind != TK_NEWLINE) {
     cur->next = tok;
     if (equal_kind(tok, TK_IDENT) && strcmp(tok->ident_str, define_str) == 0) {
       tok->is_recursived = true;
@@ -352,10 +356,16 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
   if (post) {
     if (find_str_dict(define_dict, define_str)) {
-      warn("redifine %s", define_str);
-      remove_str_dict(define_dict, define_str);
+      DefineList *define_list = find_str_dict(define_dict, define_str);
+
+      if (!is_same_define_seq(new_def->start, define_list->start)) {
+        warn("redifine %s", define_str);
+        remove_str_dict(define_dict, define_str);
+        add_str_dict(define_dict, define_str, new_def);
+      }
+    } else {
+      add_str_dict(define_dict, define_str, new_def);
     }
-    add_str_dict(define_dict, define_str, new_def);
   }
 
   expect_kind(&tok, tok, TK_NEWLINE);
@@ -432,10 +442,7 @@ void process_pragma_line(Token **post, Token **pre, Token *tok) {
     expect_ident(&tok, tok, "once");
     if (post) {
 
-      PragmaOnceList *pragma = calloc(1, sizeof(PragmaOnceList));
-      pragma->filepath = tok->filepath;
-      pragma->next = pragma_list;
-      pragma_list = pragma;
+      add_str_dict(pragma_once_dict, tok->filepath, tok->filepath);
     }
 
     expect_kind(&tok, tok, TK_NEWLINE);
@@ -760,7 +767,7 @@ long process_primary(Token **pre, Token *tok) {
 
 Token *preprocess(Token *tok) {
   define_dict = new_str_dict();
-  pragma_list = NULL;
+  pragma_once_dict = new_str_dict();
 
   add_predefine("__STDC_VERSION__", "201112L");
   add_predefine("__STDC__", "1");

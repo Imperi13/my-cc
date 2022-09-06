@@ -5,6 +5,13 @@
 
 typedef enum TokenKind {
   TK_RESERVED,
+  TK_IDENT,
+  TK_NUM,
+  TK_STR,
+  TK_NEWLINE,
+  TK_EOF,
+
+  // keyword
   TK_RETURN,
   TK_SIZEOF,
   TK_ALIGNOF,
@@ -21,7 +28,6 @@ typedef enum TokenKind {
   TK_FOR,
   TK_BREAK,
   TK_CONTINUE,
-  TK_IDENT,
   TK_VOID,
   TK_LONG,
   TK_INT,
@@ -39,10 +45,6 @@ typedef enum TokenKind {
   TK_TYPEDEF,
   TK_INLINE,
   TK_NORETURN,
-  TK_NUM,
-  TK_STR,
-  TK_NEWLINE,
-  TK_EOF,
 } TokenKind;
 
 typedef struct Token Token;
@@ -96,6 +98,8 @@ void expect_ident(Token **rest, Token *token, char *name);
 char *getname_ident(Token **rest, Token *tok);
 bool cmp_ident(Token *tok, const char *name);
 bool at_eof(Token *token);
+
+bool is_same_token(Token *a, Token *b);
 
 bool is_alnum(char c);
 

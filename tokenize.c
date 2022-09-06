@@ -87,6 +87,18 @@ bool is_digit(char c) { return '0' <= c && c <= '9'; }
 
 bool at_eof(Token *token) { return token->kind == TK_EOF; }
 
+bool is_same_token(Token *a, Token *b) {
+  if (a->kind != b->kind)
+    return false;
+  if (a->kind == TK_RESERVED || a->kind == TK_IDENT || a->kind == TK_STR ||
+      a->kind == TK_NUM) {
+    if (strncmp(a->str, b->str, a->len) != 0)
+      return false;
+    return true;
+  }
+  return true;
+}
+
 Token *new_token(TokenKind kind, Token *cur, char *str, int len, char *filepath,
                  char *file_buf) {
   Token *tok = calloc(1, sizeof(Token));
