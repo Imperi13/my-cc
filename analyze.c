@@ -14,6 +14,9 @@ static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
 static void analyze_parameter(Tree *arg, Analyze *state);
 static void analyze_stmt(Tree *ast, Analyze *state);
 
+static void analyze_variable_initialize(Type *var_type, Tree *init_val,
+                                        Analyze *state, bool is_global);
+
 static void push_lvar_scope(Analyze *state);
 static void pop_lvar_scope(Analyze *state);
 static void push_lvar(ObjScope *locals, Obj *lvar);
@@ -149,14 +152,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
         if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
           obj->is_defined = true;
 
-        if (cur->init_expr) {
-          analyze_stmt(cur->init_expr, state);
-          if (!is_constexpr(cur->init_expr))
-            error("not constexpr");
-          if (cur->init_expr->kind != INITIALIZE_LIST &&
-              !is_compatible(obj_type, cur->init_expr))
-            error("not compatible type");
-        }
+        if (cur->init_expr)
+          analyze_variable_initialize(obj_type, cur->init_expr, state, true);
 
         cur->def_obj = obj;
       }
@@ -407,10 +404,6 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       if (cur->init_expr) {
         analyze_stmt(cur->init_expr, state);
       }
-    }
-  } else if (ast->kind == INITIALIZE_LIST) {
-    for (InitializeList *cur = ast->init_list; cur; cur = cur->next) {
-      analyze_stmt(cur->init_val, state);
     }
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
@@ -887,6 +880,52 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     if (ast->lhs->kind != VAR)
       error("invalid usage  __builtin_va_end");
+  } else {
+    not_implemented(__func__);
+  }
+}
+
+void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
+                                 bool is_global) {
+  if (var_type->kind != ARRAY && var_type->kind != STRUCT) {
+    if (init_val->kind == INITIALIZE_LIST)
+      error("invalid initialize list");
+
+    analyze_stmt(init_val, state);
+
+    if (!is_compatible(var_type, init_val))
+      error("cannot convert type");
+
+    if (is_global && !is_constexpr(init_val))
+      error("not constexpr for global initialize");
+  } else if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
+             init_val->kind == STR) {
+    not_implemented("array of char initialize with str-literal");
+  } else if (var_type->kind == ARRAY) {
+    if (init_val->kind != INITIALIZE_LIST)
+      error("must initialize with INITIALIZE_LIST");
+
+    int cnt = 0;
+    for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
+      analyze_variable_initialize(var_type->ptr_to, cur->init_val, state,
+                                  is_global);
+      cnt++;
+    }
+
+    if (cnt > var_type->arr_size)
+      error("excess elements");
+  } else if (var_type->kind == STRUCT) {
+    if (init_val->kind != INITIALIZE_LIST)
+      error("must initialize with INITIALIZE_LIST");
+
+    Member *mem_cur = var_type->st_def->members;
+    for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
+      if (!mem_cur)
+        error("excess elements");
+      analyze_variable_initialize(mem_cur->type, cur->init_val, state,
+                                  is_global);
+      mem_cur = mem_cur->next;
+    }
   } else {
     not_implemented(__func__);
   }
