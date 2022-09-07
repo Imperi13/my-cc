@@ -204,17 +204,8 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
                 cur->def_obj->rbp_offset);
         fprintf(codegen_output, "  push rdi\n");
         codegen_stmt(codegen_output, cur->init_expr);
-        if (cur->def_obj->type->kind == STRUCT ||
-            cur->def_obj->type->kind == UNION) {
-          fprintf(codegen_output, "  pop rdi\n");
-          fprintf(codegen_output, "  mov rsi, rax\n");
-          fprintf(codegen_output, "  mov rcx, %d\n",
-                  type_size(cur->def_obj->type));
-          fprintf(codegen_output, "  rep movsb\n");
-        } else {
-          fprintf(codegen_output, "  pop rdi\n");
-          store2rdiaddr_from_rax(codegen_output, cur->def_obj->type);
-        }
+        fprintf(codegen_output, "  pop rdi\n");
+        store2rdiaddr_from_rax(codegen_output, cur->def_obj->type);
       }
     }
   }
@@ -313,24 +304,12 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, stmt->rhs);
-    if (stmt->lhs->type->kind == STRUCT || stmt->lhs->type->kind == UNION) {
-      fprintf(codegen_output, "  pop rdi\n");
-      fprintf(codegen_output, "  mov rsi, rax\n");
-      fprintf(codegen_output, "  mov rcx, %d\n", type_size(stmt->lhs->type));
-      fprintf(codegen_output, "  rep movsb\n");
-    } else if (stmt->lhs->type->kind == BOOL) {
-      fprintf(codegen_output, "  cmp rax,0\n");
-      fprintf(codegen_output, "  setne al\n");
-      fprintf(codegen_output, "  pop rdi\n");
-      fprintf(codegen_output, "  mov [rdi],al\n");
-    } else if (is_integer(stmt->lhs->type)) {
-      fprintf(codegen_output, "  pop rdi\n");
-      store2rdiaddr_from_rax(codegen_output, stmt->type);
+    fprintf(codegen_output, "  pop rdi\n");
+    store2rdiaddr_from_rax(codegen_output, stmt->lhs->type);
+
+    if (is_integer(stmt->lhs->type))
       size_extend_rax(codegen_output, stmt->lhs->type);
-    } else {
-      fprintf(codegen_output, "  pop rdi\n");
-      store2rdiaddr_from_rax(codegen_output, stmt->type);
-    }
+
     return;
   case ADD_ASSIGN:
     codegen_addr(codegen_output, stmt->lhs);
@@ -775,13 +754,24 @@ void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
     not_implemented(__func__);
 }
 
+// raxレジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
 void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
-  if (type_size(type) == 8)
-    fprintf(codegen_output, "  mov [rdi],rax\n");
-  else if (type_size(type) == 4)
-    fprintf(codegen_output, "  mov [rdi],eax\n");
-  else if (type_size(type) == 1)
+  if (type->kind == STRUCT || type->kind == UNION) {
+    fprintf(codegen_output, "  mov rsi, rax\n");
+    fprintf(codegen_output, "  mov rcx, %d\n", type_size(type));
+    fprintf(codegen_output, "  rep movsb\n");
+  } else if (type->kind == BOOL) {
+    fprintf(codegen_output, "  cmp rax,0\n");
+    fprintf(codegen_output, "  setne al\n");
     fprintf(codegen_output, "  mov [rdi],al\n");
-  else
-    not_implemented(__func__);
+  } else {
+    if (type_size(type) == 8)
+      fprintf(codegen_output, "  mov [rdi],rax\n");
+    else if (type_size(type) == 4)
+      fprintf(codegen_output, "  mov [rdi],eax\n");
+    else if (type_size(type) == 1)
+      fprintf(codegen_output, "  mov [rdi],al\n");
+    else
+      error("%s", __func__);
+  }
 }
