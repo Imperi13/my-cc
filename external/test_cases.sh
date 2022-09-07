@@ -460,6 +460,7 @@ run_test initialize_list_2 'char *a[4] = {"a","b","c","d"}; int main(){return 17
 run_test initialize_list_3 'struct Test{int n;int *p;}; struct Test t = {10,(void *)0}; int main(){return 164 + t.n + (t.p ? 10 : 0);}' 174
 run_test initialize_list_4 'int a[] = {1,2,3,4}; int main(){return 164+a[0]+a[1]+a[2]+a[3];}' 174
 run_test initialize_list_5 'int main(){int a[4] = {1,2,3,4}; return 164+a[0]+a[1]+a[2]+a[3];}' 174
+run_test initialize_list_6 'struct Test{int n;int *p;}; int main(){ struct Test t = {10,(void *)0}; return 164 + t.n + (t.p ? 10 : 0);}' 174
 
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
