@@ -37,10 +37,15 @@ int main(int argc, char **argv) {
     error("not exist input file");
 
   for (int filepath_index = optind; filepath_index != argc; filepath_index++) {
+    char *filename = argv[filepath_index];
+    FileType file_type = get_file_type(filename);
 
-    char *filename = get_caronical_path(argv[filepath_index]);
-    char *user_input = read_file(filename);
-    Token *token = tokenize(user_input, filename);
+    if (file_type != C_SOURCE)
+      not_implemented("not implement expect c source file");
+
+    char *fullpath = get_caronical_path(filename);
+    char *user_input = read_file(fullpath);
+    Token *token = tokenize(user_input, fullpath);
 
     //  debug_token(token);
 
