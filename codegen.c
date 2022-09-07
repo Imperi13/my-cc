@@ -13,6 +13,9 @@ static void codegen_function(FILE *codegen_output, Tree *func);
 static void codegen_stmt(FILE *codegen_output, Tree *stmt);
 static void codegen_addr(FILE *codegen_output, Tree *stmt);
 
+static void store2rdiaddr_local_var_initialize(FILE *codegen_output,
+                                               Type *var_type, Tree *init_val);
+
 static void size_extend_rax(FILE *codegen_output, Type *a);
 
 static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
@@ -169,6 +172,15 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   current_function = NULL;
 }
 
+//
+void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
+                                        Tree *init_val) {
+  fprintf(codegen_output, "  push rdi\n");
+  codegen_stmt(codegen_output, init_val);
+  fprintf(codegen_output, "  pop rdi\n");
+  store2rdiaddr_from_rax(codegen_output, var_type);
+}
+
 void codegen_addr(FILE *codegen_output, Tree *stmt) {
   if (stmt->kind == VAR) {
     if (!stmt->var_obj->is_global)
@@ -199,13 +211,10 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   case DECLARATION: {
     for (Declarator *cur = stmt->declarator; cur; cur = cur->next) {
       if (cur && cur->init_expr) {
-        fprintf(codegen_output, "  nop\n");
         fprintf(codegen_output, "  lea rdi, [rbp - %d]\n",
                 cur->def_obj->rbp_offset);
-        fprintf(codegen_output, "  push rdi\n");
-        codegen_stmt(codegen_output, cur->init_expr);
-        fprintf(codegen_output, "  pop rdi\n");
-        store2rdiaddr_from_rax(codegen_output, cur->def_obj->type);
+        store2rdiaddr_local_var_initialize(codegen_output, cur->def_obj->type,
+                                           cur->init_expr);
       }
     }
   }

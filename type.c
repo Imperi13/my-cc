@@ -218,6 +218,14 @@ bool is_integer(Type *type) {
   return false;
 }
 
+bool is_scalar(Type *type) {
+  if (type->kind == LONG || type->kind == INT || type->kind == CHAR ||
+      type->kind == BOOL || type->kind == PTR)
+    return true;
+  else
+    return false;
+}
+
 bool is_void_ptr(Type *type) {
   return type->kind == PTR && type->ptr_to->kind == VOID;
 }
