@@ -937,6 +937,9 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
 
     analyze_stmt(init_val, state);
 
+    add_implicit_array_cast(&init_val);
+    add_implicit_func_cast(&init_val);
+
     if (!is_compatible(var_type, init_val))
       error("cannot convert type");
 
