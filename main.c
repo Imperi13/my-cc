@@ -33,29 +33,32 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (optind + 1 != argc)
-    error("invalid argv");
+  if (optind == argc)
+    error("not exist input file");
 
-  char *filename = get_caronical_path(argv[optind]);
-  char *user_input = read_file(filename);
-  Token *token = tokenize(user_input, filename);
+  for (int filepath_index = optind; filepath_index != argc; filepath_index++) {
 
-  //  debug_token(token);
+    char *filename = get_caronical_path(argv[filepath_index]);
+    char *user_input = read_file(filename);
+    Token *token = tokenize(user_input, filename);
 
-  token = preprocess(token);
+    //  debug_token(token);
 
-  if (cmd_opt->only_preprocess) {
-    print_token_seq(stdout, token);
-    return 0;
+    token = preprocess(token);
+
+    if (cmd_opt->only_preprocess) {
+      print_token_seq(stdout, token);
+      return 0;
+    }
+
+    token = remove_newline(token);
+
+    Tree *ast = parse_translation_unit(token);
+
+    analyze_translation_unit(ast);
+
+    codegen_translation_unit(stdout, ast);
+    // codegen_all(stdout);
   }
-
-  token = remove_newline(token);
-
-  Tree *ast = parse_translation_unit(token);
-
-  analyze_translation_unit(ast);
-
-  codegen_translation_unit(stdout, ast);
-  // codegen_all(stdout);
   return 0;
 }

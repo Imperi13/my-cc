@@ -31,6 +31,18 @@ char *read_file(char *path) {
   return buf;
 }
 
+FileType get_file_type(char *path) {
+  char *dot = strrchr(path, '.');
+  if (strcmp(dot, ".c") == 0)
+    return C_SOURCE;
+  else if (strcmp(dot, ".s") == 0)
+    return ASSEBLER_SOURCE;
+  else if (strcmp(dot, ".o") == 0)
+    return OBJECT_FILE;
+  else
+    error("invalid file type");
+}
+
 char *get_caronical_path(char *path) {
   char abs_path[2 * PATH_MAX + 1];
   if (path[0] == '/') {

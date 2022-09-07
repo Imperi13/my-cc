@@ -45,7 +45,7 @@ void warn_token(Token *tok, char *fmt, ...) {
   __builtin_va_end(ap);
 }
 
-void error(char *fmt, ...) {
+_Noreturn void error(char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
   fprintf(stderr, "\e[31m[error]\e[m ");
@@ -55,7 +55,7 @@ void error(char *fmt, ...) {
   exit(1);
 }
 
-void error_token(Token *tok, char *fmt, ...) {
+_Noreturn void error_token(Token *tok, char *fmt, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, fmt);
 
@@ -87,6 +87,10 @@ void error_token(Token *tok, char *fmt, ...) {
   exit(1);
 }
 
-void not_implemented(const char *msg) { error("not implemented: %s", msg); }
+_Noreturn void not_implemented(const char *msg) {
+  error("not implemented: %s", msg);
+}
 
-void not_implemented_token(Token *tok) { error_token(tok, "not implemented"); }
+_Noreturn void not_implemented_token(Token *tok) {
+  error_token(tok, "not implemented");
+}
