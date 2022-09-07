@@ -259,12 +259,6 @@ bool is_compatible(Type *a, Tree *b) {
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
     return true;
-
-  // TODO start 暗黙の型変換はanalyzeに載せたい
-  else if (is_void_ptr(a) && b->type->kind == FUNC)
-    return true;
-  // TODO end
-
   else if (a->kind == PTR && is_constexpr_zero(b))
     return true;
 

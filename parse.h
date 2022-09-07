@@ -151,6 +151,7 @@ struct Tree {
 
   // for cast
   Tree *type_name;
+  bool is_implicit;
 
   // for unary and binary op
   Tree *lhs; // for unary
