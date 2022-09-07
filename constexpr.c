@@ -63,6 +63,8 @@ void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
       fprintf(codegen_output, "  .zero %d\n",
               type_size(obj_type) - write_bytes);
 
+  } else if (obj_type->kind == UNION) {
+    not_implemented(__func__);
   } else
     error("invalid global_initialize");
 }

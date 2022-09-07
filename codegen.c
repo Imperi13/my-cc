@@ -13,6 +13,9 @@ static void codegen_function(FILE *codegen_output, Tree *func);
 static void codegen_stmt(FILE *codegen_output, Tree *stmt);
 static void codegen_addr(FILE *codegen_output, Tree *stmt);
 
+static void store2rdiaddr_local_var_initialize(FILE *codegen_output,
+                                               Type *var_type, Tree *init_val);
+
 static void size_extend_rax(FILE *codegen_output, Type *a);
 
 static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
@@ -169,6 +172,56 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   current_function = NULL;
 }
 
+//
+void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
+                                        Tree *init_val) {
+  if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
+      init_val->kind == STR) {
+    not_implemented(__func__);
+  } else if (init_val->kind != INITIALIZE_LIST) {
+    fprintf(codegen_output, "  push rdi\n");
+    codegen_stmt(codegen_output, init_val);
+    fprintf(codegen_output, "  pop rdi\n");
+    store2rdiaddr_from_rax(codegen_output, var_type);
+  } else if (var_type->kind == ARRAY) {
+    int cnt = 0;
+    fprintf(codegen_output, "  push rdi\n");
+
+    for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
+      fprintf(codegen_output, "  pop rdi\n");
+      fprintf(codegen_output, "  push rdi\n");
+      fprintf(codegen_output, "  add rdi, %d\n",
+              cnt * type_size(var_type->ptr_to));
+      store2rdiaddr_local_var_initialize(codegen_output, var_type->ptr_to,
+                                         cur->init_val);
+      cnt++;
+    }
+
+    fprintf(codegen_output, "  pop rdi\n");
+
+  } else if (var_type->kind == STRUCT) {
+    fprintf(codegen_output, "  push rdi\n");
+
+    Member *mem_cur = var_type->st_def->members;
+
+    for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
+      fprintf(codegen_output, "  pop rdi\n");
+      fprintf(codegen_output, "  push rdi\n");
+      fprintf(codegen_output, "  add rdi, %d\n", mem_cur->offset);
+      store2rdiaddr_local_var_initialize(codegen_output, mem_cur->type,
+                                         cur->init_val);
+      mem_cur = mem_cur->next;
+    }
+
+    fprintf(codegen_output, "  pop rdi\n");
+
+  } else if (var_type->kind == UNION) {
+    not_implemented(__func__);
+  } else {
+    error("%s", __func__);
+  }
+}
+
 void codegen_addr(FILE *codegen_output, Tree *stmt) {
   if (stmt->kind == VAR) {
     if (!stmt->var_obj->is_global)
@@ -199,22 +252,10 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   case DECLARATION: {
     for (Declarator *cur = stmt->declarator; cur; cur = cur->next) {
       if (cur && cur->init_expr) {
-        fprintf(codegen_output, "  nop\n");
         fprintf(codegen_output, "  lea rdi, [rbp - %d]\n",
                 cur->def_obj->rbp_offset);
-        fprintf(codegen_output, "  push rdi\n");
-        codegen_stmt(codegen_output, cur->init_expr);
-        if (cur->def_obj->type->kind == STRUCT ||
-            cur->def_obj->type->kind == UNION) {
-          fprintf(codegen_output, "  pop rdi\n");
-          fprintf(codegen_output, "  mov rsi, rax\n");
-          fprintf(codegen_output, "  mov rcx, %d\n",
-                  type_size(cur->def_obj->type));
-          fprintf(codegen_output, "  rep movsb\n");
-        } else {
-          fprintf(codegen_output, "  pop rdi\n");
-          store2rdiaddr_from_rax(codegen_output, cur->def_obj->type);
-        }
+        store2rdiaddr_local_var_initialize(codegen_output, cur->def_obj->type,
+                                           cur->init_expr);
       }
     }
   }
@@ -313,24 +354,12 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, stmt->rhs);
-    if (stmt->lhs->type->kind == STRUCT || stmt->lhs->type->kind == UNION) {
-      fprintf(codegen_output, "  pop rdi\n");
-      fprintf(codegen_output, "  mov rsi, rax\n");
-      fprintf(codegen_output, "  mov rcx, %d\n", type_size(stmt->lhs->type));
-      fprintf(codegen_output, "  rep movsb\n");
-    } else if (stmt->lhs->type->kind == BOOL) {
-      fprintf(codegen_output, "  cmp rax,0\n");
-      fprintf(codegen_output, "  setne al\n");
-      fprintf(codegen_output, "  pop rdi\n");
-      fprintf(codegen_output, "  mov [rdi],al\n");
-    } else if (is_integer(stmt->lhs->type)) {
-      fprintf(codegen_output, "  pop rdi\n");
-      store2rdiaddr_from_rax(codegen_output, stmt->type);
+    fprintf(codegen_output, "  pop rdi\n");
+    store2rdiaddr_from_rax(codegen_output, stmt->lhs->type);
+
+    if (is_integer(stmt->lhs->type))
       size_extend_rax(codegen_output, stmt->lhs->type);
-    } else {
-      fprintf(codegen_output, "  pop rdi\n");
-      store2rdiaddr_from_rax(codegen_output, stmt->type);
-    }
+
     return;
   case ADD_ASSIGN:
     codegen_addr(codegen_output, stmt->lhs);
@@ -775,13 +804,24 @@ void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
     not_implemented(__func__);
 }
 
+// raxレジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
 void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
-  if (type_size(type) == 8)
-    fprintf(codegen_output, "  mov [rdi],rax\n");
-  else if (type_size(type) == 4)
-    fprintf(codegen_output, "  mov [rdi],eax\n");
-  else if (type_size(type) == 1)
+  if (type->kind == STRUCT || type->kind == UNION) {
+    fprintf(codegen_output, "  mov rsi, rax\n");
+    fprintf(codegen_output, "  mov rcx, %d\n", type_size(type));
+    fprintf(codegen_output, "  rep movsb\n");
+  } else if (type->kind == BOOL) {
+    fprintf(codegen_output, "  cmp rax,0\n");
+    fprintf(codegen_output, "  setne al\n");
     fprintf(codegen_output, "  mov [rdi],al\n");
-  else
-    not_implemented(__func__);
+  } else {
+    if (type_size(type) == 8)
+      fprintf(codegen_output, "  mov [rdi],rax\n");
+    else if (type_size(type) == 4)
+      fprintf(codegen_output, "  mov [rdi],eax\n");
+    else if (type_size(type) == 1)
+      fprintf(codegen_output, "  mov [rdi],al\n");
+    else
+      error("%s", __func__);
+  }
 }

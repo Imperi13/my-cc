@@ -218,6 +218,14 @@ bool is_integer(Type *type) {
   return false;
 }
 
+bool is_scalar(Type *type) {
+  if (type->kind == LONG || type->kind == INT || type->kind == CHAR ||
+      type->kind == BOOL || type->kind == PTR)
+    return true;
+  else
+    return false;
+}
+
 bool is_void_ptr(Type *type) {
   return type->kind == PTR && type->ptr_to->kind == VOID;
 }
@@ -259,12 +267,6 @@ bool is_compatible(Type *a, Tree *b) {
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
     return true;
-
-  // TODO start 暗黙の型変換はanalyzeに載せたい
-  else if (is_void_ptr(a) && b->type->kind == FUNC)
-    return true;
-  // TODO end
-
   else if (a->kind == PTR && is_constexpr_zero(b))
     return true;
 
