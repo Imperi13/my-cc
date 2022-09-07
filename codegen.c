@@ -175,10 +175,37 @@ void codegen_function(FILE *codegen_output, Tree *func) {
 //
 void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
                                         Tree *init_val) {
-  fprintf(codegen_output, "  push rdi\n");
-  codegen_stmt(codegen_output, init_val);
-  fprintf(codegen_output, "  pop rdi\n");
-  store2rdiaddr_from_rax(codegen_output, var_type);
+  if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
+      init_val->kind == STR) {
+    not_implemented(__func__);
+  } else if (init_val->kind != INITIALIZE_LIST) {
+    fprintf(codegen_output, "  push rdi\n");
+    codegen_stmt(codegen_output, init_val);
+    fprintf(codegen_output, "  pop rdi\n");
+    store2rdiaddr_from_rax(codegen_output, var_type);
+  } else if (var_type->kind == ARRAY) {
+    int cnt = 0;
+    fprintf(codegen_output, "  push rdi\n");
+
+    for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
+      fprintf(codegen_output, "  pop rdi\n");
+      fprintf(codegen_output, "  push rdi\n");
+      fprintf(codegen_output, "  add rdi, %d\n",
+              cnt * type_size(var_type->ptr_to));
+      store2rdiaddr_local_var_initialize(codegen_output, var_type->ptr_to,
+                                         cur->init_val);
+      cnt++;
+    }
+
+    fprintf(codegen_output, "  pop rdi\n");
+
+  } else if (var_type->kind == STRUCT) {
+    not_implemented(__func__);
+  } else if (var_type->kind == UNION) {
+    not_implemented(__func__);
+  } else {
+    error("%s", __func__);
+  }
 }
 
 void codegen_addr(FILE *codegen_output, Tree *stmt) {
