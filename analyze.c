@@ -124,9 +124,25 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     Type *base_type = gettype_decl_spec(ast->decl_specs, state);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
+      char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type);
 
-      char *obj_name = getname_declarator(cur);
+      // get size for null-size array []
+      if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
+        if (!cur->init_expr)
+          error("tentative array def must have initialize value");
+
+        if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
+          not_implemented(__func__);
+        } else if (cur->init_expr->kind == INITIALIZE_LIST) {
+          obj_type->arr_size = 0;
+          for (InitializeList *init_list_cur = cur->init_expr->init_list;
+               init_list_cur; init_list_cur = init_list_cur->next)
+            obj_type->arr_size++;
+        } else {
+          error("tentative array def must have initialize-list or str-literal");
+        }
+      }
 
       if (ast->decl_specs->has_typedef) {
         Typedef *new_def = calloc(1, sizeof(Typedef));
@@ -154,24 +170,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
         if (obj_type->kind != FUNC && !ast->decl_specs->has_extern)
           obj->is_defined = true;
-
-        // get size for null-size array []
-        if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
-          if (!cur->init_expr)
-            error("tentative array def must have initialize value");
-
-          if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
-            not_implemented(__func__);
-          } else if (cur->init_expr->kind == INITIALIZE_LIST) {
-            obj_type->arr_size = 0;
-            for (InitializeList *init_list_cur = cur->init_expr->init_list;
-                 init_list_cur; init_list_cur = init_list_cur->next)
-              obj_type->arr_size++;
-          } else {
-            error(
-                "tentative array def must have initialize-list or str-literal");
-          }
-        }
 
         if (cur->init_expr)
           analyze_variable_initialize(obj_type, cur->init_expr, state, true);
@@ -406,9 +404,25 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     Type *base_type = gettype_decl_spec(ast->decl_specs, state);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
+      char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type);
 
-      char *obj_name = getname_declarator(cur);
+      // get size for null-size array []
+      if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
+        if (!cur->init_expr)
+          error("tentative array def must have initialize value");
+
+        if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
+          not_implemented(__func__);
+        } else if (cur->init_expr->kind == INITIALIZE_LIST) {
+          obj_type->arr_size = 0;
+          for (InitializeList *init_list_cur = cur->init_expr->init_list;
+               init_list_cur; init_list_cur = init_list_cur->next)
+            obj_type->arr_size++;
+        } else {
+          error("tentative array def must have initialize-list or str-literal");
+        }
+      }
 
       Obj *lvar = calloc(1, sizeof(Obj));
       lvar->obj_name = obj_name;
@@ -422,9 +436,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
       push_lvar(state->locals, lvar);
 
-      if (cur->init_expr) {
-        analyze_stmt(cur->init_expr, state);
-      }
+      if (cur->init_expr)
+        analyze_variable_initialize(obj_type, cur->init_expr, state, false);
     }
   } else if (ast->kind == LABEL) {
     analyze_stmt(ast->lhs, state);
@@ -749,11 +762,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == ADDR) {
     analyze_stmt(ast->lhs, state);
 
-    if (ast->lhs->type->kind == ARRAY) {
-      ast->type = newtype_ptr(ast->lhs->type->ptr_to);
-    } else {
-      ast->type = newtype_ptr(ast->lhs->type);
-    }
+    ast->type = newtype_ptr(ast->lhs->type);
   } else if (ast->kind == DEREF) {
     analyze_stmt(ast->lhs, state);
 
@@ -948,6 +957,17 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
   } else if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
              init_val->kind == STR) {
     not_implemented("array of char initialize with str-literal");
+  } else if (init_val->kind != INITIALIZE_LIST) {
+    analyze_stmt(init_val, state);
+
+    add_implicit_array_cast(&init_val);
+    add_implicit_func_cast(&init_val);
+
+    if (!is_compatible(var_type, init_val))
+      error("cannot convert type");
+
+    if (is_global && !is_constexpr(init_val))
+      error("not constexpr for global initialize");
   } else if (var_type->kind == ARRAY) {
     if (init_val->kind != INITIALIZE_LIST)
       error("must initialize with INITIALIZE_LIST");
