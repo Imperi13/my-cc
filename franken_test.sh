@@ -10,7 +10,7 @@ ${cc} ${cc_option} -c *.c
 ${cc} ${cc_option} -o ./build/mycc1 *.o
 
 for filepath in ${compile}; do
-  ./build/mycc1 ${filepath} > ${filepath%.c}.s;
+  ./build/mycc1 ${filepath} -o ${filepath%.c}.s;
   ${cc} ${cc_option} -c ${filepath%.c}.s
   rm -f ${filepath%.c}.s
 done
@@ -20,12 +20,12 @@ rm *.o
 
 
 for filepath in ${compile}; do
-  ./build/mycc1 ${filepath} > ./build/${filepath%.c}1.s;
+  ./build/mycc1 ${filepath} -o ./build/${filepath%.c}1.s;
   if [ $? -ne 0 ]; then { exit 1; }; fi
 
   echo "${filepath%.c}1.c is compiled"
 
-  ./build/mycc2 ${filepath} > ./build/${filepath%.c}2.s;
+  ./build/mycc2 ${filepath} -o ./build/${filepath%.c}2.s;
   if [ $? -ne 0 ]; then { exit 1; }; fi
 
   echo "${filepath%.c}2.c is compiled"

@@ -1,8 +1,0 @@
-int main(){
-  int test[10][10];
-
-  test[4][5] = 10;
-  test[2][3] = 20;
-
-  return test[4][5] + test[2][3];
-}

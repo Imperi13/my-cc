@@ -16,6 +16,10 @@ int main(int argc, char **argv) {
 
   CommandOptions *cmd_opt = parse_cmd_opt(argc, argv);
 
+  if (cmd_opt->input_file_cnt > 1 && cmd_opt->output_file &&
+      (cmd_opt->only_preprocess))
+    error("cannot output for multiple files");
+
   for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
        input_index++) {
     char *filename = cmd_opt->input_files[input_index];
@@ -34,7 +38,7 @@ int main(int argc, char **argv) {
 
     if (cmd_opt->only_preprocess) {
       print_token_seq(stdout, token);
-      return 0;
+      continue;
     }
 
     token = remove_newline(token);
@@ -43,7 +47,12 @@ int main(int argc, char **argv) {
 
     analyze_translation_unit(ast);
 
-    codegen_translation_unit(stdout, ast);
+    FILE *output = fopen((cmd_opt->output_file
+                              ? cmd_opt->output_file
+                              : rename_file_ext(filename, ASSEBLER_SOURCE)),
+                         "w");
+
+    codegen_translation_unit(output, ast);
     // codegen_all(stdout);
   }
   return 0;

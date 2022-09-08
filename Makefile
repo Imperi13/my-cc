@@ -16,7 +16,7 @@ clean:
 	rm -f mycc mycc2 *.o *~ tmp* supplement* donuts*
 
 donuts: mycc
-	./mycc ./sample/donuts.c > ./donuts.s
+	./mycc ./sample/donuts.c -o ./donuts.s
 	$(CC) -o donuts ./donuts.s
 
 franken:
