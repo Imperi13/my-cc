@@ -1,6 +1,6 @@
 #!/bin/bash
 
-compile="file.c main.c tokenize.c preprocess.c parse.c type.c analyze.c codegen.c error.c str_dict.c"
+compile="file.c main.c tokenize.c preprocess.c parse.c type.c analyze.c codegen.c error.c str_dict.c cmd_opt.c constexpr.c"
 cc=/usr/local/musl/bin/musl-gcc
 cc_option="--std=gnu11 -g --static"
 
