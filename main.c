@@ -4,40 +4,21 @@
 #include <unistd.h>
 
 #include "analyze.h"
+#include "cmd_opt.h"
 #include "codegen.h"
 #include "error.h"
 #include "file.h"
 #include "parse.h"
 #include "preprocess.h"
 #include "tokenize.h"
-#include "type.h"
-
-typedef struct CommandOptions CommandOptions;
-struct CommandOptions {
-  bool only_preprocess;
-};
 
 int main(int argc, char **argv) {
 
-  int c;
-  opterr = 0;
+  CommandOptions *cmd_opt = parse_cmd_opt(argc, argv);
 
-  CommandOptions *cmd_opt = calloc(1, sizeof(CommandOptions));
-
-  while ((c = getopt(argc, argv, "E")) != -1) {
-    if (c == 'E') {
-      cmd_opt->only_preprocess = true;
-    } else {
-      fprintf(stderr, "opt=%c\n", optopt);
-      error("invalid option");
-    }
-  }
-
-  if (optind == argc)
-    error("not exist input file");
-
-  for (int filepath_index = optind; filepath_index != argc; filepath_index++) {
-    char *filename = argv[filepath_index];
+  for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
+       input_index++) {
+    char *filename = cmd_opt->input_files[input_index];
     FileType file_type = get_file_type(filename);
 
     if (file_type != C_SOURCE)
