@@ -26,6 +26,7 @@ static void process_pragma_line(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
 
 static void expand_define(Token **pre, Token *tok);
+static Token *copy_macro_arg(Token **pre, Token *tok);
 static void add_predefine(char *name, char *replace);
 
 static void consume_line(Token **pre, Token *tok);
@@ -51,7 +52,10 @@ typedef struct DefineList DefineList;
 struct DefineList {
   char *name;
 
+  // for func-like macro
   bool is_function_like;
+  int argc;
+  bool is_va;
 
   // startからTK_NEWLINEまでが展開するトークン
   Token *start;
@@ -351,7 +355,6 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   // parse arguments of func-like macro
   if (equal(tok, "(") && !isblank(*(tok->str - 1))) {
     consume(&tok, tok, "(");
-    new_def->is_function_like = true;
 
     int cnt = 0;
     while (!equal(tok, ")")) {
@@ -371,6 +374,9 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
       consume(&tok, tok, ",");
     }
     expect(&tok, tok, ")");
+
+    new_def->is_function_like = true;
+    new_def->argc = cnt;
   }
 
   Token *head = calloc(1, sizeof(Token));
@@ -472,7 +478,58 @@ void expand_define(Token **pre, Token *tok) {
   }
 
   // expand func-like macro
-  not_implemented(__func__);
+  Token **arg_token_list = calloc(def->argc + 1, sizeof(Token *));
+
+  consume_kind(&tok, tok, TK_IDENT);
+  consume(&tok, tok, "(");
+  int cnt = 0;
+  while (!equal(tok, ")")) {
+    if (cnt > def->argc)
+      error("excess macro argument");
+
+    arg_token_list[cnt] = copy_macro_arg(&tok, tok);
+    cnt++;
+    consume(&tok, tok, ",");
+  }
+
+  Token *symbol = tok;
+  Token *sym_next = tok->next;
+  Token *cur = symbol;
+  for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
+    if (src->kind == TK_MACRO_ARG) {
+      for (Token *arg_src = arg_token_list[src->nth_arg]; arg_src;
+           arg_src = arg_src->next) {
+        Token *cpy = calloc(1, sizeof(Token));
+        memcpy(cpy, arg_src, sizeof(Token));
+        cur->next = cpy;
+        cur = cur->next;
+      }
+    } else {
+      Token *cpy = calloc(1, sizeof(Token));
+      memcpy(cpy, src, sizeof(Token));
+      cur->next = cpy;
+      cur = cur->next;
+    }
+  }
+  cur->next = sym_next;
+  expand_define(pre, symbol->next);
+}
+
+Token *copy_macro_arg(Token **pre, Token *tok) {
+  Token *head = calloc(1, sizeof(Token));
+  Token *cur = head;
+
+  while (!equal(tok, ",") && !equal(tok, ")")) {
+    Token *tmp = calloc(1, sizeof(Token));
+    memcpy(tmp, tok, sizeof(Token));
+    cur->next = tmp;
+    cur = cur->next;
+    tok = tok->next;
+  }
+  cur->next = NULL;
+
+  *pre = tok;
+  return head->next;
 }
 
 void add_predefine(char *name, char *replace) {
