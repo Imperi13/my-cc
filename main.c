@@ -54,6 +54,8 @@ int main(int argc, char **argv) {
 
     codegen_translation_unit(output, ast);
     // codegen_all(stdout);
+
+    fclose(output);
   }
   return 0;
 }
