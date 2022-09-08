@@ -4,58 +4,58 @@
 #include <unistd.h>
 
 #include "analyze.h"
+#include "cmd_opt.h"
 #include "codegen.h"
 #include "error.h"
 #include "file.h"
 #include "parse.h"
 #include "preprocess.h"
 #include "tokenize.h"
-#include "type.h"
-
-typedef struct CommandOptions CommandOptions;
-struct CommandOptions {
-  bool only_preprocess;
-};
 
 int main(int argc, char **argv) {
 
-  int c;
-  opterr = 0;
+  CommandOptions *cmd_opt = parse_cmd_opt(argc, argv);
 
-  CommandOptions *cmd_opt = calloc(1, sizeof(CommandOptions));
+  if (cmd_opt->input_file_cnt > 1 && cmd_opt->output_file &&
+      (cmd_opt->only_preprocess))
+    error("cannot output for multiple files");
 
-  while ((c = getopt(argc, argv, "E")) != -1) {
-    if (c == 'E') {
-      cmd_opt->only_preprocess = true;
-    } else {
-      fprintf(stderr, "opt=%c\n", optopt);
-      error("invalid option");
+  for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
+       input_index++) {
+    char *filename = cmd_opt->input_files[input_index];
+    FileType file_type = get_file_type(filename);
+
+    if (file_type != C_SOURCE)
+      not_implemented("not implement expect c source file");
+
+    char *fullpath = get_caronical_path(filename);
+    char *user_input = read_file(fullpath);
+    Token *token = tokenize(user_input, fullpath);
+
+    //  debug_token(token);
+
+    token = preprocess(token);
+
+    if (cmd_opt->only_preprocess) {
+      print_token_seq(stdout, token);
+      continue;
     }
+
+    token = remove_newline(token);
+
+    Tree *ast = parse_translation_unit(token);
+
+    analyze_translation_unit(ast);
+
+    FILE *output = fopen((cmd_opt->output_file
+                              ? cmd_opt->output_file
+                              : rename_file_ext(filename, ASSEBLER_SOURCE)),
+                         "w");
+
+    codegen_translation_unit(output, ast);
+    // codegen_all(stdout);
+
+    fclose(output);
   }
-
-  if (optind + 1 != argc)
-    error("invalid argv");
-
-  char *filename = get_caronical_path(argv[optind]);
-  char *user_input = read_file(filename);
-  Token *token = tokenize(user_input, filename);
-
-  //  debug_token(token);
-
-  token = preprocess(token);
-
-  if (cmd_opt->only_preprocess) {
-    print_token_seq(stdout, token);
-    return 0;
-  }
-
-  token = remove_newline(token);
-
-  Tree *ast = parse_translation_unit(token);
-
-  analyze_translation_unit(ast);
-
-  codegen_translation_unit(stdout, ast);
-  // codegen_all(stdout);
   return 0;
 }

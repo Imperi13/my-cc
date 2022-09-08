@@ -8,9 +8,9 @@ cc=/usr/local/musl/bin/musl-gcc
 cc_option="-std=gnu11 -g -static"
 
 run_test_with_supplement0() {
-  rm -f ./tmp
-  echo -e "$2" > ./external/tmp.in
-  $MYCC ./external/tmp.in > tmp.s
+  rm -f ./tmp ./tmp.s
+  echo -e "$2" > ./external/tmp.c
+  $MYCC ./external/tmp.c -o tmp.s
 	${cc} ${cc_option} ./external/misc/supplement0.c -S -o supplement0.s
 	${cc} ${cc_option} tmp.s supplement0.s -o tmp
 	./tmp
@@ -19,9 +19,9 @@ run_test_with_supplement0() {
 }
 
 run_test() {
-  rm -f ./tmp
-  echo -e "$2" > ./external/tmp.in
-	$MYCC ./external/tmp.in > tmp.s
+  rm -f ./tmp ./tmp.s
+  echo -e "$2" > ./external/tmp.c
+	$MYCC ./external/tmp.c -o tmp.s
   ${cc} ${cc_option} -o tmp tmp.s
 	./tmp
 	res=$?
@@ -29,19 +29,19 @@ run_test() {
 }
 
 run_test_with_supplement1() {
-  rm -f ./tmp
-  echo -e "$2" > ./external/tmp.in
-  $MYCC ./external/tmp.in > tmp.s
+  rm -f ./tmp ./tmp.s
+  echo -e "$2" > ./external/tmp.c
+  $MYCC ./external/tmp.c -o tmp.s
 	${cc} ${cc_option} ./external/misc/supplement1.c -S -o supplement1.s
 	${cc} ${cc_option} tmp.s supplement1.s -o tmp
 	./tmp
 	res=$?
 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (mixed)" $1: "$2"; exit 1; }; else echo -e "\033[32mPASS (mixed)\033[m"; fi
 
-  rm -f ./tmp
-  echo -e "$2" > ./external/tmp.in
-  $MYCC ./external/tmp.in > tmp.s
-  $MYCC ./external/misc/supplement1.c > supplement1.s
+  rm -f ./tmp ./tmp.s ./supplement1.s
+  echo -e "$2" > ./external/tmp.c
+  $MYCC ./external/tmp.c -o tmp.s
+  $MYCC ./external/misc/supplement1.c -o supplement1.s
 	${cc} ${cc_option} tmp.s supplement1.s -o tmp
 	./tmp
 	res=$?

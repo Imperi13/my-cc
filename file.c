@@ -31,6 +31,35 @@ char *read_file(char *path) {
   return buf;
 }
 
+FileType get_file_type(char *path) {
+  char *dot = strrchr(path, '.');
+  if (strcmp(dot, ".c") == 0)
+    return C_SOURCE;
+  else if (strcmp(dot, ".s") == 0)
+    return ASSEBLER_SOURCE;
+  else if (strcmp(dot, ".o") == 0)
+    return OBJECT_FILE;
+  else
+    error("invalid file type");
+}
+
+char *rename_file_ext(char *path, FileType file_type) {
+  char *dot = strrchr(path, '.');
+
+  int filename_len = dot - path;
+  char *renamed_path = calloc(filename_len + 3, sizeof(char));
+  strncpy(renamed_path, path, filename_len);
+
+  if (file_type == C_SOURCE)
+    strncpy(renamed_path + filename_len, ".c", 2);
+  else if (file_type == ASSEBLER_SOURCE)
+    strncpy(renamed_path + filename_len, ".s", 2);
+  else if (file_type == OBJECT_FILE)
+    strncpy(renamed_path + filename_len, ".o", 2);
+
+  return renamed_path;
+}
+
 char *get_caronical_path(char *path) {
   char abs_path[2 * PATH_MAX + 1];
   if (path[0] == '/') {
