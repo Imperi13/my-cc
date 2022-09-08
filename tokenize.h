@@ -11,6 +11,9 @@ typedef enum TokenKind {
   TK_NEWLINE,
   TK_EOF,
 
+  // for func-like macro
+  TK_MACRO_ARG,
+
   // keyword
   TK_RETURN,
   TK_SIZEOF,
@@ -59,6 +62,8 @@ struct Token {
   // for preprocess & error-handling
   char *filepath;
   char *file_buf;
+  bool is_recursived;
+  int nth_arg; // for func-like macro
 
   // for TK_NUM
   long val;
@@ -68,7 +73,6 @@ struct Token {
 
   // for TK_IDENT
   char *ident_str;
-  bool is_recursived;
 
   // for str-literal
   StrLiteral *str_literal;

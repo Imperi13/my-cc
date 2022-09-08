@@ -1,4 +1,5 @@
 
+#include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +26,7 @@ static void process_pragma_line(Token **post, Token **pre, Token *tok);
 static void process_text_line(Token **post, Token **pre, Token *tok);
 
 static void expand_define(Token **pre, Token *tok);
+static Token *copy_macro_arg(Token **pre, Token *tok);
 static void add_predefine(char *name, char *replace);
 
 static void consume_line(Token **pre, Token *tok);
@@ -49,6 +51,11 @@ static long process_primary(Token **pre, Token *tok);
 typedef struct DefineList DefineList;
 struct DefineList {
   char *name;
+
+  // for func-like macro
+  bool is_function_like;
+  int argc;
+  bool is_va;
 
   // startからTK_NEWLINEまでが展開するトークン
   Token *start;
@@ -324,6 +331,11 @@ bool is_same_define_seq(Token *a, Token *b) {
   return is_same_token(a, b);
 }
 
+typedef struct MacroArg {
+  char *name;
+  int nth;
+} MacroArg;
+
 void process_define_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "define");
@@ -338,34 +350,71 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   DefineList *new_def = calloc(1, sizeof(DefineList));
   new_def->name = define_str;
 
+  StrDict *macro_arg_dict = new_str_dict();
+
+  // parse arguments of func-like macro
+  if (equal(tok, "(") && !isblank(*(tok->str - 1))) {
+    consume(&tok, tok, "(");
+
+    int cnt = 0;
+    while (!equal(tok, ")")) {
+      if (equal(tok, "..."))
+        not_implemented_token(tok);
+
+      char *name = getname_ident(&tok, tok);
+      MacroArg *macro_arg = calloc(1, sizeof(MacroArg));
+      macro_arg->name = name;
+      macro_arg->nth = cnt;
+
+      if (find_str_dict(macro_arg_dict, name))
+        error("dup arg name");
+      add_str_dict(macro_arg_dict, name, macro_arg);
+
+      cnt++;
+      consume(&tok, tok, ",");
+    }
+    expect(&tok, tok, ")");
+
+    new_def->is_function_like = true;
+    new_def->argc = cnt;
+  }
+
   Token *head = calloc(1, sizeof(Token));
   Token *cur = head;
 
   while (tok->kind != TK_NEWLINE) {
     cur->next = tok;
-    if (equal_kind(tok, TK_IDENT) && strcmp(tok->ident_str, define_str) == 0) {
+
+    if (equal_kind(tok, TK_IDENT) && strcmp(tok->ident_str, define_str) == 0)
       tok->is_recursived = true;
+
+    // rename TK_IDENT to TK_MACRO_ARG
+    if (equal_kind(tok, TK_IDENT) &&
+        find_str_dict(macro_arg_dict, tok->ident_str)) {
+      MacroArg *macro_arg = find_str_dict(macro_arg_dict, tok->ident_str);
+      tok->kind = TK_MACRO_ARG;
+      tok->nth_arg = macro_arg->nth;
     }
+
     cur = cur->next;
 
     tok = tok->next;
   }
+
   cur->next = tok;
 
   new_def->start = head->next;
 
-  if (post) {
-    if (find_str_dict(define_dict, define_str)) {
-      DefineList *define_list = find_str_dict(define_dict, define_str);
+  if (find_str_dict(define_dict, define_str)) {
+    DefineList *define_list = find_str_dict(define_dict, define_str);
 
-      if (!is_same_define_seq(new_def->start, define_list->start)) {
-        warn("redifine %s", define_str);
-        remove_str_dict(define_dict, define_str);
-        add_str_dict(define_dict, define_str, new_def);
-      }
-    } else {
+    if (!is_same_define_seq(new_def->start, define_list->start)) {
+      warn("redifine %s", define_str);
+      remove_str_dict(define_dict, define_str);
       add_str_dict(define_dict, define_str, new_def);
     }
+  } else {
+    add_str_dict(define_dict, define_str, new_def);
   }
 
   expect_kind(&tok, tok, TK_NEWLINE);
@@ -406,17 +455,81 @@ void expand_define(Token **pre, Token *tok) {
     return;
   }
 
+  // expand normal macro
+  if (!def->is_function_like) {
+    Token *symbol = tok;
+    Token *sym_next = tok->next;
+    Token *cur = symbol;
+    for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
+      Token *cpy = calloc(1, sizeof(Token));
+      memcpy(cpy, src, sizeof(Token));
+      cur->next = cpy;
+      cur = cur->next;
+    }
+    cur->next = sym_next;
+    expand_define(pre, symbol->next);
+    return;
+  }
+
+  // check func-like macro
+  if (!equal(tok->next, "(")) {
+    *pre = tok;
+    return;
+  }
+
+  // expand func-like macro
+  Token **arg_token_list = calloc(def->argc + 1, sizeof(Token *));
+
+  consume_kind(&tok, tok, TK_IDENT);
+  consume(&tok, tok, "(");
+  int cnt = 0;
+  while (!equal(tok, ")")) {
+    if (cnt > def->argc)
+      error("excess macro argument");
+
+    arg_token_list[cnt] = copy_macro_arg(&tok, tok);
+    cnt++;
+    consume(&tok, tok, ",");
+  }
+
   Token *symbol = tok;
   Token *sym_next = tok->next;
   Token *cur = symbol;
   for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
-    Token *cpy = calloc(1, sizeof(Token));
-    memcpy(cpy, src, sizeof(Token));
-    cur->next = cpy;
-    cur = cur->next;
+    if (src->kind == TK_MACRO_ARG) {
+      for (Token *arg_src = arg_token_list[src->nth_arg]; arg_src;
+           arg_src = arg_src->next) {
+        Token *cpy = calloc(1, sizeof(Token));
+        memcpy(cpy, arg_src, sizeof(Token));
+        cur->next = cpy;
+        cur = cur->next;
+      }
+    } else {
+      Token *cpy = calloc(1, sizeof(Token));
+      memcpy(cpy, src, sizeof(Token));
+      cur->next = cpy;
+      cur = cur->next;
+    }
   }
   cur->next = sym_next;
   expand_define(pre, symbol->next);
+}
+
+Token *copy_macro_arg(Token **pre, Token *tok) {
+  Token *head = calloc(1, sizeof(Token));
+  Token *cur = head;
+
+  while (!equal(tok, ",") && !equal(tok, ")")) {
+    Token *tmp = calloc(1, sizeof(Token));
+    memcpy(tmp, tok, sizeof(Token));
+    cur->next = tmp;
+    cur = cur->next;
+    tok = tok->next;
+  }
+  cur->next = NULL;
+
+  *pre = tok;
+  return head->next;
 }
 
 void add_predefine(char *name, char *replace) {
