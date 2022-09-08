@@ -82,9 +82,6 @@ bool cmp_ident(Token *tok, const char *name) {
   return strcmp(tok->ident_str, name) == 0;
 }
 
-// instead of isdigit(char) in ctype.h
-bool is_digit(char c) { return '0' <= c && c <= '9'; }
-
 bool at_eof(Token *token) { return token->kind == TK_EOF; }
 
 bool is_same_token(Token *a, Token *b) {
@@ -380,8 +377,7 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
-    // if (isdigit(*p)) {
-    if (is_digit(*p)) {
+    if (isdigit(*p)) {
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);
