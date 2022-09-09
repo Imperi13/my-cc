@@ -1,6 +1,9 @@
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "analyze.h"
@@ -11,6 +14,23 @@
 #include "parse.h"
 #include "preprocess.h"
 #include "tokenize.h"
+
+void run_cmd(char **argv) {
+  pid_t pid = fork();
+
+  if (pid == 0) {
+    execv(argv[0], argv);
+    _exit(0);
+  } else if (pid < 0) {
+    error("failed to fork: %s", strerror(errno));
+  }
+
+  int status;
+  waitpid(pid, &status, 0);
+
+  if (!WIFEXITED(status))
+    error("filed to run cmd");
+}
 
 int main(int argc, char **argv) {
 
