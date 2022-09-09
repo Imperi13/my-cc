@@ -195,6 +195,7 @@ struct Case {
 struct DeclSpec {
   // type_qual
   bool has_const; // unused;
+  bool has_volatile; // unused;
   bool has_extern;
   bool has_static;
   bool has_typedef;

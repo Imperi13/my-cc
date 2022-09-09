@@ -226,9 +226,9 @@ bool is_decl_specs(Token *tok, Analyze *state) {
          equal_kind(tok, TK_FLOAT) || equal_kind(tok, TK_DOUBLE) ||
          equal_kind(tok, TK_STRUCT) || equal_kind(tok, TK_UNION) ||
          equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
-         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC) ||
-         equal_kind(tok, TK_INLINE) || equal_kind(tok, TK_NORETURN) ||
-         equal_kind(tok, TK_TYPEDEF) ||
+         equal_kind(tok, TK_VOLATILE) || equal_kind(tok, TK_EXTERN) ||
+         equal_kind(tok, TK_STATIC) || equal_kind(tok, TK_INLINE) ||
+         equal_kind(tok, TK_NORETURN) || equal_kind(tok, TK_TYPEDEF) ||
          (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->ident_str));
 }
 
@@ -252,6 +252,9 @@ DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
     if (equal_kind(tok, TK_CONST)) {
       consume_kind(&tok, tok, TK_CONST);
       decl_spec->has_const = true;
+    } else if (equal_kind(tok, TK_VOLATILE)) {
+      consume_kind(&tok, tok, TK_VOLATILE);
+      decl_spec->has_volatile = true;
     } else if (equal_kind(tok, TK_EXTERN)) {
       consume_kind(&tok, tok, TK_EXTERN);
       decl_spec->has_extern = true;
@@ -673,7 +676,7 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
     declarator->nest = parse_declarator(&tok, tok, state);
     expect(&tok, tok, ")");
   } else {
-    error("cannot parse declarator");
+    error_token(tok, "cannot parse declarator");
   }
 
   // parse type-suffix

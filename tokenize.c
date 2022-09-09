@@ -550,6 +550,12 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
+    if (strncmp(p, "volatile", 8) == 0 && !is_alnum(p[8])) {
+      cur = new_token(TK_VOLATILE, cur, p, 8, filepath, file_buf);
+      p += 8;
+      continue;
+    }
+
     if (strncmp(p, "extern", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_EXTERN, cur, p, 6, filepath, file_buf);
       p += 6;
