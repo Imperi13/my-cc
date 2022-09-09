@@ -172,11 +172,13 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
   expect(&tok, tok, ";");
 
   if (ex_decl->decl_specs->has_typedef) {
-    char *def_name = getname_declarator(ex_decl->declarator);
-    Typedef *new_def = calloc(1, sizeof(Typedef));
-    new_def->name = def_name;
+    for (Declarator *cur = ex_decl->declarator; cur; cur = cur->next) {
+      char *def_name = getname_declarator(cur);
+      Typedef *new_def = calloc(1, sizeof(Typedef));
+      new_def->name = def_name;
 
-    add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+      add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+    }
   }
 
   *rest = tok;
