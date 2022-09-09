@@ -334,6 +334,12 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       en_def->members = decl_spec->en_spec->members;
       int val = 0;
       for (EnumVal *cur = en_def->members; cur; cur = cur->next) {
+        if (cur->val_expr) {
+          if (!is_constexpr_integer(cur->val_expr))
+            error("not constexpr");
+
+          val = eval_constexpr_integer(cur->val_expr);
+        }
         cur->val = val;
         val++;
       }

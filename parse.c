@@ -476,8 +476,10 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
         EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
         en_val->name = getname_ident(&tok, tok);
-        if (equal(tok, "="))
-          not_implemented_token(tok);
+        if (equal(tok, "=")) {
+          consume(&tok, tok, "=");
+          en_val->val_expr = parse_constant_expr(&tok, tok, state);
+        }
 
         cur->next = en_val;
         cur = cur->next;

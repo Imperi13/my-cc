@@ -243,6 +243,7 @@ struct EnumVal {
   char *name;
 
   int val;
+  Tree *val_expr;
   // for linked-list
   EnumVal *next;
 };

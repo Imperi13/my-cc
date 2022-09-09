@@ -467,6 +467,9 @@ run_test function_like_macro_2 '#define DOUBLE(a) 2*a\n int main(){return DOUBLE
 run_test function_like_macro_3 '#define TEST(a,b) 10*a + 2 * b \n int main(){return TEST(10,37);}' 174
 run_test function_like_macro_4 '#define DECL(a,b) int a = b \n int main(){DECL(n,174); return n;}' 174
 
+run_test enum_value_1 'enum Test{ A=10,B=14,C=16}; int main(){return 160+B;}' 174
+run_test enum_value_1 'enum Test{ A=10,B,C,D,E}; int main(){return 160+E;}' 174
+
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 #run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
