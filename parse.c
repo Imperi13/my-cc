@@ -367,17 +367,38 @@ Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, ";"))
     not_implemented_token(tok);
 
-  st_decl->declarator = parse_declarator(&tok, tok, state);
-  if (equal(tok, ":"))
-    not_implemented_token(tok);
+  if (equal(tok, ":")) {
+    warn_token(tok, "ignore bitfield");
+    consume(&tok, tok, ":");
+    st_decl->declarator = calloc(1, sizeof(Declarator));
+    st_decl->declarator->bitfield_expr = parse_constant_expr(&tok, tok, state);
+  } else {
+    st_decl->declarator = parse_declarator(&tok, tok, state);
+    if (equal(tok, ":")) {
+      warn_token(tok, "ignore bitfield");
+      consume(&tok, tok, ":");
+      st_decl->declarator->bitfield_expr =
+          parse_constant_expr(&tok, tok, state);
+    }
+  }
 
   Declarator *cur = st_decl->declarator;
   while (equal(tok, ",")) {
     consume(&tok, tok, ",");
 
-    cur->next = parse_declarator(&tok, tok, state);
-    if (equal(tok, ":"))
-      not_implemented_token(tok);
+    if (equal(tok, ":")) {
+      warn_token(tok, "ignore bitfield");
+      consume(&tok, tok, ":");
+      cur->next = calloc(1, sizeof(Declarator));
+      cur->next->bitfield_expr = parse_constant_expr(&tok, tok, state);
+    } else {
+      cur->next = parse_declarator(&tok, tok, state);
+      if (equal(tok, ":")) {
+        warn_token(tok, "ignore bitfield");
+        consume(&tok, tok, ":");
+        cur->next->bitfield_expr = parse_constant_expr(&tok, tok, state);
+      }
+    }
 
     cur = cur->next;
   }

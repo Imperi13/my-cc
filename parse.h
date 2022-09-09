@@ -271,8 +271,9 @@ struct Declarator {
   Tree *init_expr;
 
   // for struct-declarator
-  bool has_bit_field;
-  int bit_field;
+  bool has_bitfield;
+  Tree *bitfield_expr;
+  int bitfield;
 
   // for linked-list
   Declarator *next;
