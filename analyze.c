@@ -248,18 +248,19 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
     decl_spec->st_def = st_defs;
   } else if (decl_spec->type_spec_kind == TypeSpec_UNION) {
+    UnionDef *union_def = NULL;
 
-    if (!decl_spec->union_spec->union_name) {
-      not_implemented(__func__);
-    }
-
-    UnionDef *union_def = find_union(state, decl_spec->union_spec->union_name);
+    if (decl_spec->union_spec->union_name)
+      union_def = find_union(state, decl_spec->union_spec->union_name);
 
     if (!union_def) {
       union_def = calloc(1, sizeof(UnionDef));
-      union_def->union_name = decl_spec->union_spec->union_name;
 
-      add_str_dict(state->glb_union_def_dict, union_def->union_name, union_def);
+      if (decl_spec->union_spec->union_name) {
+        union_def->union_name = decl_spec->union_spec->union_name;
+        add_str_dict(state->glb_union_def_dict, union_def->union_name,
+                     union_def);
+      }
     }
 
     if (union_def->is_defined && decl_spec->union_spec->has_decl)
@@ -312,17 +313,19 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     decl_spec->union_def = union_def;
 
   } else if (decl_spec->type_spec_kind == TypeSpec_ENUM) {
-    if (!decl_spec->en_spec->en_name)
-      not_implemented(__func__);
+    EnumDef *en_def = NULL;
 
-    EnumDef *en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name);
+    if (decl_spec->en_spec->en_name)
+      en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name);
 
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
-      en_def->en_name = decl_spec->en_spec->en_name;
 
-      en_def->next = state->glb_endefs;
-      state->glb_endefs = en_def;
+      if (decl_spec->en_spec->en_name) {
+        en_def->en_name = decl_spec->en_spec->en_name;
+        en_def->next = state->glb_endefs;
+        state->glb_endefs = en_def;
+      }
     }
 
     if (en_def->is_defined && decl_spec->en_spec->has_decl)

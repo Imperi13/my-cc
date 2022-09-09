@@ -489,7 +489,26 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
       en_spec->members = head->next;
     }
   } else {
-    not_implemented_token(tok);
+    consume(&tok, tok, "{");
+    en_spec->has_decl = true;
+
+    EnumVal *head = calloc(1, sizeof(EnumVal));
+    EnumVal *cur = head;
+    while (!consume(&tok, tok, "}")) {
+      EnumVal *en_val = calloc(1, sizeof(EnumVal));
+
+      en_val->name = getname_ident(&tok, tok);
+      if (equal(tok, "=")) {
+        consume(&tok, tok, "=");
+        en_val->val_expr = parse_constant_expr(&tok, tok, state);
+      }
+
+      cur->next = en_val;
+      cur = cur->next;
+      consume(&tok, tok, ",");
+    }
+
+    en_spec->members = head->next;
   }
 
   *rest = tok;
