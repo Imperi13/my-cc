@@ -259,6 +259,11 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "include");
 
+  if (!post) {
+    consume_line(pre, tok);
+    return;
+  }
+
   if (equal(tok, "<")) {
     // ignore include
     consume(&tok, tok, "<");
@@ -303,6 +308,7 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
   } else if (equal_kind(tok, TK_STR)) {
     Token *file = consume_kind(&tok, tok, TK_STR);
     char *filepath = file->str_literal->str;
+    filepath = get_caronical_path(filepath);
 
     if (post && !is_included(filepath)) {
       char *buf = read_file(filepath);
