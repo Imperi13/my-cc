@@ -15,11 +15,16 @@
 #include "preprocess.h"
 #include "tokenize.h"
 
+static void run_cmd(char **argv);
+
 void run_cmd(char **argv) {
+  if (!argv || !argv[0])
+    error("invalid run_cmd argv");
+
   pid_t pid = fork();
 
   if (pid == 0) {
-    execv(argv[0], argv);
+    execvp(argv[0], argv);
     _exit(0);
   } else if (pid < 0) {
     error("failed to fork: %s", strerror(errno));
@@ -30,6 +35,11 @@ void run_cmd(char **argv) {
 
   if (!WIFEXITED(status))
     error("filed to run cmd");
+}
+
+void assemble(char *input_path, char *output_path) {
+  char *argv[] = {"as", "--64", "-o", output_path, input_path, NULL};
+  run_cmd(argv);
 }
 
 int main(int argc, char **argv) {
@@ -67,15 +77,20 @@ int main(int argc, char **argv) {
 
     analyze_translation_unit(ast);
 
-    FILE *output = fopen((cmd_opt->output_file
-                              ? cmd_opt->output_file
-                              : rename_file_ext(filename, ASSEBLER_SOURCE)),
-                         "w");
+    if (cmd_opt->only_compile) {
+      FILE *output = fopen((cmd_opt->output_file
+                                ? cmd_opt->output_file
+                                : rename_file_ext(filename, ASSEBLER_SOURCE)),
+                           "w");
 
-    codegen_translation_unit(output, ast);
-    // codegen_all(stdout);
+      codegen_translation_unit(output, ast);
+      // codegen_all(stdout);
 
-    fclose(output);
+      fclose(output);
+      continue;
+    }
+
+    not_implemented(__func__);
   }
   return 0;
 }

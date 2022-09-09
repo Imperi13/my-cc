@@ -51,6 +51,9 @@ CommandOptions *parse_cmd_opt(int argc, char **argv) {
     } else if (strncmp(arg, "-S", 2) == 0) {
       cmd_opt->only_compile = true;
       i++;
+    } else if (strncmp(arg, "-c", 2) == 0) {
+      cmd_opt->only_assemble = true;
+      i++;
     } else {
       not_implemented(__func__);
     }
