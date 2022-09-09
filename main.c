@@ -16,7 +16,7 @@
 #include "tokenize.h"
 
 static void run_cmd(char **argv);
-static char *create_tmpfile();
+static char *create_tmpfile(FileType file_type);
 
 void run_cmd(char **argv) {
   if (!argv || !argv[0])
@@ -43,9 +43,23 @@ void assemble(char *input_path, char *output_path) {
   run_cmd(argv);
 }
 
-char *create_tmpfile() {
-  char *path = strdup("/tmp/myccXXXXXX");
-  int fd = mkstemp(path);
+char *create_tmpfile(FileType file_type) {
+  char *path = NULL;
+  int fd;
+
+  if (file_type == C_SOURCE) {
+    path = strdup("/tmp/myccXXXXXX.c");
+    int fd = mkstemps(path, 2);
+  } else if (file_type == ASSEBLER_SOURCE) {
+    path = strdup("/tmp/myccXXXXXX.s");
+    int fd = mkstemps(path, 2);
+  } else if (file_type == OBJECT_FILE) {
+    path = strdup("/tmp/myccXXXXXX.o");
+    int fd = mkstemps(path, 2);
+  } else {
+    not_implemented(__func__);
+  }
+
   close(fd);
   return path;
 }
@@ -97,7 +111,7 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    char *asm_source_path = create_tmpfile();
+    char *asm_source_path = create_tmpfile(ASSEBLER_SOURCE);
     FILE *compile_output = fopen(asm_source_path, "w");
     codegen_translation_unit(compile_output, ast);
     fclose(compile_output);
