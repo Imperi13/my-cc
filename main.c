@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/wait.h>
 
 #include "analyze.h"
 #include "cmd_opt.h"
