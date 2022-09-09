@@ -86,7 +86,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
   return NULL;
 }
 
-Type *gettype_declarator(Declarator *declarator, Type *base_type) {
+Type *gettype_declarator(Declarator *declarator, Type *base_type,
+                         Analyze *state) {
   Pointer *cur = declarator->pointer;
   while (cur) {
     base_type = newtype_ptr(base_type);
@@ -105,8 +106,10 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
     while (cur) {
       Type *ty = calloc(1, sizeof(Type));
       ty->kind = ARRAY;
-      if (!cur->is_null_size)
+      if (!cur->is_null_size) {
+        analyze_stmt(cur->size, state);
         ty->arr_size = eval_constexpr_integer(cur->size);
+      }
       ty->ptr_to = base_type;
       base_type = ty;
 
@@ -120,7 +123,7 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
   }
 
   if (declarator->nest) {
-    base_type = gettype_declarator(declarator->nest, base_type);
+    base_type = gettype_declarator(declarator->nest, base_type, state);
   }
 
   return base_type;
