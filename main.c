@@ -16,6 +16,7 @@
 #include "tokenize.h"
 
 static void run_cmd(char **argv);
+static char *create_tmpfile();
 
 void run_cmd(char **argv) {
   if (!argv || !argv[0])
@@ -42,13 +43,21 @@ void assemble(char *input_path, char *output_path) {
   run_cmd(argv);
 }
 
+char *create_tmpfile() {
+  char *path = strdup("/tmp/myccXXXXXX");
+  int fd = mkstemp(path);
+  close(fd);
+  return path;
+}
+
 int main(int argc, char **argv) {
 
   CommandOptions *cmd_opt = parse_cmd_opt(argc, argv);
 
   if (cmd_opt->input_file_cnt > 1 && cmd_opt->output_file &&
-      (cmd_opt->only_preprocess))
-    error("cannot output for multiple files");
+      (cmd_opt->only_preprocess || cmd_opt->only_compile ||
+       cmd_opt->only_assemble))
+    error("cannot output for multiple files with -E -S -c");
 
   for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
        input_index++) {
@@ -84,9 +93,21 @@ int main(int argc, char **argv) {
                            "w");
 
       codegen_translation_unit(output, ast);
-      // codegen_all(stdout);
-
       fclose(output);
+      continue;
+    }
+
+    char *asm_source_path = create_tmpfile();
+    FILE *compile_output = fopen(asm_source_path, "w");
+    codegen_translation_unit(compile_output, ast);
+    fclose(compile_output);
+
+    if (cmd_opt->only_assemble) {
+      char *output_path =
+          (cmd_opt->output_file ? cmd_opt->output_file
+                                : rename_file_ext(filename, OBJECT_FILE));
+
+      assemble(asm_source_path, output_path);
       continue;
     }
 
