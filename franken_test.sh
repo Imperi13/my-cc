@@ -6,7 +6,7 @@ cc_option="--std=gnu11 -g --static"
 
 echo ${compile}
 
-rm -f ./build/*
+rm -f ./build/*.s
 
 ${cc} ${cc_option} -c *.c
 ${cc} ${cc_option} -o ./build/mycc1 *.o

@@ -12,7 +12,6 @@ static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
 static void analyze_parameter(Tree *arg, Analyze *state);
-static void analyze_stmt(Tree *ast, Analyze *state);
 
 static void analyze_variable_initialize(Type *var_type, Tree *init_val,
                                         Analyze *state, bool is_global);
@@ -74,7 +73,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     analyze_decl_spec(ast->decl_specs, state, true);
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type);
+    obj_type = gettype_declarator(ast->declarator, obj_type, state);
 
     char *obj_name = getname_declarator(ast->declarator);
 
@@ -125,7 +124,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
       char *obj_name = getname_declarator(cur);
-      Type *obj_type = gettype_declarator(cur, base_type);
+      Type *obj_type = gettype_declarator(cur, base_type, state);
 
       // get size for null-size array []
       if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
@@ -215,7 +214,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         Type *base_type = gettype_decl_spec(decl_cur->decl_specs, state);
 
         for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
-          Type *obj_type = gettype_declarator(cur, base_type);
+          Type *obj_type = gettype_declarator(cur, base_type, state);
           char *obj_name = getname_declarator(cur);
 
           Member *mem = calloc(1, sizeof(Member));
@@ -248,18 +247,19 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
     decl_spec->st_def = st_defs;
   } else if (decl_spec->type_spec_kind == TypeSpec_UNION) {
+    UnionDef *union_def = NULL;
 
-    if (!decl_spec->union_spec->union_name) {
-      not_implemented(__func__);
-    }
-
-    UnionDef *union_def = find_union(state, decl_spec->union_spec->union_name);
+    if (decl_spec->union_spec->union_name)
+      union_def = find_union(state, decl_spec->union_spec->union_name);
 
     if (!union_def) {
       union_def = calloc(1, sizeof(UnionDef));
-      union_def->union_name = decl_spec->union_spec->union_name;
 
-      add_str_dict(state->glb_union_def_dict, union_def->union_name, union_def);
+      if (decl_spec->union_spec->union_name) {
+        union_def->union_name = decl_spec->union_spec->union_name;
+        add_str_dict(state->glb_union_def_dict, union_def->union_name,
+                     union_def);
+      }
     }
 
     if (union_def->is_defined && decl_spec->union_spec->has_decl)
@@ -281,7 +281,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         if (decl_cur->declarator->next)
           not_implemented(__func__);
 
-        obj_type = gettype_declarator(decl_cur->declarator, obj_type);
+        obj_type = gettype_declarator(decl_cur->declarator, obj_type, state);
         char *obj_name = getname_declarator(decl_cur->declarator);
 
         Member *mem = calloc(1, sizeof(Member));
@@ -312,17 +312,19 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     decl_spec->union_def = union_def;
 
   } else if (decl_spec->type_spec_kind == TypeSpec_ENUM) {
-    if (!decl_spec->en_spec->en_name)
-      not_implemented(__func__);
+    EnumDef *en_def = NULL;
 
-    EnumDef *en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name);
+    if (decl_spec->en_spec->en_name)
+      en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name);
 
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
-      en_def->en_name = decl_spec->en_spec->en_name;
 
-      en_def->next = state->glb_endefs;
-      state->glb_endefs = en_def;
+      if (decl_spec->en_spec->en_name) {
+        en_def->en_name = decl_spec->en_spec->en_name;
+        en_def->next = state->glb_endefs;
+        state->glb_endefs = en_def;
+      }
     }
 
     if (en_def->is_defined && decl_spec->en_spec->has_decl)
@@ -334,6 +336,12 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       en_def->members = decl_spec->en_spec->members;
       int val = 0;
       for (EnumVal *cur = en_def->members; cur; cur = cur->next) {
+        if (cur->val_expr) {
+          if (!is_constexpr_integer(cur->val_expr))
+            error("not constexpr");
+
+          val = eval_constexpr_integer(cur->val_expr);
+        }
         cur->val = val;
         val++;
       }
@@ -353,7 +361,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
     }
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type);
+    obj_type = gettype_declarator(ast->declarator, obj_type, state);
 
     if (obj_type->kind == ARRAY)
       obj_type->kind = PTR;
@@ -405,7 +413,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
       char *obj_name = getname_declarator(cur);
-      Type *obj_type = gettype_declarator(cur, base_type);
+      Type *obj_type = gettype_declarator(cur, base_type, state);
 
       // get size for null-size array []
       if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
@@ -739,7 +747,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_decl_spec(ast->type_name->decl_specs, state, false);
     Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs, state);
     if (ast->type_name->declarator)
-      cast_type = gettype_declarator(ast->type_name->declarator, cast_type);
+      cast_type =
+          gettype_declarator(ast->type_name->declarator, cast_type, state);
 
     analyze_stmt(ast->lhs, state);
 
@@ -783,7 +792,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (ast->lhs->kind == TYPE_NAME) {
       analyze_decl_spec(ast->lhs->decl_specs, state, false);
       Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
-      base_type = gettype_declarator(ast->lhs->declarator, base_type);
+      base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
 
       // replace "sizeof" -> num
       ast->kind = NUM;
@@ -800,7 +809,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == ALIGNOF) {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
     Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
-    base_type = gettype_declarator(ast->lhs->declarator, base_type);
+    base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
 
     // replace "sizeof" -> num
     ast->kind = NUM;

@@ -119,6 +119,7 @@ struct SwitchScope {
 Analyze *new_analyze_state();
 
 void analyze_translation_unit(Tree *ast);
+void analyze_stmt(Tree *ast, Analyze *state);
 
 Typedef *find_typedef(Analyze *state, char *typedef_name);
 

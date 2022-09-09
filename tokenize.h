@@ -43,6 +43,7 @@ typedef enum TokenKind {
   TK_DOUBLE,
   TK_CONST,
   TK_RESTRICT,
+  TK_VOLATILE,
   TK_EXTERN,
   TK_STATIC,
   TK_TYPEDEF,

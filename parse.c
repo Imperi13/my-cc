@@ -172,11 +172,13 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
   expect(&tok, tok, ";");
 
   if (ex_decl->decl_specs->has_typedef) {
-    char *def_name = getname_declarator(ex_decl->declarator);
-    Typedef *new_def = calloc(1, sizeof(Typedef));
-    new_def->name = def_name;
+    for (Declarator *cur = ex_decl->declarator; cur; cur = cur->next) {
+      char *def_name = getname_declarator(cur);
+      Typedef *new_def = calloc(1, sizeof(Typedef));
+      new_def->name = def_name;
 
-    add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+      add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+    }
   }
 
   *rest = tok;
@@ -226,9 +228,9 @@ bool is_decl_specs(Token *tok, Analyze *state) {
          equal_kind(tok, TK_FLOAT) || equal_kind(tok, TK_DOUBLE) ||
          equal_kind(tok, TK_STRUCT) || equal_kind(tok, TK_UNION) ||
          equal_kind(tok, TK_ENUM) || equal_kind(tok, TK_CONST) ||
-         equal_kind(tok, TK_EXTERN) || equal_kind(tok, TK_STATIC) ||
-         equal_kind(tok, TK_INLINE) || equal_kind(tok, TK_NORETURN) ||
-         equal_kind(tok, TK_TYPEDEF) ||
+         equal_kind(tok, TK_VOLATILE) || equal_kind(tok, TK_EXTERN) ||
+         equal_kind(tok, TK_STATIC) || equal_kind(tok, TK_INLINE) ||
+         equal_kind(tok, TK_NORETURN) || equal_kind(tok, TK_TYPEDEF) ||
          (equal_kind(tok, TK_IDENT) && find_typedef(state, tok->ident_str));
 }
 
@@ -252,6 +254,9 @@ DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
     if (equal_kind(tok, TK_CONST)) {
       consume_kind(&tok, tok, TK_CONST);
       decl_spec->has_const = true;
+    } else if (equal_kind(tok, TK_VOLATILE)) {
+      consume_kind(&tok, tok, TK_VOLATILE);
+      decl_spec->has_volatile = true;
     } else if (equal_kind(tok, TK_EXTERN)) {
       consume_kind(&tok, tok, TK_EXTERN);
       decl_spec->has_extern = true;
@@ -367,17 +372,38 @@ Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, ";"))
     not_implemented_token(tok);
 
-  st_decl->declarator = parse_declarator(&tok, tok, state);
-  if (equal(tok, ":"))
-    not_implemented_token(tok);
+  if (equal(tok, ":")) {
+    warn_token(tok, "ignore bitfield");
+    consume(&tok, tok, ":");
+    st_decl->declarator = calloc(1, sizeof(Declarator));
+    st_decl->declarator->bitfield_expr = parse_constant_expr(&tok, tok, state);
+  } else {
+    st_decl->declarator = parse_declarator(&tok, tok, state);
+    if (equal(tok, ":")) {
+      warn_token(tok, "ignore bitfield");
+      consume(&tok, tok, ":");
+      st_decl->declarator->bitfield_expr =
+          parse_constant_expr(&tok, tok, state);
+    }
+  }
 
   Declarator *cur = st_decl->declarator;
   while (equal(tok, ",")) {
     consume(&tok, tok, ",");
 
-    cur->next = parse_declarator(&tok, tok, state);
-    if (equal(tok, ":"))
-      not_implemented_token(tok);
+    if (equal(tok, ":")) {
+      warn_token(tok, "ignore bitfield");
+      consume(&tok, tok, ":");
+      cur->next = calloc(1, sizeof(Declarator));
+      cur->next->bitfield_expr = parse_constant_expr(&tok, tok, state);
+    } else {
+      cur->next = parse_declarator(&tok, tok, state);
+      if (equal(tok, ":")) {
+        warn_token(tok, "ignore bitfield");
+        consume(&tok, tok, ":");
+        cur->next->bitfield_expr = parse_constant_expr(&tok, tok, state);
+      }
+    }
 
     cur = cur->next;
   }
@@ -476,8 +502,10 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
         EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
         en_val->name = getname_ident(&tok, tok);
-        if (equal(tok, "="))
-          not_implemented_token(tok);
+        if (equal(tok, "=")) {
+          consume(&tok, tok, "=");
+          en_val->val_expr = parse_constant_expr(&tok, tok, state);
+        }
 
         cur->next = en_val;
         cur = cur->next;
@@ -487,7 +515,26 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
       en_spec->members = head->next;
     }
   } else {
-    not_implemented_token(tok);
+    consume(&tok, tok, "{");
+    en_spec->has_decl = true;
+
+    EnumVal *head = calloc(1, sizeof(EnumVal));
+    EnumVal *cur = head;
+    while (!consume(&tok, tok, "}")) {
+      EnumVal *en_val = calloc(1, sizeof(EnumVal));
+
+      en_val->name = getname_ident(&tok, tok);
+      if (equal(tok, "=")) {
+        consume(&tok, tok, "=");
+        en_val->val_expr = parse_constant_expr(&tok, tok, state);
+      }
+
+      cur->next = en_val;
+      cur = cur->next;
+      consume(&tok, tok, ",");
+    }
+
+    en_spec->members = head->next;
   }
 
   *rest = tok;
@@ -631,7 +678,7 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
     declarator->nest = parse_declarator(&tok, tok, state);
     expect(&tok, tok, ")");
   } else {
-    error("cannot parse declarator");
+    error_token(tok, "cannot parse declarator");
   }
 
   // parse type-suffix

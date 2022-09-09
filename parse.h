@@ -195,6 +195,7 @@ struct Case {
 struct DeclSpec {
   // type_qual
   bool has_const; // unused;
+  bool has_volatile; // unused;
   bool has_extern;
   bool has_static;
   bool has_typedef;
@@ -243,6 +244,7 @@ struct EnumVal {
   char *name;
 
   int val;
+  Tree *val_expr;
   // for linked-list
   EnumVal *next;
 };
@@ -270,8 +272,9 @@ struct Declarator {
   Tree *init_expr;
 
   // for struct-declarator
-  bool has_bit_field;
-  int bit_field;
+  bool has_bitfield;
+  Tree *bitfield_expr;
+  int bitfield;
 
   // for linked-list
   Declarator *next;
