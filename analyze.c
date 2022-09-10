@@ -1004,6 +1004,15 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
     for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
       if (!mem_cur)
         error("excess elements");
+
+      if (cur->member_name) {
+        while (strcmp(cur->member_name, mem_cur->member_name) != 0) {
+          mem_cur = mem_cur->next;
+          if (!mem_cur)
+            error("not found member %s in initialize-list", cur->member_name);
+        }
+      }
+
       analyze_variable_initialize(mem_cur->type, cur->init_val, state,
                                   is_global);
       mem_cur = mem_cur->next;

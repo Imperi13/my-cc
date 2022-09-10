@@ -197,7 +197,9 @@ Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
     if (equal(tok, "[")) {
       not_implemented_token(tok);
     } else if (equal(tok, ".")) {
-      not_implemented_token(tok);
+      consume(&tok, tok, ".");
+      now->member_name = getname_ident(&tok, tok);
+      expect(&tok, tok, "=");
     }
 
     if (equal(tok, "{")) {

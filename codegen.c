@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <string.h>
 
 #include "codegen.h"
 #include "constexpr.h"
@@ -205,6 +206,10 @@ void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
     Member *mem_cur = var_type->st_def->members;
 
     for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
+      if (cur->member_name) {
+        while (strcmp(cur->member_name, mem_cur->member_name) != 0)
+          mem_cur = mem_cur->next;
+      }
       fprintf(codegen_output, "  pop rdi\n");
       fprintf(codegen_output, "  push rdi\n");
       fprintf(codegen_output, "  add rdi, %d\n", mem_cur->offset);
