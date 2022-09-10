@@ -324,9 +324,9 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
   }
 }
 
-// compare token_seq (until TK_NEWLINE)
+// compare token_seq (until TK_EOF)
 bool is_same_define_seq(Token *a, Token *b) {
-  while (a->kind != TK_NEWLINE) {
+  while (a->kind != TK_EOF) {
     if (!is_same_token(a, b))
       return false;
     a = a->next;
@@ -388,25 +388,26 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   Token *cur = head;
 
   while (tok->kind != TK_NEWLINE) {
-    cur->next = tok;
+    Token *replace_tok = calloc(1, sizeof(Token));
+    memcpy(replace_tok, tok, sizeof(Token));
+    cur->next = replace_tok;
 
     if (equal_kind(tok, TK_IDENT) && strcmp(tok->ident_str, define_str) == 0)
-      tok->is_recursived = true;
+      replace_tok->is_recursived = true;
 
     // rename TK_IDENT to TK_MACRO_ARG
     if (equal_kind(tok, TK_IDENT) &&
         find_str_dict(macro_arg_dict, tok->ident_str)) {
       MacroArg *macro_arg = find_str_dict(macro_arg_dict, tok->ident_str);
-      tok->kind = TK_MACRO_ARG;
-      tok->nth_arg = macro_arg->nth;
+      replace_tok->kind = TK_MACRO_ARG;
+      replace_tok->nth_arg = macro_arg->nth;
     }
 
     cur = cur->next;
-
     tok = tok->next;
   }
 
-  cur->next = tok;
+  cur->next = new_eof_token();
 
   new_def->start = head->next;
 
@@ -465,7 +466,7 @@ void expand_define(Token **pre, Token *tok) {
     Token *symbol = tok;
     Token *sym_next = tok->next;
     Token *cur = symbol;
-    for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
+    for (Token *src = def->start; src->kind != TK_EOF; src = src->next) {
       Token *cpy = calloc(1, sizeof(Token));
       memcpy(cpy, src, sizeof(Token));
       cur->next = cpy;
@@ -500,7 +501,7 @@ void expand_define(Token **pre, Token *tok) {
   Token *symbol = tok;
   Token *sym_next = tok->next;
   Token *cur = symbol;
-  for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
+  for (Token *src = def->start; src->kind != TK_EOF; src = src->next) {
     if (src->kind == TK_MACRO_ARG) {
       for (Token *arg_src = arg_token_list[src->nth_arg]; arg_src;
            arg_src = arg_src->next) {
@@ -539,9 +540,8 @@ Token *copy_macro_arg(Token **pre, Token *tok) {
 
 void add_predefine(char *name, char *replace) {
   int size = strlen(replace);
-  char *buf = calloc(size + 2, sizeof(char));
+  char *buf = calloc(size + 1, sizeof(char));
   strcpy(buf, replace);
-  buf[size] = '\n';
 
   Token *start = tokenize(buf, "predefined_macro");
 
