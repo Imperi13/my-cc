@@ -664,6 +664,8 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
       consume_kind(&tok, tok, TK_CONST);
     } else if (equal_kind(tok, TK_RESTRICT)) {
       consume_kind(&tok, tok, TK_RESTRICT);
+    } else if (equal_kind(tok, TK_VOLATILE)) {
+      consume_kind(&tok, tok, TK_VOLATILE);
     }
 
     *cur = calloc(1, sizeof(Pointer));
@@ -847,6 +849,8 @@ bool is_declarator(Token *tok, Analyze *state) {
   while (equal(tok, "*")) {
     consume(&tok, tok, "*");
     consume_kind(&tok, tok, TK_CONST);
+    consume_kind(&tok, tok, TK_RESTRICT);
+    consume_kind(&tok, tok, TK_VOLATILE);
   }
 
   if (equal_kind(tok, TK_IDENT)) {
