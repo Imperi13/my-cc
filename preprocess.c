@@ -503,8 +503,8 @@ void expand_define(Token **pre, Token *tok) {
   Token *cur = symbol;
   for (Token *src = def->start; src->kind != TK_EOF; src = src->next) {
     if (src->kind == TK_MACRO_ARG) {
-      for (Token *arg_src = arg_token_list[src->nth_arg]; arg_src;
-           arg_src = arg_src->next) {
+      for (Token *arg_src = arg_token_list[src->nth_arg];
+           arg_src->kind != TK_EOF; arg_src = arg_src->next) {
         Token *cpy = calloc(1, sizeof(Token));
         memcpy(cpy, arg_src, sizeof(Token));
         cur->next = cpy;
@@ -532,7 +532,7 @@ Token *copy_macro_arg(Token **pre, Token *tok) {
     cur = cur->next;
     tok = tok->next;
   }
-  cur->next = NULL;
+  cur->next = new_eof_token();
 
   *pre = tok;
   return head->next;
