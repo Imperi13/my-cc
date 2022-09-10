@@ -842,14 +842,25 @@ long process_unary(Token **pre, Token *tok) {
 
     if (equal(tok, "(")) {
       consume(&tok, tok, "(");
-      char *name = getname_ident(&tok, tok);
-      expect(&tok, tok, ")");
-
-      ret = find_str_dict(define_dict, name) ? 1 : 0;
+      if (equal_kind(tok, TK_IDENT)) {
+        char *name = getname_ident(&tok, tok);
+        expect(&tok, tok, ")");
+        ret = find_str_dict(define_dict, name) ? 1 : 0;
+      } else {
+        // TODO check if token is keyword
+        tok = tok->next;
+        expect(&tok, tok, ")");
+        ret = 0;
+      }
     } else {
-      char *name = getname_ident(&tok, tok);
-
-      ret = find_str_dict(define_dict, name) ? 1 : 0;
+      if (equal_kind(tok, TK_IDENT)) {
+        char *name = getname_ident(&tok, tok);
+        ret = find_str_dict(define_dict, name) ? 1 : 0;
+      } else {
+        // TODO check if token is keyword
+        tok = tok->next;
+        ret = 0;
+      }
     }
 
     *pre = tok;
