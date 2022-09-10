@@ -108,6 +108,12 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len, char *filepath,
   return tok;
 }
 
+Token *new_eof_token() {
+  Token *tok = calloc(1, sizeof(Token));
+  tok->kind = TK_EOF;
+  return tok;
+}
+
 bool is_alnum(char c) {
   for (const char *p = variable_letters; *p != '\0'; p++)
     if (*p == c)
@@ -257,8 +263,7 @@ char consume_char(char **rest, char *p) {
 
 Token *tokenize(char *p, char *filepath) {
   char *file_buf = p;
-  Token head;
-  head.next = NULL;
+  Token head = {.next = NULL};
   Token *cur = &head;
 
   while (*p) {

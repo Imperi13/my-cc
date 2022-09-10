@@ -105,9 +105,8 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
   } else if (cmp_ident(tok->next, "pragma")) {
     process_pragma_line(post, pre, tok);
   } else {
-    // warn("ignore unrecognized macro group");
-    // consume_line(pre, tok);
-    not_implemented_token(tok);
+    warn("ignore unrecognized macro group");
+    consume_line(pre, tok);
   }
 }
 
@@ -325,9 +324,9 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
   }
 }
 
-// compare token_seq (until TK_NEWLINE)
+// compare token_seq (until TK_EOF)
 bool is_same_define_seq(Token *a, Token *b) {
-  while (a->kind != TK_NEWLINE) {
+  while (a->kind != TK_EOF) {
     if (!is_same_token(a, b))
       return false;
     a = a->next;
@@ -385,31 +384,32 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
     new_def->argc = cnt;
   }
 
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (tok->kind != TK_NEWLINE) {
-    cur->next = tok;
+    Token *replace_tok = calloc(1, sizeof(Token));
+    memcpy(replace_tok, tok, sizeof(Token));
+    cur->next = replace_tok;
 
     if (equal_kind(tok, TK_IDENT) && strcmp(tok->ident_str, define_str) == 0)
-      tok->is_recursived = true;
+      replace_tok->is_recursived = true;
 
     // rename TK_IDENT to TK_MACRO_ARG
     if (equal_kind(tok, TK_IDENT) &&
         find_str_dict(macro_arg_dict, tok->ident_str)) {
       MacroArg *macro_arg = find_str_dict(macro_arg_dict, tok->ident_str);
-      tok->kind = TK_MACRO_ARG;
-      tok->nth_arg = macro_arg->nth;
+      replace_tok->kind = TK_MACRO_ARG;
+      replace_tok->nth_arg = macro_arg->nth;
     }
 
     cur = cur->next;
-
     tok = tok->next;
   }
 
-  cur->next = tok;
+  cur->next = new_eof_token();
 
-  new_def->start = head->next;
+  new_def->start = head.next;
 
   if (find_str_dict(define_dict, define_str)) {
     DefineList *define_list = find_str_dict(define_dict, define_str);
@@ -466,7 +466,7 @@ void expand_define(Token **pre, Token *tok) {
     Token *symbol = tok;
     Token *sym_next = tok->next;
     Token *cur = symbol;
-    for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
+    for (Token *src = def->start; src->kind != TK_EOF; src = src->next) {
       Token *cpy = calloc(1, sizeof(Token));
       memcpy(cpy, src, sizeof(Token));
       cur->next = cpy;
@@ -501,10 +501,10 @@ void expand_define(Token **pre, Token *tok) {
   Token *symbol = tok;
   Token *sym_next = tok->next;
   Token *cur = symbol;
-  for (Token *src = def->start; src->kind != TK_NEWLINE; src = src->next) {
+  for (Token *src = def->start; src->kind != TK_EOF; src = src->next) {
     if (src->kind == TK_MACRO_ARG) {
-      for (Token *arg_src = arg_token_list[src->nth_arg]; arg_src;
-           arg_src = arg_src->next) {
+      for (Token *arg_src = arg_token_list[src->nth_arg];
+           arg_src->kind != TK_EOF; arg_src = arg_src->next) {
         Token *cpy = calloc(1, sizeof(Token));
         memcpy(cpy, arg_src, sizeof(Token));
         cur->next = cpy;
@@ -522,8 +522,8 @@ void expand_define(Token **pre, Token *tok) {
 }
 
 Token *copy_macro_arg(Token **pre, Token *tok) {
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (!equal(tok, ",") && !equal(tok, ")")) {
     Token *tmp = calloc(1, sizeof(Token));
@@ -532,17 +532,16 @@ Token *copy_macro_arg(Token **pre, Token *tok) {
     cur = cur->next;
     tok = tok->next;
   }
-  cur->next = NULL;
+  cur->next = new_eof_token();
 
   *pre = tok;
-  return head->next;
+  return head.next;
 }
 
 void add_predefine(char *name, char *replace) {
   int size = strlen(replace);
-  char *buf = calloc(size + 2, sizeof(char));
+  char *buf = calloc(size + 1, sizeof(char));
   strcpy(buf, replace);
-  buf[size] = '\n';
 
   Token *start = tokenize(buf, "predefined_macro");
 
@@ -842,14 +841,25 @@ long process_unary(Token **pre, Token *tok) {
 
     if (equal(tok, "(")) {
       consume(&tok, tok, "(");
-      char *name = getname_ident(&tok, tok);
-      expect(&tok, tok, ")");
-
-      ret = find_str_dict(define_dict, name) ? 1 : 0;
+      if (equal_kind(tok, TK_IDENT)) {
+        char *name = getname_ident(&tok, tok);
+        expect(&tok, tok, ")");
+        ret = find_str_dict(define_dict, name) ? 1 : 0;
+      } else {
+        // TODO check if token is keyword
+        tok = tok->next;
+        expect(&tok, tok, ")");
+        ret = 0;
+      }
     } else {
-      char *name = getname_ident(&tok, tok);
-
-      ret = find_str_dict(define_dict, name) ? 1 : 0;
+      if (equal_kind(tok, TK_IDENT)) {
+        char *name = getname_ident(&tok, tok);
+        ret = find_str_dict(define_dict, name) ? 1 : 0;
+      } else {
+        // TODO check if token is keyword
+        tok = tok->next;
+        ret = 0;
+      }
     }
 
     *pre = tok;
@@ -891,8 +901,8 @@ Token *preprocess(Token *tok) {
   add_predefine("__STDC_VERSION__", "201112L");
   add_predefine("__STDC__", "1");
 
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (!at_eof(tok)) {
     if (equal(tok, "#")) {
@@ -905,12 +915,12 @@ Token *preprocess(Token *tok) {
   define_dict = NULL;
 
   cur->next = tok;
-  return head->next;
+  return head.next;
 }
 
 Token *remove_newline(Token *tok) {
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (tok->kind != TK_EOF) {
     if (tok->kind != TK_NEWLINE) {
@@ -922,5 +932,5 @@ Token *remove_newline(Token *tok) {
 
   cur->next = tok;
 
-  return head->next;
+  return head.next;
 }

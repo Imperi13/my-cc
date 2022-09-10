@@ -127,7 +127,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       Type *obj_type = gettype_declarator(cur, base_type, state);
 
       // get size for null-size array []
-      if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
+      if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
         if (!cur->init_expr)
           error("tentative array def must have initialize value");
 
@@ -207,8 +207,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       st_defs->alignment = 1;
 
       Tree *decl_cur = decl_spec->st_spec->members;
-      Member *head = calloc(1, sizeof(Member));
-      Member *mem_cur = head;
+      Member head = {.next = NULL};
+      Member *mem_cur = &head;
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
         Type *base_type = gettype_decl_spec(decl_cur->decl_specs, state);
@@ -237,7 +237,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         decl_cur = decl_cur->next;
       }
 
-      st_defs->members = head->next;
+      st_defs->members = head.next;
 
       st_defs->size = (st_defs->size % st_defs->alignment == 0)
                           ? st_defs->size
@@ -271,8 +271,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       union_def->alignment = 1;
 
       Tree *decl_cur = decl_spec->union_spec->members;
-      Member *head = calloc(1, sizeof(Member));
-      Member *mem_cur = head;
+      Member head = {.next = NULL};
+      Member *mem_cur = &head;
 
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
@@ -302,7 +302,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         decl_cur = decl_cur->next;
       }
 
-      union_def->members = head->next;
+      union_def->members = head.next;
       union_def->size = (union_def->size % union_def->alignment == 0)
                             ? union_def->size
                             : union_def->size + union_def->alignment -
@@ -416,7 +416,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       Type *obj_type = gettype_declarator(cur, base_type, state);
 
       // get size for null-size array []
-      if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
+      if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
         if (!cur->init_expr)
           error("tentative array def must have initialize value");
 
@@ -635,7 +635,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     add_implicit_array_cast(&ast->rhs);
     add_implicit_func_cast(&ast->rhs);
 
-    ast->type = ast->lhs->type;
+    if (is_constexpr_zero(ast->lhs) && ast->rhs->type->kind == PTR)
+      ast->type = ast->rhs->type;
+    else if (ast->lhs->type->kind == PTR && is_constexpr_zero(ast->rhs))
+      ast->type = ast->lhs->type;
+    else
+      ast->type = ast->lhs->type;
+
   } else if (ast->kind == LOGICAL_OR) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
@@ -998,6 +1004,15 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
     for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
       if (!mem_cur)
         error("excess elements");
+
+      if (cur->member_name) {
+        while (strcmp(cur->member_name, mem_cur->member_name) != 0) {
+          mem_cur = mem_cur->next;
+          if (!mem_cur)
+            error("not found member %s in initialize-list", cur->member_name);
+        }
+      }
+
       analyze_variable_initialize(mem_cur->type, cur->init_val, state,
                                   is_global);
       mem_cur = mem_cur->next;

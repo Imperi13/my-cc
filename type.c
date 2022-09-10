@@ -146,6 +146,16 @@ Tree *getargs_declarator(Declarator *declarator) {
   return declarator->args;
 }
 
+ArrayDeclarator *get_arr_declarator(Declarator *declarator) {
+  if (declarator->nest)
+    return get_arr_declarator(declarator->nest);
+
+  if (declarator->type_suffix_kind != ARRAY_DECLARATOR)
+    error("not array");
+
+  return declarator->arr_decl;
+}
+
 Type *newtype_ptr(Type *type) {
   Type *nt = calloc(1, sizeof(Type));
   nt->kind = PTR;

@@ -472,6 +472,8 @@ run_test enum_value_1 'enum Test{ A=10,B,C,D,E}; int main(){return 160+E;}' 174
 
 run_test typedef_test_1 'typedef long long TEST,ABC; int main(){TEST n = 164; ABC m = 10; return n+m;}' 174
 
+run_test member_initialize 'struct Test{int n;int *p;}; int main(){struct Test t = {.p = (void *)0}; if(t.p)return 160;else return 174;}' 174
+
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 #run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174

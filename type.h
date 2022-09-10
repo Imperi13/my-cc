@@ -53,6 +53,7 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type,
                          Analyze *state);
 char *getname_declarator(Declarator *declarator);
 Tree *getargs_declarator(Declarator *declarator);
+ArrayDeclarator *get_arr_declarator(Declarator *declarator);
 
 Type *newtype_ptr(Type *type);
 Type *newtype_struct(StructDef *st_def);

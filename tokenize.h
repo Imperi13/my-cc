@@ -108,6 +108,8 @@ bool is_same_token(Token *a, Token *b);
 
 bool is_alnum(char c);
 
+Token *new_eof_token();
+
 Token *tokenize(char *p, char *filepath);
 
 void print_token_seq(FILE *output_stream, Token *tok);
