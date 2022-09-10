@@ -15,6 +15,12 @@
 #include "preprocess.h"
 #include "tokenize.h"
 
+typedef struct FileList FileList;
+struct FileList {
+  char *path;
+  FileList *next;
+};
+
 static void run_cmd(char **argv);
 static char *create_tmpfile(FileType file_type);
 
@@ -40,6 +46,29 @@ void run_cmd(char **argv) {
 
 void assemble(char *input_path, char *output_path) {
   char *argv[] = {"as", "--64", "-o", output_path, input_path, NULL};
+  run_cmd(argv);
+}
+
+// use musl-gcc instead of ld because I'm not sure about the linker option
+// TODO use ld linker
+void linker(FileList *linker_list, char *output_path) {
+  int cnt = 3;
+  for (FileList *cur = linker_list; cur; cur = cur->next)
+    cnt++;
+
+  char **argv = calloc(cnt + 1, sizeof(char *));
+  argv[0] = "/usr/local/musl/bin/musl-gcc";
+  argv[1] = "-o";
+  argv[2] = output_path;
+
+  cnt = 3;
+  for (FileList *cur = linker_list; cur; cur = cur->next) {
+    argv[cnt] = cur->path;
+    cnt++;
+  }
+
+  argv[cnt] = NULL;
+
   run_cmd(argv);
 }
 
@@ -72,6 +101,8 @@ int main(int argc, char **argv) {
       (cmd_opt->only_preprocess || cmd_opt->only_compile ||
        cmd_opt->only_assemble))
     error("cannot output for multiple files with -E -S -c");
+
+  FileList *linker_list = NULL;
 
   for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
        input_index++) {
@@ -125,7 +156,20 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    not_implemented(__func__);
+    char *object_path = create_tmpfile(OBJECT_FILE);
+    assemble(asm_source_path, object_path);
+
+    FileList *object_file_list = calloc(1, sizeof(FileList));
+    object_file_list->path = object_path;
+    object_file_list->next = linker_list;
+    linker_list = object_file_list;
   }
+
+  if (!cmd_opt->only_preprocess && !cmd_opt->only_compile &&
+      !cmd_opt->only_assemble) {
+    char *output_path = (cmd_opt->output_file ? cmd_opt->output_file : "a.out");
+    linker(linker_list, output_path);
+  }
+
   return 0;
 }
