@@ -6,6 +6,7 @@ typedef struct CommandOptions CommandOptions;
 struct CommandOptions {
   bool only_preprocess;
   bool only_compile;
+  bool only_assemble;
 
   char *output_file;
 

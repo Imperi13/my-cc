@@ -3,7 +3,7 @@ assert() {
   expected="$1"
   input="$2"
 
-  ./mycc ${input} -o tmp.s
+  ./mycc -S ${input} -o tmp.s
   gcc -o tmp tmp.s util/ten.o util/add.o util/many_arg.o util/alloc4.o
   ./tmp
   actual="$?"

@@ -10,7 +10,7 @@ cc_option="-std=gnu11 -g -static"
 run_test_with_supplement0() {
   rm -f ./tmp ./tmp.s
   echo -e "$2" > ./external/tmp.c
-  $MYCC ./external/tmp.c -o tmp.s
+  $MYCC -S ./external/tmp.c -o tmp.s
 	${cc} ${cc_option} ./external/misc/supplement0.c -S -o supplement0.s
 	${cc} ${cc_option} tmp.s supplement0.s -o tmp
 	./tmp
@@ -21,7 +21,7 @@ run_test_with_supplement0() {
 run_test() {
   rm -f ./tmp ./tmp.s
   echo -e "$2" > ./external/tmp.c
-	$MYCC ./external/tmp.c -o tmp.s
+	$MYCC -S ./external/tmp.c -o tmp.s
   ${cc} ${cc_option} -o tmp tmp.s
 	./tmp
 	res=$?
@@ -31,7 +31,7 @@ run_test() {
 run_test_with_supplement1() {
   rm -f ./tmp ./tmp.s
   echo -e "$2" > ./external/tmp.c
-  $MYCC ./external/tmp.c -o tmp.s
+  $MYCC -S ./external/tmp.c -o tmp.s
 	${cc} ${cc_option} ./external/misc/supplement1.c -S -o supplement1.s
 	${cc} ${cc_option} tmp.s supplement1.s -o tmp
 	./tmp
@@ -40,8 +40,8 @@ run_test_with_supplement1() {
 
   rm -f ./tmp ./tmp.s ./supplement1.s
   echo -e "$2" > ./external/tmp.c
-  $MYCC ./external/tmp.c -o tmp.s
-  $MYCC ./external/misc/supplement1.c -o supplement1.s
+  $MYCC -S ./external/tmp.c -o tmp.s
+  $MYCC -S ./external/misc/supplement1.c -o supplement1.s
 	${cc} ${cc_option} tmp.s supplement1.s -o tmp
 	./tmp
 	res=$?
