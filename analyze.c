@@ -207,8 +207,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       st_defs->alignment = 1;
 
       Tree *decl_cur = decl_spec->st_spec->members;
-      Member *head = calloc(1, sizeof(Member));
-      Member *mem_cur = head;
+      Member head = {.next = NULL};
+      Member *mem_cur = &head;
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
         Type *base_type = gettype_decl_spec(decl_cur->decl_specs, state);
@@ -237,7 +237,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         decl_cur = decl_cur->next;
       }
 
-      st_defs->members = head->next;
+      st_defs->members = head.next;
 
       st_defs->size = (st_defs->size % st_defs->alignment == 0)
                           ? st_defs->size
@@ -271,8 +271,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       union_def->alignment = 1;
 
       Tree *decl_cur = decl_spec->union_spec->members;
-      Member *head = calloc(1, sizeof(Member));
-      Member *mem_cur = head;
+      Member head = {.next = NULL};
+      Member *mem_cur = &head;
 
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
@@ -302,7 +302,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         decl_cur = decl_cur->next;
       }
 
-      union_def->members = head->next;
+      union_def->members = head.next;
       union_def->size = (union_def->size % union_def->alignment == 0)
                             ? union_def->size
                             : union_def->size + union_def->alignment -

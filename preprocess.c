@@ -384,8 +384,8 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
     new_def->argc = cnt;
   }
 
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (tok->kind != TK_NEWLINE) {
     Token *replace_tok = calloc(1, sizeof(Token));
@@ -409,7 +409,7 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
 
   cur->next = new_eof_token();
 
-  new_def->start = head->next;
+  new_def->start = head.next;
 
   if (find_str_dict(define_dict, define_str)) {
     DefineList *define_list = find_str_dict(define_dict, define_str);
@@ -522,8 +522,8 @@ void expand_define(Token **pre, Token *tok) {
 }
 
 Token *copy_macro_arg(Token **pre, Token *tok) {
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (!equal(tok, ",") && !equal(tok, ")")) {
     Token *tmp = calloc(1, sizeof(Token));
@@ -535,7 +535,7 @@ Token *copy_macro_arg(Token **pre, Token *tok) {
   cur->next = new_eof_token();
 
   *pre = tok;
-  return head->next;
+  return head.next;
 }
 
 void add_predefine(char *name, char *replace) {
@@ -901,8 +901,8 @@ Token *preprocess(Token *tok) {
   add_predefine("__STDC_VERSION__", "201112L");
   add_predefine("__STDC__", "1");
 
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (!at_eof(tok)) {
     if (equal(tok, "#")) {
@@ -915,12 +915,12 @@ Token *preprocess(Token *tok) {
   define_dict = NULL;
 
   cur->next = tok;
-  return head->next;
+  return head.next;
 }
 
 Token *remove_newline(Token *tok) {
-  Token *head = calloc(1, sizeof(Token));
-  Token *cur = head;
+  Token head = {.next = NULL};
+  Token *cur = &head;
 
   while (tok->kind != TK_EOF) {
     if (tok->kind != TK_NEWLINE) {
@@ -932,5 +932,5 @@ Token *remove_newline(Token *tok) {
 
   cur->next = tok;
 
-  return head->next;
+  return head.next;
 }

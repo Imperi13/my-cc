@@ -263,8 +263,7 @@ char consume_char(char **rest, char *p) {
 
 Token *tokenize(char *p, char *filepath) {
   char *file_buf = p;
-  Token head;
-  head.next = NULL;
+  Token head = {.next = NULL};
   Token *cur = &head;
 
   while (*p) {

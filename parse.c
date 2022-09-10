@@ -92,8 +92,8 @@ Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs) {
 }
 
 Tree *parse_translation_unit(Token *tok) {
-  Tree *head = calloc(1, sizeof(Tree));
-  Tree *cur = head;
+  Tree head = {.next = NULL};
+  Tree *cur = &head;
 
   Analyze *state = new_analyze_state();
 
@@ -105,7 +105,7 @@ Tree *parse_translation_unit(Token *tok) {
     cur = ex_decl;
   }
 
-  return head->next;
+  return head.next;
 }
 
 Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
@@ -188,8 +188,8 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
   expect(&tok, tok, "{");
 
-  InitializeList *head = calloc(1, sizeof(InitializeList));
-  InitializeList *cur = head;
+  InitializeList head = {.next = NULL};
+  InitializeList *cur = &head;
 
   while (!(equal(tok, "}") || (equal(tok, ",") && equal(tok->next, "}")))) {
     InitializeList *now = calloc(1, sizeof(InitializeList));
@@ -218,7 +218,7 @@ Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
 
   Tree *init_list = calloc(1, sizeof(Tree));
   init_list->kind = INITIALIZE_LIST;
-  init_list->init_list = head->next;
+  init_list->init_list = head.next;
   return init_list;
 }
 
@@ -423,28 +423,28 @@ StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state) {
 
     if (consume(&tok, tok, "{")) {
       st_spec->has_decl = true;
-      Tree *head = calloc(1, sizeof(Tree));
-      Tree *cur = head;
+      Tree head = {.next = NULL};
+      Tree *cur = &head;
       while (!consume(&tok, tok, "}")) {
         cur->next = parse_struct_declaration(&tok, tok, state);
         cur = cur->next;
         consume(&tok, tok, ",");
       }
 
-      st_spec->members = head->next;
+      st_spec->members = head.next;
     }
   } else {
     expect(&tok, tok, "{");
     st_spec->has_decl = true;
-    Tree *head = calloc(1, sizeof(Tree));
-    Tree *cur = head;
+    Tree head = {.next = NULL};
+    Tree *cur = &head;
     while (!consume(&tok, tok, "}")) {
       cur->next = parse_struct_declaration(&tok, tok, state);
       cur = cur->next;
       consume(&tok, tok, ",");
     }
 
-    st_spec->members = head->next;
+    st_spec->members = head.next;
   }
   *rest = tok;
   return st_spec;
@@ -458,28 +458,28 @@ UnionSpec *parse_union_spec(Token **rest, Token *tok, Analyze *state) {
 
     if (consume(&tok, tok, "{")) {
       union_spec->has_decl = true;
-      Tree *head = calloc(1, sizeof(Tree));
-      Tree *cur = head;
+      Tree head = {.next = NULL};
+      Tree *cur = &head;
       while (!consume(&tok, tok, "}")) {
         cur->next = parse_struct_declaration(&tok, tok, state);
         cur = cur->next;
         consume(&tok, tok, ",");
       }
 
-      union_spec->members = head->next;
+      union_spec->members = head.next;
     }
   } else {
     expect(&tok, tok, "{");
     union_spec->has_decl = true;
-    Tree *head = calloc(1, sizeof(Tree));
-    Tree *cur = head;
+    Tree head = {.next = NULL};
+    Tree *cur = &head;
     while (!consume(&tok, tok, "}")) {
       cur->next = parse_struct_declaration(&tok, tok, state);
       cur = cur->next;
       consume(&tok, tok, ",");
     }
 
-    union_spec->members = head->next;
+    union_spec->members = head.next;
   }
   *rest = tok;
   return union_spec;
@@ -498,8 +498,8 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
       consume(&tok, tok, "{");
       en_spec->has_decl = true;
 
-      EnumVal *head = calloc(1, sizeof(EnumVal));
-      EnumVal *cur = head;
+      EnumVal head = {.next = NULL};
+      EnumVal *cur = &head;
       while (!consume(&tok, tok, "}")) {
         EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
@@ -514,14 +514,14 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
         consume(&tok, tok, ",");
       }
 
-      en_spec->members = head->next;
+      en_spec->members = head.next;
     }
   } else {
     consume(&tok, tok, "{");
     en_spec->has_decl = true;
 
-    EnumVal *head = calloc(1, sizeof(EnumVal));
-    EnumVal *cur = head;
+    EnumVal head = {.next = NULL};
+    EnumVal *cur = &head;
     while (!consume(&tok, tok, "}")) {
       EnumVal *en_val = calloc(1, sizeof(EnumVal));
 
@@ -536,7 +536,7 @@ EnumSpec *parse_enum_spec(Token **rest, Token *tok, Analyze *state) {
       consume(&tok, tok, ",");
     }
 
-    en_spec->members = head->next;
+    en_spec->members = head.next;
   }
 
   *rest = tok;
@@ -953,8 +953,8 @@ Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
 
 Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
   expect(&tok, tok, "{");
-  Tree *head = calloc(1, sizeof(Tree));
-  Tree *cur = head;
+  Tree head = {.next = NULL};
+  Tree *cur = &head;
   while (!consume(&tok, tok, "}")) {
     if (is_decl_specs(tok, state)) {
       cur->next = parse_external_decl(&tok, tok, state, false);
@@ -968,7 +968,7 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
 
   Tree *node = calloc(1, sizeof(Tree));
   node->kind = COMPOUND_STMT;
-  node->stmts = head->next;
+  node->stmts = head.next;
   return node;
 }
 
