@@ -45,8 +45,8 @@ static Tree *parse_type_name(Token **rest, Token *tok, Analyze *state);
 static Declarator *parse_abstract_declarator(Token **rest, Token *tok,
                                              Analyze *state);
 
-static bool is_decl_specs(Token *tok, Analyze *state);
 static bool is_declaration(Token *tok, Analyze *state);
+static bool is_decl_specs(Token *tok, Analyze *state);
 static bool is_declarator(Token *tok, Analyze *state);
 
 static Tree *parse_stmt(Token **rest, Token *tok, Analyze *state);
@@ -868,7 +868,14 @@ bool is_declarator(Token *tok, Analyze *state) {
   }
 
   if (equal(tok, "(")) {
-    not_implemented_token(tok);
+    consume(&tok, tok, "(");
+    if (equal(tok, ")") || (equal_kind(tok, TK_VOID) && equal(tok->next, ")")))
+      return true;
+
+    parse_parameter_type_list(&tok, tok, state);
+    if (!equal(tok, ")"))
+      return false;
+    consume(&tok, tok, ")");
   } else if (equal(tok, "[")) {
     consume(&tok, tok, "[");
     if (!equal_kind(tok, TK_NUM))

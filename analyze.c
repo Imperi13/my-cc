@@ -127,7 +127,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       Type *obj_type = gettype_declarator(cur, base_type, state);
 
       // get size for null-size array []
-      if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
+      if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
         if (!cur->init_expr)
           error("tentative array def must have initialize value");
 
@@ -416,7 +416,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       Type *obj_type = gettype_declarator(cur, base_type, state);
 
       // get size for null-size array []
-      if (obj_type->kind == ARRAY && cur->arr_decl->is_null_size) {
+      if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
         if (!cur->init_expr)
           error("tentative array def must have initialize value");
 
@@ -635,7 +635,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     add_implicit_array_cast(&ast->rhs);
     add_implicit_func_cast(&ast->rhs);
 
-    ast->type = ast->lhs->type;
+    if (is_constexpr_zero(ast->lhs) && ast->rhs->type->kind == PTR)
+      ast->type = ast->rhs->type;
+    else if (ast->lhs->type->kind == PTR && is_constexpr_zero(ast->rhs))
+      ast->type = ast->lhs->type;
+    else
+      ast->type = ast->lhs->type;
+
   } else if (ast->kind == LOGICAL_OR) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
