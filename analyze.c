@@ -448,7 +448,21 @@ void analyze_stmt(Tree *ast, Analyze *state) {
         analyze_variable_initialize(obj_type, cur->init_expr, state, false);
     }
   } else if (ast->kind == LABEL) {
+    int label_len =
+        strlen(state->current_func->obj_name) + strlen(ast->label_name) + 1;
+    char *label_name = calloc(label_len + 1, sizeof(char));
+    snprintf(label_name, label_len + 1, "%s.%s", state->current_func->obj_name,
+             ast->label_name);
+    ast->label_name = label_name;
+
     analyze_stmt(ast->lhs, state);
+  } else if (ast->kind == GOTO) {
+    int label_len =
+        strlen(state->current_func->obj_name) + strlen(ast->label_name) + 1;
+    char *label_name = calloc(label_len + 1, sizeof(char));
+    snprintf(label_name, label_len + 1, "%s.%s", state->current_func->obj_name,
+             ast->label_name);
+    ast->label_name = label_name;
   } else if (ast->kind == CASE) {
     analyze_stmt(ast->case_num_node, state);
     int case_num = eval_constexpr_integer(ast->case_num_node);

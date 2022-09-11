@@ -974,7 +974,7 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
 
 bool is_jump_stmt(Token *tok) {
   return equal_kind(tok, TK_RETURN) || equal_kind(tok, TK_BREAK) ||
-         equal_kind(tok, TK_CONTINUE);
+         equal_kind(tok, TK_GOTO) || equal_kind(tok, TK_CONTINUE);
 }
 
 Tree *parse_jump_stmt(Token **rest, Token *tok, Analyze *state) {
@@ -997,6 +997,11 @@ Tree *parse_jump_stmt(Token **rest, Token *tok, Analyze *state) {
   } else if (equal_kind(tok, TK_CONTINUE)) {
     consume_kind(&tok, tok, TK_CONTINUE);
     node->kind = CONTINUE;
+    expect(&tok, tok, ";");
+  } else if (equal_kind(tok, TK_GOTO)) {
+    consume_kind(&tok, tok, TK_GOTO);
+    node->kind = GOTO;
+    node->label_name = getname_ident(&tok, tok);
     expect(&tok, tok, ";");
   } else {
     error("cannot parse selection_stmt");

@@ -10,6 +10,7 @@ typedef enum TreeKind {
   CASE,
   DEFAULT,
   RETURN,
+  GOTO,
   BREAK,
   CONTINUE,
   DO_WHILE,
@@ -130,7 +131,7 @@ struct Tree {
   // for compound_stmt
   Tree *stmts;
 
-  // for LABEL
+  // for LABEL goto-stmt
   char *label_name;
 
   // for CASE
@@ -194,7 +195,7 @@ struct Case {
 
 struct DeclSpec {
   // type_qual
-  bool has_const; // unused;
+  bool has_const;    // unused;
   bool has_volatile; // unused;
   bool has_extern;
   bool has_static;
