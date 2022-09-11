@@ -16,6 +16,7 @@ typedef enum TokenKind {
 
   // keyword
   TK_RETURN,
+  TK_GOTO,
   TK_SIZEOF,
   TK_ALIGNOF,
   TK_STRUCT,

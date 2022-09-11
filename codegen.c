@@ -266,8 +266,11 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   }
     return;
   case LABEL:
-    fprintf(codegen_output, ".Llabel%s:\n", stmt->label_name);
+    fprintf(codegen_output, ".Llabel.%s:\n", stmt->label_name);
     codegen_stmt(codegen_output, stmt->lhs);
+    return;
+  case GOTO:
+    fprintf(codegen_output, "  jmp .Llabel.%s\n", stmt->label_name);
     return;
   case CASE:
     fprintf(codegen_output, ".Lswitch%d_case%d:\n", stmt->label_number,

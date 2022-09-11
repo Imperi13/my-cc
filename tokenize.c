@@ -468,6 +468,12 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
+    if (strncmp(p, "goto", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_GOTO, cur, p, 4, filepath, file_buf);
+      p += 4;
+      continue;
+    }
+
     if (strncmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_SIZEOF, cur, p, 6, filepath, file_buf);
       p += 6;
