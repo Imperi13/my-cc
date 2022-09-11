@@ -114,6 +114,21 @@ Token *new_eof_token() {
   return tok;
 }
 
+Token *copy_token_seq(Token *tok) {
+  Token head = {.next = NULL};
+  Token *copy_cur = &head;
+
+  for (Token *cur = tok; cur->kind != TK_EOF; cur = cur->next) {
+    Token *copy = calloc(1, sizeof(Token));
+    memcpy(copy, cur, sizeof(Token));
+    copy_cur->next = copy;
+    copy_cur = copy_cur->next;
+  }
+
+  copy_cur->next = new_eof_token();
+  return head.next;
+}
+
 bool is_alnum(char c) {
   for (const char *p = variable_letters; *p != '\0'; p++)
     if (*p == c)
