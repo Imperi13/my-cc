@@ -476,6 +476,7 @@ run_test member_initialize 'struct Test{int n;int *p;}; int main(){struct Test t
 
 run_test concat_token_1 '#define TEST a ## b\n int TEST = 10; int main(){return 164 + ab;}' 174
 run_test concat_token_2 '#define TEST(x) a ## x\n int TEST(1) = 10,TEST(2) = 20; int main(){return 144 + a1 + a2;}' 174
+run_test concat_token_2 '#define TEST(x) CONSTANT_ ## x\n #define CONSTANT_TEN 10\n int main(){return 164 + TEST(TEN);}' 174
 
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
