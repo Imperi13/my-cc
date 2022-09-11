@@ -75,6 +75,9 @@ bool is_included(char *filepath) {
 // dst -> dst_next , src -> ... -> src_end -> TK_EOF
 // dst -> src -> ... -> src_end -> dst_next
 void insert_token_seq(Token *dst, Token *src) {
+  if (src->kind == TK_EOF)
+    return;
+
   Token *dst_next = dst->next;
 
   Token *cur = src;
@@ -461,64 +464,61 @@ void expand_define(Token **pre, Token *tok) {
     return;
   }
 
-  // expand normal macro
-  if (!def->is_function_like) {
-    Token *symbol = tok;
-    Token *sym_next = tok->next;
-    Token *cur = symbol;
-    for (Token *src = def->start; src->kind != TK_EOF; src = src->next) {
-      Token *cpy = calloc(1, sizeof(Token));
-      memcpy(cpy, src, sizeof(Token));
-      cur->next = cpy;
-      cur = cur->next;
-    }
-    cur->next = sym_next;
-    expand_define(pre, symbol->next);
-    return;
-  }
-
-  // check func-like macro
-  if (!equal(tok->next, "(")) {
+  if (def->is_function_like && !equal(tok->next, "(")) {
     *pre = tok;
     return;
   }
 
-  // expand func-like macro
-  Token **arg_token_list = calloc(def->argc + 1, sizeof(Token *));
+  Token *def_symbol;
+  Token *replacement_list = copy_token_seq(def->start);
 
-  consume_kind(&tok, tok, TK_IDENT);
-  consume(&tok, tok, "(");
-  int cnt = 0;
-  while (!equal(tok, ")")) {
-    if (cnt > def->argc)
-      error("excess macro argument");
+  // expand object-like macro
+  if (!def->is_function_like) {
+    def_symbol = tok;
+  } else {
 
-    arg_token_list[cnt] = copy_macro_arg(&tok, tok);
-    cnt++;
-    consume(&tok, tok, ",");
-  }
+    // expand func-like macro
+    Token **arg_token_list = calloc(def->argc + 1, sizeof(Token *));
 
-  Token *symbol = tok;
-  Token *sym_next = tok->next;
-  Token *cur = symbol;
-  for (Token *src = def->start; src->kind != TK_EOF; src = src->next) {
-    if (src->kind == TK_MACRO_ARG) {
-      for (Token *arg_src = arg_token_list[src->nth_arg];
-           arg_src->kind != TK_EOF; arg_src = arg_src->next) {
-        Token *cpy = calloc(1, sizeof(Token));
-        memcpy(cpy, arg_src, sizeof(Token));
-        cur->next = cpy;
-        cur = cur->next;
-      }
-    } else {
-      Token *cpy = calloc(1, sizeof(Token));
-      memcpy(cpy, src, sizeof(Token));
-      cur->next = cpy;
-      cur = cur->next;
+    consume_kind(&tok, tok, TK_IDENT);
+    consume(&tok, tok, "(");
+    int cnt = 0;
+    while (!equal(tok, ")")) {
+      if (cnt > def->argc)
+        error("excess macro argument");
+
+      arg_token_list[cnt] = copy_macro_arg(&tok, tok);
+      cnt++;
+      consume(&tok, tok, ",");
     }
+
+    def_symbol = tok;
+
+    // replace TK_MACRO_ARG (remain TK_MACRO_ARG token)
+    for (Token *cur = replacement_list; cur->kind != TK_EOF; cur = cur->next) {
+      if (cur->kind == TK_MACRO_ARG) {
+        int index = cur->nth_arg;
+        insert_token_seq(cur, copy_token_seq(arg_token_list[index]));
+      }
+    }
+
+    // remove TK_MACRO_ARG token
+    Token head;
+    head.next = replacement_list;
+    for (Token *cur = &head; cur->kind != TK_EOF; cur = cur->next) {
+      if (cur->next->kind == TK_MACRO_ARG) {
+        Token *tmp = cur->next->next;
+        cur->next = tmp;
+      }
+    }
+
+    replacement_list = head.next;
   }
-  cur->next = sym_next;
-  expand_define(pre, symbol->next);
+
+  // TODO process #,## token
+
+  insert_token_seq(def_symbol, replacement_list);
+  expand_define(pre, def_symbol->next);
 }
 
 Token *copy_macro_arg(Token **pre, Token *tok) {
