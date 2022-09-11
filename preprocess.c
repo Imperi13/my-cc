@@ -27,6 +27,7 @@ static void process_text_line(Token **post, Token **pre, Token *tok);
 
 static void expand_define(Token **pre, Token *tok);
 static Token *copy_macro_arg(Token **pre, Token *tok);
+static Token *process_hash_pp_token(Token *replacement_list);
 static void add_predefine(char *name, char *replace);
 
 static void consume_line(Token **pre, Token *tok);
@@ -515,7 +516,7 @@ void expand_define(Token **pre, Token *tok) {
     replacement_list = head.next;
   }
 
-  // TODO process #,## token
+  replacement_list = process_hash_pp_token(replacement_list);
 
   insert_token_seq(def_symbol, replacement_list);
   expand_define(pre, def_symbol->next);
@@ -535,6 +536,32 @@ Token *copy_macro_arg(Token **pre, Token *tok) {
   cur->next = new_eof_token();
 
   *pre = tok;
+  return head.next;
+}
+
+Token *process_hash_pp_token(Token *replacement_list) {
+  Token head;
+  head.next = replacement_list;
+
+  for (Token *cur = &head; cur->kind != TK_EOF; cur = cur->next) {
+    // process ## token
+    if (cur->next->next && equal(cur->next->next, "##")) {
+      Token *lhs = cur->next;
+      Token *rhs = cur->next->next->next;
+
+      char *concat_str = calloc(lhs->len + rhs->len + 1, sizeof(char));
+      strncpy(concat_str, lhs->str, lhs->len);
+      strncpy(concat_str + lhs->len, rhs->str, rhs->len);
+      Token *concat_tok = tokenize(concat_str, lhs->filepath);
+
+      if (!equal_kind(concat_tok->next, TK_EOF))
+        error("cannot concat token");
+
+      cur->next = rhs->next;
+      insert_token_seq(cur, concat_tok);
+    }
+  }
+
   return head.next;
 }
 
