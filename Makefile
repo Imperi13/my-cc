@@ -1,5 +1,5 @@
 CC=/usr/local/musl/bin/musl-gcc
-CFLAGS=-std=gnu11 -g -static
+CFLAGS=-std=gnu11 -g -static -Wall -Wextra
 SRCS=$(wildcard *.c)
 OBJS=$(SRCS:.c=.o)
 

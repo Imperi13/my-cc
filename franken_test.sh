@@ -2,7 +2,7 @@
 
 compile="*.c"
 cc=/usr/local/musl/bin/musl-gcc
-cc_option="--std=gnu11 -g --static"
+cc_option="--std=gnu11 -g --static -Wall -Wextra"
 
 echo ${compile}
 

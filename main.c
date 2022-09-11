@@ -78,13 +78,13 @@ char *create_tmpfile(FileType file_type) {
 
   if (file_type == C_SOURCE) {
     path = strdup("/tmp/myccXXXXXX.c");
-    int fd = mkstemps(path, 2);
+    fd = mkstemps(path, 2);
   } else if (file_type == ASSEBLER_SOURCE) {
     path = strdup("/tmp/myccXXXXXX.s");
-    int fd = mkstemps(path, 2);
+    fd = mkstemps(path, 2);
   } else if (file_type == OBJECT_FILE) {
     path = strdup("/tmp/myccXXXXXX.o");
-    int fd = mkstemps(path, 2);
+    fd = mkstemps(path, 2);
   } else {
     not_implemented(__func__);
   }

@@ -9,11 +9,11 @@
 #include "str_dict.h"
 #include "type.h"
 
-Type type_void = {VOID};
-Type type_long = {LONG};
-Type type_int = {INT};
-Type type_char = {CHAR};
-Type type_bool = {BOOL};
+Type type_void = {.kind = VOID};
+Type type_long = {.kind = LONG};
+Type type_int = {.kind = INT};
+Type type_char = {.kind = CHAR};
+Type type_bool = {.kind = BOOL};
 
 void builtin_type_init(Analyze *state) {
 

@@ -504,7 +504,9 @@ void expand_define(Token **pre, Token *tok) {
     }
 
     // remove TK_MACRO_ARG token
+
     Token head;
+    head.kind = TK_NEWLINE;
     head.next = replacement_list;
     for (Token *cur = &head; cur->kind != TK_EOF; cur = cur->next) {
       if (cur->next->kind == TK_MACRO_ARG) {
@@ -541,6 +543,7 @@ Token *copy_macro_arg(Token **pre, Token *tok) {
 
 Token *process_hash_pp_token(Token *replacement_list) {
   Token head;
+  head.kind = TK_NEWLINE;
   head.next = replacement_list;
 
   for (Token *cur = &head; cur->kind != TK_EOF; cur = cur->next) {

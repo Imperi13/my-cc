@@ -22,7 +22,9 @@ char *read_file(char *path) {
     error("%s: fseek: %s", path, strerror(errno));
 
   char *buf = calloc(size + 2, sizeof(char));
-  fread(buf, size, 1, fp);
+  size_t read_byte = fread(buf, 1, size, fp);
+  if (read_byte < size)
+    error("failed to read");
 
   if (size == 0 || buf[size - 1] != '\n')
     buf[size++] = '\n';
@@ -48,14 +50,14 @@ char *rename_file_ext(char *path, FileType file_type) {
 
   int filename_len = dot - path;
   char *renamed_path = calloc(filename_len + 3, sizeof(char));
-  strncpy(renamed_path, path, filename_len);
+  char *dst = strncpy(renamed_path, path, filename_len + 1);
 
   if (file_type == C_SOURCE)
-    strncpy(renamed_path + filename_len, ".c", 2);
+    strncpy(dst, ".c", 3);
   else if (file_type == ASSEBLER_SOURCE)
-    strncpy(renamed_path + filename_len, ".s", 2);
+    strncpy(dst, ".s", 3);
   else if (file_type == OBJECT_FILE)
-    strncpy(renamed_path + filename_len, ".o", 2);
+    strncpy(dst, ".o", 3);
 
   return renamed_path;
 }
@@ -63,7 +65,7 @@ char *rename_file_ext(char *path, FileType file_type) {
 char *get_caronical_path(char *path) {
   char abs_path[2 * PATH_MAX + 1];
   if (path[0] == '/') {
-    strncpy(abs_path, path, strlen(path));
+    strncpy(abs_path, path, PATH_MAX+1);
   } else {
     char cwd[PATH_MAX + 1];
     if (!getcwd(cwd, PATH_MAX + 1))
