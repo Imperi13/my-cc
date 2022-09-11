@@ -636,14 +636,14 @@ Token *tokenize(char *p, char *filepath) {
 
 void print_token_seq(FILE *output_stream, Token *tok) {
   for (Token *cur = tok; cur->kind != TK_EOF; cur = cur->next)
-    fprintf(output_stream, "%.*s ", cur->len, cur->str);
+    fprintf(output_stream, "%.*s ", (int)cur->len, cur->str);
 }
 
 void debug_token(Token *token) {
   Token *cur = token;
   while (cur != NULL) {
-    fprintf(stderr, "kind:%d , len :%d , str: %.*s\n", cur->kind, cur->len,
-            cur->len, cur->str);
+    fprintf(stderr, "kind:%d , len :%lu , str: %.*s\n", cur->kind, cur->len,
+            (int)cur->len, cur->str);
     cur = cur->next;
   }
 }

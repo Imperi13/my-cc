@@ -59,7 +59,7 @@ struct Token {
   TokenKind kind;
   Token *next;
   char *str;
-  int len;
+  size_t len;
 
   // for preprocess & error-handling
   char *filepath;
