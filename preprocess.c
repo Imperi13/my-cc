@@ -27,6 +27,7 @@ static void process_text_line(Token **post, Token **pre, Token *tok);
 
 static void expand_define(Token **pre, Token *tok);
 static Token *copy_macro_arg(Token **pre, Token *tok);
+static Token *copy_matching_parentheses(Token **pre, Token *tok);
 static Token *process_hash_pp_token(Token *replacement_list);
 static void add_predefine(char *name, char *replace);
 
@@ -497,7 +498,7 @@ void expand_define(Token **pre, Token *tok) {
     consume(&tok, tok, "(");
     int cnt = 0;
     while (!equal(tok, ")")) {
-      if (cnt > def->argc)
+      if (cnt >= def->argc)
         error("excess macro argument");
 
       arg_token_list[cnt] = copy_macro_arg(&tok, tok);
@@ -541,16 +542,46 @@ Token *copy_macro_arg(Token **pre, Token *tok) {
   Token *cur = &head;
 
   while (!equal(tok, ",") && !equal(tok, ")")) {
-    Token *tmp = calloc(1, sizeof(Token));
-    memcpy(tmp, tok, sizeof(Token));
-    cur->next = tmp;
-    cur = cur->next;
-    tok = tok->next;
+    if (equal(tok, "(")) {
+      cur->next = copy_matching_parentheses(&tok, tok);
+
+      while (cur->next)
+        cur = cur->next;
+    } else {
+      cur->next = copy_and_consume(&tok, tok);
+      cur = cur->next;
+    }
   }
   cur->next = new_eof_token();
 
   *pre = tok;
   return head.next;
+}
+
+// not append TK_EOF
+Token *copy_matching_parentheses(Token **pre, Token *tok) {
+  if (!equal(tok, "("))
+    error("not left parenthese");
+
+  Token *head = copy_and_consume(&tok, tok);
+  Token *cur = head;
+
+  while (!equal(tok, ")")) {
+    if (equal(tok, "(")) {
+      cur->next = copy_matching_parentheses(&tok, tok);
+
+      while (cur->next)
+        cur = cur->next;
+    } else {
+      cur->next = copy_and_consume(&tok, tok);
+      cur = cur->next;
+    }
+  }
+
+  cur->next = copy_and_consume(&tok, tok);
+
+  *pre = tok;
+  return head;
 }
 
 Token *process_hash_pp_token(Token *replacement_list) {

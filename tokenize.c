@@ -114,6 +114,15 @@ Token *new_eof_token() {
   return tok;
 }
 
+Token *copy_and_consume(Token **rest, Token *tok) {
+  Token *tmp = calloc(1, sizeof(Token));
+  memcpy(tmp, tok, sizeof(Token));
+  // cut new-token from token-seq
+  tmp->next = NULL;
+  *rest = tok->next;
+  return tmp;
+}
+
 Token *copy_token_seq(Token *tok) {
   Token head = {.next = NULL};
   Token *copy_cur = &head;
