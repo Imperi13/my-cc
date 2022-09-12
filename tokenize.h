@@ -109,7 +109,7 @@ bool is_same_token(Token *a, Token *b);
 
 bool is_alnum(char c);
 
-Token *new_eof_token();
+Token *new_eof_token(void);
 Token *copy_and_consume(Token **rest, Token *tok);
 Token *copy_token_seq(Token *tok);
 
