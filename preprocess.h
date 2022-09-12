@@ -1,9 +1,9 @@
 #pragma once
 
-#include "tokenize.h"
 #include "file.h"
-
-extern FilePathList *include_path_list;
+#include "tokenize.h"
 
 Token *preprocess(Token *tok);
 Token *remove_newline(Token *tok);
+
+void add_include_path(char *);

@@ -11,8 +11,6 @@
 #include "str_dict.h"
 #include "tokenize.h"
 
-FilePathList *include_path_list = NULL;
-
 // when post == NULL, the line is just consumed, not executed
 
 static void process_macro_group(Token **post, Token **pre, Token *tok);
@@ -64,8 +62,17 @@ struct DefineList {
   Token *start;
 };
 
+FilePathList *include_path_list = NULL;
+
 StrDict *pragma_once_dict = NULL;
 StrDict *define_dict = NULL;
+
+void add_include_path(char *include_path) {
+  FilePathList *tmp = calloc(1, sizeof(FilePathList));
+  tmp->path = include_path;
+  tmp->next = include_path_list;
+  include_path_list = tmp;
+}
 
 bool is_included(char *filepath) {
   if (find_str_dict(pragma_once_dict, filepath))

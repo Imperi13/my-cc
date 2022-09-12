@@ -98,12 +98,7 @@ int main(int argc, char **argv) {
 
   FilePathList *linker_list = NULL;
 
-  {
-    FilePathList *tmp = calloc(1, sizeof(FilePathList));
-    tmp->path = "/usr/local/musl/include";
-    tmp->next = include_path_list;
-    include_path_list = tmp;
-  }
+  add_include_path("/usr/local/musl/include");
 
   for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
        input_index++) {
