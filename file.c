@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "error.h"
@@ -45,6 +46,11 @@ FileType get_file_type(char *path) {
     error("invalid file type");
 }
 
+bool file_exists(char *filepath) {
+  struct stat tmp;
+  return stat(filepath, &tmp) == 0;
+}
+
 char *rename_file_ext(char *path, FileType file_type) {
   char *dot = strrchr(path, '.');
 
@@ -65,7 +71,7 @@ char *rename_file_ext(char *path, FileType file_type) {
 char *get_caronical_path(char *path) {
   char abs_path[2 * PATH_MAX + 1];
   if (path[0] == '/') {
-    strncpy(abs_path, path, PATH_MAX+1);
+    strncpy(abs_path, path, PATH_MAX + 1);
   } else {
     char cwd[PATH_MAX + 1];
     if (!getcwd(cwd, PATH_MAX + 1))

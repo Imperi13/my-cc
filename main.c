@@ -15,12 +15,6 @@
 #include "preprocess.h"
 #include "tokenize.h"
 
-typedef struct FileList FileList;
-struct FileList {
-  char *path;
-  FileList *next;
-};
-
 static void run_cmd(char **argv);
 static char *create_tmpfile(FileType file_type);
 
@@ -51,9 +45,9 @@ void assemble(char *input_path, char *output_path) {
 
 // use musl-gcc instead of ld because I'm not sure about the linker option
 // TODO use ld linker
-void linker(FileList *linker_list, char *output_path) {
+void linker(FilePathList *linker_list, char *output_path) {
   int cnt = 3;
-  for (FileList *cur = linker_list; cur; cur = cur->next)
+  for (FilePathList *cur = linker_list; cur; cur = cur->next)
     cnt++;
 
   char **argv = calloc(cnt + 1, sizeof(char *));
@@ -62,7 +56,7 @@ void linker(FileList *linker_list, char *output_path) {
   argv[2] = output_path;
 
   cnt = 3;
-  for (FileList *cur = linker_list; cur; cur = cur->next) {
+  for (FilePathList *cur = linker_list; cur; cur = cur->next) {
     argv[cnt] = cur->path;
     cnt++;
   }
@@ -102,7 +96,14 @@ int main(int argc, char **argv) {
        cmd_opt->only_assemble))
     error("cannot output for multiple files with -E -S -c");
 
-  FileList *linker_list = NULL;
+  FilePathList *linker_list = NULL;
+
+  {
+    FilePathList *tmp = calloc(1, sizeof(FilePathList));
+    tmp->path = "/usr/local/musl/include";
+    tmp->next = include_path_list;
+    include_path_list = tmp;
+  }
 
   for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
        input_index++) {
@@ -159,7 +160,7 @@ int main(int argc, char **argv) {
     char *object_path = create_tmpfile(OBJECT_FILE);
     assemble(asm_source_path, object_path);
 
-    FileList *object_file_list = calloc(1, sizeof(FileList));
+    FilePathList *object_file_list = calloc(1, sizeof(FilePathList));
     object_file_list->path = object_path;
     object_file_list->next = linker_list;
     linker_list = object_file_list;

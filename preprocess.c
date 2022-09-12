@@ -11,6 +11,8 @@
 #include "str_dict.h"
 #include "tokenize.h"
 
+FilePathList *include_path_list = NULL;
+
 // when post == NULL, the line is just consumed, not executed
 
 static void process_macro_group(Token **post, Token **pre, Token *tok);
@@ -279,30 +281,33 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
 
     char *filename = calloc(len + 1, sizeof(char));
     int off = 0;
-
     while (!equal(tok, ">")) {
       memcpy(filename + off, tok->str, tok->len);
       off += tok->len;
       tok = tok->next;
     }
-
     expect(&tok, tok, ">");
 
-    if (post) {
-      char *filepath = calloc(PATH_MAX + 1, sizeof(char));
-      snprintf(filepath, PATH_MAX, "/usr/local/musl/include/%s", filename);
+    char *filepath = NULL;
 
-      /*
-      fprintf(stderr, "%s\n", filepath);
-      warn_token(filename_start, "ignore include");
-      */
+    for (FilePathList *cur = include_path_list; cur; cur = cur->next) {
+      char tmp[PATH_MAX + 1];
+      snprintf(tmp, PATH_MAX + 1, "%s/%s", cur->path, filename);
 
-      if (!is_included(filepath)) {
-        char *buf = read_file(filepath);
-        Token *inc_tok = tokenize(buf, filepath);
-
-        insert_token_seq(tok, inc_tok);
+      if (file_exists(tmp)) {
+        filepath = get_caronical_path(tmp);
+        break;
       }
+    }
+
+    if (!filepath)
+      error("not exist include file: %s", filename);
+
+    if (!is_included(filepath)) {
+      char *buf = read_file(filepath);
+      Token *inc_tok = tokenize(buf, filepath);
+
+      insert_token_seq(tok, inc_tok);
     }
 
     expect_kind(&tok, tok, TK_NEWLINE);
@@ -313,7 +318,7 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
     char *filepath = file->str_literal->str;
     filepath = get_caronical_path(filepath);
 
-    if (post && !is_included(filepath)) {
+    if (!is_included(filepath)) {
       char *buf = read_file(filepath);
       Token *inc_tok = tokenize(buf, filepath);
 
