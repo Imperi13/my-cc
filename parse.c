@@ -580,16 +580,28 @@ void set_primitive_type_spec_kind(DeclSpec *decl_spec,
     // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_CHAR;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 0, 0,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 0, 0,
+                                        1, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 1, 0,
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 1, 0,
+                                        1, 0, 0, 0)) {
     // short
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 0, 0,
+                                        0, 1, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 1, 0,
                                         0, 1, 0, 0)) {
     // unsigned short
     // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 0,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 0,
+                                        1, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 0,
+                                        1, 0, 0, 0)) {
     // int
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 0,
@@ -601,20 +613,34 @@ void set_primitive_type_spec_kind(DeclSpec *decl_spec,
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 1,
                                         0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 1,
+                                        1, 0, 0, 0) ||
              check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 1,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 1,
+                                        1, 0, 0, 0)) {
     // long
     decl_spec->type_spec_kind = TypeSpec_LONG;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 1,
+                                        0, 1, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 1,
                                         0, 1, 0, 0)) {
     // unsigned long
     // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_LONG;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 2,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 2,
+                                        1, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 2,
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 2,
+                                        1, 0, 0, 0)) {
     // long long
     decl_spec->type_spec_kind = TypeSpec_LONG;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 2,
+                                        0, 1, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 2,
                                         0, 1, 0, 0)) {
     // unsigned long long
     // TODO impl unsigned type
