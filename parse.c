@@ -716,16 +716,23 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, "(")) {
     expect(&tok, tok, "(");
     declarator->type_suffix_kind = FUNC_DECLARATOR;
-    if (!equal(tok, ")") &&
-        !(equal_kind(tok, TK_VOID) && equal(tok->next, ")")))
+
+    if (equal(tok, ")")) {
+      expect(&tok, tok, ")");
+    } else if (equal_kind(tok, TK_VOID) && equal(tok->next, ")")) {
+      declarator->has_arg_type = true;
+      expect_kind(&tok, tok, TK_VOID);
+      expect(&tok, tok, ")");
+    } else {
+      declarator->has_arg_type = true;
       declarator->args = parse_parameter_type_list(&tok, tok, state);
+      expect(&tok, tok, ")");
+    }
 
     for (Tree *cur = declarator->args; cur; cur = cur->next)
       if (cur->has_variable_arg)
         declarator->has_variable_arg = true;
 
-    consume_kind(&tok, tok, TK_VOID);
-    consume(&tok, tok, ")");
   } else if (equal(tok, "[")) {
     declarator->type_suffix_kind = ARRAY_DECLARATOR;
     while (consume(&tok, tok, "[")) {
