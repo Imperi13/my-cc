@@ -88,11 +88,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
 
 Type *gettype_declarator(Declarator *declarator, Type *base_type,
                          Analyze *state) {
-  Pointer *cur = declarator->pointer;
-  while (cur) {
+  for (Pointer *cur = declarator->pointer; cur; cur = cur->nest)
     base_type = newtype_ptr(base_type);
-    cur = cur->nest;
-  }
 
   switch (declarator->type_suffix_kind) {
   case FUNC_DECLARATOR: {
