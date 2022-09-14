@@ -56,6 +56,7 @@ struct Obj {
 
 struct ObjScope {
   StrDict *local_obj_dict;
+  StrDict *local_struct_def_dict;
 
   // for linked-list
   ObjScope *next;
@@ -116,7 +117,8 @@ struct SwitchScope {
   SwitchScope *next;
 };
 
-Analyze *new_analyze_state();
+Analyze *new_analyze_state(void);
+ObjScope *new_obj_scope(void);
 
 void analyze_translation_unit(Tree *ast);
 void analyze_stmt(Tree *ast, Analyze *state);

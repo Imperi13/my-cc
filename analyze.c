@@ -39,7 +39,7 @@ static EnumDef *find_enum(EnumDef *en_defs, char *en_name);
 
 static EnumVal *find_enum_val(EnumDef *en_defs, char *name);
 
-Analyze *new_analyze_state() {
+Analyze *new_analyze_state(void) {
   Analyze *state = calloc(1, sizeof(Analyze));
   state->glb_obj_dict = new_str_dict();
   state->glb_struct_def_dict = new_str_dict();
@@ -49,9 +49,10 @@ Analyze *new_analyze_state() {
   return state;
 }
 
-ObjScope *new_obj_scope() {
+ObjScope *new_obj_scope(void) {
   ObjScope *scope = calloc(1, sizeof(ObjScope));
   scope->local_obj_dict = new_str_dict();
+  scope->local_struct_def_dict = new_str_dict();
   return scope;
 }
 
@@ -194,7 +195,12 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
       if (decl_spec->st_spec->st_name) {
         st_defs->st_name = decl_spec->st_spec->st_name;
-        add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
+
+        if (is_global)
+          add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
+        else
+          add_str_dict(state->locals->local_struct_def_dict, st_defs->st_name,
+                       st_defs);
       }
     }
 
@@ -1116,6 +1122,9 @@ int calc_rbp_offset(int start, int data_size, int alignment) {
 }
 
 StructDef *find_struct(Analyze *state, char *struct_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_str_dict(cur->local_struct_def_dict, struct_name))
+      return find_str_dict(cur->local_struct_def_dict, struct_name);
   return find_str_dict(state->glb_struct_def_dict, struct_name);
 }
 
