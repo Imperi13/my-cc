@@ -53,6 +53,7 @@ ObjScope *new_obj_scope(void) {
   ObjScope *scope = calloc(1, sizeof(ObjScope));
   scope->local_obj_dict = new_str_dict();
   scope->local_struct_def_dict = new_str_dict();
+  scope->local_union_def_dict = new_str_dict();
   return scope;
 }
 
@@ -263,8 +264,12 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
       if (decl_spec->union_spec->union_name) {
         union_def->union_name = decl_spec->union_spec->union_name;
-        add_str_dict(state->glb_union_def_dict, union_def->union_name,
-                     union_def);
+        if (is_global)
+          add_str_dict(state->glb_union_def_dict, union_def->union_name,
+                       union_def);
+        else
+          add_str_dict(state->locals->local_union_def_dict,
+                       union_def->union_name, union_def);
       }
     }
 
@@ -1129,6 +1134,9 @@ StructDef *find_struct(Analyze *state, char *struct_name) {
 }
 
 UnionDef *find_union(Analyze *state, char *union_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_str_dict(cur->local_union_def_dict, union_name))
+      return find_str_dict(cur->local_union_def_dict, union_name);
   return find_str_dict(state->glb_union_def_dict, union_name);
 }
 

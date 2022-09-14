@@ -57,6 +57,7 @@ struct Obj {
 struct ObjScope {
   StrDict *local_obj_dict;
   StrDict *local_struct_def_dict;
+  StrDict *local_union_def_dict;
 
   // for linked-list
   ObjScope *next;

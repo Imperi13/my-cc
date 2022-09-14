@@ -483,6 +483,9 @@ run_test concat_token_3 '#define TEST(x) CONSTANT_ ## x\n #define CONSTANT_TEN 1
 run_test local_struct_1 'int main(){struct Test{int a;int *p;}; struct Test t = {.a = 174,.p = (void *)0}; if(t.p)return 164;else return t.a;}' 174
 run_test local_struct_2 'int main(){ { struct Test{char c;}; }  { struct Test{int *p;int *q;};  return sizeof(struct Test) + 158; } }' 174
 
+run_test local_union_1 'int main(){union Test{int a;int *p;}; union Test t; t.a = 10; return 164 + t.a;}' 174
+run_test local_union_2 'int main(){ { union Test{char c;}; }  { union Test{int *p;int *q;};  return sizeof(union Test) + 166; } }' 174
+
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 #run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
