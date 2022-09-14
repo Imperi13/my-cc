@@ -109,7 +109,7 @@ Tree *parse_translation_unit(Token *tok) {
 }
 
 Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
-                          bool allow_function) {
+                          bool is_global) {
   Tree *ex_decl = calloc(1, sizeof(Tree));
   ex_decl->decl_specs = parse_decl_specs(&tok, tok, state);
 
@@ -117,7 +117,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     consume(rest, tok, ";");
 
     if (ex_decl->decl_specs->has_typedef)
-      error_token(tok, "typedef needs def_name");
+      error_token(tok, "typedef needs declarator");
     ex_decl->kind = DECLARATION;
     return ex_decl;
   }
@@ -125,7 +125,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
   ex_decl->declarator = parse_declarator(&tok, tok, state);
 
   if (equal(tok, "{")) {
-    if (!allow_function)
+    if (!is_global)
       error("not allow func-def");
     if (ex_decl->decl_specs->has_typedef)
       error_token(tok, "cannot typedef for FUNC_DEF");
@@ -177,7 +177,10 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
       Typedef *new_def = calloc(1, sizeof(Typedef));
       new_def->name = def_name;
 
-      add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+      if (is_global)
+        add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+      else
+        add_str_dict(state->locals->local_typedef_dict, new_def->name, new_def);
     }
   }
 
@@ -986,6 +989,8 @@ Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
 
 Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
   expect(&tok, tok, "{");
+  push_lvar_scope(state);
+
   Tree head = {.next = NULL};
   Tree *cur = &head;
   while (!consume(&tok, tok, "}")) {
@@ -998,6 +1003,8 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
     }
   }
   *rest = tok;
+
+  pop_lvar_scope(state);
 
   Tree *node = calloc(1, sizeof(Tree));
   node->kind = COMPOUND_STMT;

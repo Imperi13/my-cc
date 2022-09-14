@@ -19,8 +19,6 @@ static void analyze_variable_initialize(Type *var_type, Tree *init_val,
 static void add_implicit_array_cast(Tree **ast);
 static void add_implicit_func_cast(Tree **ast);
 
-static void push_lvar_scope(Analyze *state);
-static void pop_lvar_scope(Analyze *state);
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name);
 static Obj *find_global(Analyze *state, char *var_name);
@@ -54,6 +52,7 @@ ObjScope *new_obj_scope(void) {
   scope->local_obj_dict = new_str_dict();
   scope->local_struct_def_dict = new_str_dict();
   scope->local_union_def_dict = new_str_dict();
+  scope->local_typedef_dict = new_str_dict();
   return scope;
 }
 
@@ -443,20 +442,29 @@ void analyze_stmt(Tree *ast, Analyze *state) {
         }
       }
 
-      Obj *lvar = calloc(1, sizeof(Obj));
-      lvar->obj_name = obj_name;
-      lvar->type = obj_type;
-      lvar->rbp_offset =
-          calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
-                          type_alignment(obj_type));
-      state->current_func->stack_size = lvar->rbp_offset;
+      if (ast->decl_specs->has_typedef) {
+        Typedef *new_def = calloc(1, sizeof(Typedef));
+        new_def->name = obj_name;
+        new_def->type = obj_type;
 
-      cur->def_obj = lvar;
+        add_str_dict(state->locals->local_typedef_dict, new_def->name, new_def);
+      } else {
 
-      push_lvar(state->locals, lvar);
+        Obj *lvar = calloc(1, sizeof(Obj));
+        lvar->obj_name = obj_name;
+        lvar->type = obj_type;
+        lvar->rbp_offset =
+            calc_rbp_offset(state->current_func->stack_size,
+                            type_size(obj_type), type_alignment(obj_type));
+        state->current_func->stack_size = lvar->rbp_offset;
 
-      if (cur->init_expr)
-        analyze_variable_initialize(obj_type, cur->init_expr, state, false);
+        cur->def_obj = lvar;
+
+        push_lvar(state->locals, lvar);
+
+        if (cur->init_expr)
+          analyze_variable_initialize(obj_type, cur->init_expr, state, false);
+      }
     }
   } else if (ast->kind == LABEL) {
     int label_len =
@@ -1170,5 +1178,8 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name) {
 }
 
 Typedef *find_typedef(Analyze *state, char *typedef_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_str_dict(cur->local_typedef_dict, typedef_name))
+      return find_str_dict(cur->local_typedef_dict, typedef_name);
   return find_str_dict(state->glb_typedef_dict, typedef_name);
 }
