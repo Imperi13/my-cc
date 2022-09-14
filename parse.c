@@ -109,7 +109,7 @@ Tree *parse_translation_unit(Token *tok) {
 }
 
 Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
-                          bool allow_function) {
+                          bool is_global) {
   Tree *ex_decl = calloc(1, sizeof(Tree));
   ex_decl->decl_specs = parse_decl_specs(&tok, tok, state);
 
@@ -117,7 +117,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
     consume(rest, tok, ";");
 
     if (ex_decl->decl_specs->has_typedef)
-      error_token(tok, "typedef needs def_name");
+      error_token(tok, "typedef needs declarator");
     ex_decl->kind = DECLARATION;
     return ex_decl;
   }
@@ -125,7 +125,7 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
   ex_decl->declarator = parse_declarator(&tok, tok, state);
 
   if (equal(tok, "{")) {
-    if (!allow_function)
+    if (!is_global)
       error("not allow func-def");
     if (ex_decl->decl_specs->has_typedef)
       error_token(tok, "cannot typedef for FUNC_DEF");
@@ -177,7 +177,10 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
       Typedef *new_def = calloc(1, sizeof(Typedef));
       new_def->name = def_name;
 
-      add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+      if (is_global)
+        add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
+      else
+        add_str_dict(state->locals->local_typedef_dict, new_def->name, new_def);
     }
   }
 
@@ -580,16 +583,28 @@ void set_primitive_type_spec_kind(DeclSpec *decl_spec,
     // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_CHAR;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 0, 0,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 0, 0,
+                                        1, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 1, 0,
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 1, 0,
+                                        1, 0, 0, 0)) {
     // short
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 0, 0,
+                                        0, 1, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 1, 1, 0,
                                         0, 1, 0, 0)) {
     // unsigned short
     // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 0,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 0,
+                                        1, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 0,
+                                        1, 0, 0, 0)) {
     // int
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 0,
@@ -601,20 +616,34 @@ void set_primitive_type_spec_kind(DeclSpec *decl_spec,
     decl_spec->type_spec_kind = TypeSpec_INT;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 1,
                                         0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 1,
+                                        1, 0, 0, 0) ||
              check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 1,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 1,
+                                        1, 0, 0, 0)) {
     // long
     decl_spec->type_spec_kind = TypeSpec_LONG;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 1,
+                                        0, 1, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 1,
                                         0, 1, 0, 0)) {
     // unsigned long
     // TODO impl unsigned type
     decl_spec->type_spec_kind = TypeSpec_LONG;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 2,
-                                        0, 0, 0, 0)) {
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 2,
+                                        1, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 2,
+                                        0, 0, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 2,
+                                        1, 0, 0, 0)) {
     // long long
     decl_spec->type_spec_kind = TypeSpec_LONG;
   } else if (check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 0, 2,
+                                        0, 1, 0, 0) ||
+             check_primitive_type_token(primitive_type_token, 0, 0, 0, 0, 1, 2,
                                         0, 1, 0, 0)) {
     // unsigned long long
     // TODO impl unsigned type
@@ -690,16 +719,23 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, "(")) {
     expect(&tok, tok, "(");
     declarator->type_suffix_kind = FUNC_DECLARATOR;
-    if (!equal(tok, ")") &&
-        !(equal_kind(tok, TK_VOID) && equal(tok->next, ")")))
+
+    if (equal(tok, ")")) {
+      expect(&tok, tok, ")");
+    } else if (equal_kind(tok, TK_VOID) && equal(tok->next, ")")) {
+      declarator->has_arg_type = true;
+      expect_kind(&tok, tok, TK_VOID);
+      expect(&tok, tok, ")");
+    } else {
+      declarator->has_arg_type = true;
       declarator->args = parse_parameter_type_list(&tok, tok, state);
+      expect(&tok, tok, ")");
+    }
 
     for (Tree *cur = declarator->args; cur; cur = cur->next)
       if (cur->has_variable_arg)
         declarator->has_variable_arg = true;
 
-    consume_kind(&tok, tok, TK_VOID);
-    consume(&tok, tok, ")");
   } else if (equal(tok, "[")) {
     declarator->type_suffix_kind = ARRAY_DECLARATOR;
     while (consume(&tok, tok, "[")) {
@@ -953,6 +989,8 @@ Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
 
 Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
   expect(&tok, tok, "{");
+  push_lvar_scope(state);
+
   Tree head = {.next = NULL};
   Tree *cur = &head;
   while (!consume(&tok, tok, "}")) {
@@ -965,6 +1003,8 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
     }
   }
   *rest = tok;
+
+  pop_lvar_scope(state);
 
   Tree *node = calloc(1, sizeof(Tree));
   node->kind = COMPOUND_STMT;

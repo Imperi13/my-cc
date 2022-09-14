@@ -264,6 +264,7 @@ struct Declarator {
 
   // for FUNC_DECLARATOR
   Tree *args;
+  bool has_arg_type;
   bool has_variable_arg;
 
   // for ARRAY_DECLARATOR

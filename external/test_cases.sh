@@ -466,6 +466,8 @@ run_test function_like_macro_1 '#define DOUBLE(a) 174\n int main(){return DOUBLE
 run_test function_like_macro_2 '#define DOUBLE(a) 2*a\n int main(){return DOUBLE(87);}' 174
 run_test function_like_macro_3 '#define TEST(a,b) 10*a + 2 * b \n int main(){return TEST(10,37);}' 174
 run_test function_like_macro_4 '#define DECL(a,b) int a = b \n int main(){DECL(n,174); return n;}' 174
+run_test function_like_macro_5 '#define DOUBLE(a) 2*a\n int main(){return DOUBLE((10,87));}' 174
+run_test function_like_macro_6 '#define DOUBLE(a) 2*a\n int main(){return DOUBLE((10,(20,87)));}' 174
 
 run_test enum_value_1 'enum Test{ A=10,B=14,C=16}; int main(){return 160+B;}' 174
 run_test enum_value_1 'enum Test{ A=10,B,C,D,E}; int main(){return 160+E;}' 174
@@ -476,7 +478,19 @@ run_test member_initialize 'struct Test{int n;int *p;}; int main(){struct Test t
 
 run_test concat_token_1 '#define TEST a ## b\n int TEST = 10; int main(){return 164 + ab;}' 174
 run_test concat_token_2 '#define TEST(x) a ## x\n int TEST(1) = 10,TEST(2) = 20; int main(){return 144 + a1 + a2;}' 174
-run_test concat_token_2 '#define TEST(x) CONSTANT_ ## x\n #define CONSTANT_TEN 10\n int main(){return 164 + TEST(TEN);}' 174
+run_test concat_token_3 '#define TEST(x) CONSTANT_ ## x\n #define CONSTANT_TEN 10\n int main(){return 164 + TEST(TEN);}' 174
+
+run_test local_struct_1 'int main(){struct Test{int a;int *p;}; struct Test t = {.a = 174,.p = (void *)0}; if(t.p)return 164;else return t.a;}' 174
+run_test local_struct_2 'int main(){ { struct Test{char c;}; }  { struct Test{int *p;int *q;};  return sizeof(struct Test) + 158; } }' 174
+
+run_test local_union_1 'int main(){union Test{int a;int *p;}; union Test t; t.a = 10; return 164 + t.a;}' 174
+run_test local_union_2 'int main(){ { union Test{char c;}; }  { union Test{int *p;int *q;};  return sizeof(union Test) + 166; } }' 174
+
+run_test local_typedef_1 'int main(){typedef char AA; AA n = 10; return 164+ n;}' 174
+run_test local_typedef_1 'int main(){ { typedef int *AA; AA n; } {typedef char AA; AA n = 10; return 164+ n;} }' 174
+
+run_test local_enum_1 'int main(){ enum Test{A,B,C}; int n = C; return 172+n;}' 174
+run_test local_enum_1 'int main(){ { enum Test{A,B,C}; int n = C; } { enum Test{D,E,F}; int n = F; return 172+n;} }' 174
 
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174

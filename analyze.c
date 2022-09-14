@@ -19,8 +19,6 @@ static void analyze_variable_initialize(Type *var_type, Tree *init_val,
 static void add_implicit_array_cast(Tree **ast);
 static void add_implicit_func_cast(Tree **ast);
 
-static void push_lvar_scope(Analyze *state);
-static void pop_lvar_scope(Analyze *state);
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name);
 static Obj *find_global(Analyze *state, char *var_name);
@@ -32,14 +30,17 @@ static void push_switch(SwitchScope **switch_scope, Tree *switch_node);
 static void pop_switch(SwitchScope **switch_scope);
 
 static StructDef *find_struct(Analyze *state, char *struct_name);
-static UnionDef *find_union(Analyze *state, char *union_name);
 static Member *find_struct_member(StructDef *st_def, char *mem_name);
+
+static UnionDef *find_union(Analyze *state, char *union_name);
 static Member *find_union_member(UnionDef *union_def, char *mem_name);
-static EnumDef *find_enum(EnumDef *en_defs, char *en_name);
 
-static EnumVal *find_enum_val(EnumDef *en_defs, char *name);
+static EnumDef *find_enum(Analyze *state, char *en_name);
+static EnumDef *find_enum_in_scope(EnumDef *en_defs, char *en_name);
+static EnumVal *find_enum_val(Analyze *state, char *name);
+static EnumVal *find_enum_val_in_scope(EnumDef *en_defs, char *name);
 
-Analyze *new_analyze_state() {
+Analyze *new_analyze_state(void) {
   Analyze *state = calloc(1, sizeof(Analyze));
   state->glb_obj_dict = new_str_dict();
   state->glb_struct_def_dict = new_str_dict();
@@ -49,9 +50,12 @@ Analyze *new_analyze_state() {
   return state;
 }
 
-ObjScope *new_obj_scope() {
+ObjScope *new_obj_scope(void) {
   ObjScope *scope = calloc(1, sizeof(ObjScope));
   scope->local_obj_dict = new_str_dict();
+  scope->local_struct_def_dict = new_str_dict();
+  scope->local_union_def_dict = new_str_dict();
+  scope->local_typedef_dict = new_str_dict();
   return scope;
 }
 
@@ -194,7 +198,12 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
       if (decl_spec->st_spec->st_name) {
         st_defs->st_name = decl_spec->st_spec->st_name;
-        add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
+
+        if (is_global)
+          add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
+        else
+          add_str_dict(state->locals->local_struct_def_dict, st_defs->st_name,
+                       st_defs);
       }
     }
 
@@ -257,8 +266,12 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
       if (decl_spec->union_spec->union_name) {
         union_def->union_name = decl_spec->union_spec->union_name;
-        add_str_dict(state->glb_union_def_dict, union_def->union_name,
-                     union_def);
+        if (is_global)
+          add_str_dict(state->glb_union_def_dict, union_def->union_name,
+                       union_def);
+        else
+          add_str_dict(state->locals->local_union_def_dict,
+                       union_def->union_name, union_def);
       }
     }
 
@@ -315,15 +328,21 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     EnumDef *en_def = NULL;
 
     if (decl_spec->en_spec->en_name)
-      en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name);
+      en_def = find_enum(state, decl_spec->en_spec->en_name);
 
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
 
       if (decl_spec->en_spec->en_name) {
-        en_def->en_name = decl_spec->en_spec->en_name;
-        en_def->next = state->glb_endefs;
-        state->glb_endefs = en_def;
+        if (is_global) {
+          en_def->en_name = decl_spec->en_spec->en_name;
+          en_def->next = state->glb_enum_defs;
+          state->glb_enum_defs = en_def;
+        } else {
+          en_def->en_name = decl_spec->en_spec->en_name;
+          en_def->next = state->locals->local_enum_defs;
+          state->locals->local_enum_defs = en_def;
+        }
       }
     }
 
@@ -432,20 +451,29 @@ void analyze_stmt(Tree *ast, Analyze *state) {
         }
       }
 
-      Obj *lvar = calloc(1, sizeof(Obj));
-      lvar->obj_name = obj_name;
-      lvar->type = obj_type;
-      lvar->rbp_offset =
-          calc_rbp_offset(state->current_func->stack_size, type_size(obj_type),
-                          type_alignment(obj_type));
-      state->current_func->stack_size = lvar->rbp_offset;
+      if (ast->decl_specs->has_typedef) {
+        Typedef *new_def = calloc(1, sizeof(Typedef));
+        new_def->name = obj_name;
+        new_def->type = obj_type;
 
-      cur->def_obj = lvar;
+        add_str_dict(state->locals->local_typedef_dict, new_def->name, new_def);
+      } else {
 
-      push_lvar(state->locals, lvar);
+        Obj *lvar = calloc(1, sizeof(Obj));
+        lvar->obj_name = obj_name;
+        lvar->type = obj_type;
+        lvar->rbp_offset =
+            calc_rbp_offset(state->current_func->stack_size,
+                            type_size(obj_type), type_alignment(obj_type));
+        state->current_func->stack_size = lvar->rbp_offset;
 
-      if (cur->init_expr)
-        analyze_variable_initialize(obj_type, cur->init_expr, state, false);
+        cur->def_obj = lvar;
+
+        push_lvar(state->locals, lvar);
+
+        if (cur->init_expr)
+          analyze_variable_initialize(obj_type, cur->init_expr, state, false);
+      }
     }
   } else if (ast->kind == LABEL) {
     int label_len =
@@ -932,7 +960,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    EnumVal *en_val = find_enum_val(state->glb_endefs, ast->var_name);
+    EnumVal *en_val = find_enum_val(state, ast->var_name);
     if (en_val) {
       ast->kind = NUM;
       ast->num = en_val->val;
@@ -1116,10 +1144,16 @@ int calc_rbp_offset(int start, int data_size, int alignment) {
 }
 
 StructDef *find_struct(Analyze *state, char *struct_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_str_dict(cur->local_struct_def_dict, struct_name))
+      return find_str_dict(cur->local_struct_def_dict, struct_name);
   return find_str_dict(state->glb_struct_def_dict, struct_name);
 }
 
 UnionDef *find_union(Analyze *state, char *union_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_str_dict(cur->local_union_def_dict, union_name))
+      return find_str_dict(cur->local_union_def_dict, union_name);
   return find_str_dict(state->glb_union_def_dict, union_name);
 }
 
@@ -1137,14 +1171,28 @@ Member *find_union_member(UnionDef *union_def, char *mem_name) {
   return NULL;
 }
 
-EnumDef *find_enum(EnumDef *en_defs, char *en_name) {
+EnumDef *find_enum(Analyze *state, char *en_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_enum_in_scope(cur->local_enum_defs, en_name))
+      return find_enum_in_scope(cur->local_enum_defs, en_name);
+  return find_enum_in_scope(state->glb_enum_defs, en_name);
+}
+
+EnumDef *find_enum_in_scope(EnumDef *en_defs, char *en_name) {
   for (EnumDef *cur = en_defs; cur; cur = cur->next)
     if (strcmp(en_name, cur->en_name) == 0)
       return cur;
   return NULL;
 }
 
-EnumVal *find_enum_val(EnumDef *en_defs, char *name) {
+EnumVal *find_enum_val(Analyze *state, char *name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_enum_val_in_scope(cur->local_enum_defs, name))
+      return find_enum_val_in_scope(cur->local_enum_defs, name);
+  return find_enum_val_in_scope(state->glb_enum_defs, name);
+}
+
+EnumVal *find_enum_val_in_scope(EnumDef *en_defs, char *name) {
   for (EnumDef *cur_def = en_defs; cur_def; cur_def = cur_def->next)
     for (EnumVal *cur = cur_def->members; cur; cur = cur->next)
       if (strcmp(name, cur->name) == 0)
@@ -1153,5 +1201,8 @@ EnumVal *find_enum_val(EnumDef *en_defs, char *name) {
 }
 
 Typedef *find_typedef(Analyze *state, char *typedef_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_str_dict(cur->local_typedef_dict, typedef_name))
+      return find_str_dict(cur->local_typedef_dict, typedef_name);
   return find_str_dict(state->glb_typedef_dict, typedef_name);
 }

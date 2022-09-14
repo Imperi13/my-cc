@@ -21,7 +21,7 @@ struct Analyze {
   StrDict *glb_struct_def_dict;
   StrDict *glb_union_def_dict;
   StrDict *glb_typedef_dict;
-  EnumDef *glb_endefs;
+  EnumDef *glb_enum_defs;
   Obj *current_func;
 
   // local scope
@@ -56,6 +56,10 @@ struct Obj {
 
 struct ObjScope {
   StrDict *local_obj_dict;
+  StrDict *local_struct_def_dict;
+  StrDict *local_union_def_dict;
+  StrDict *local_typedef_dict;
+  EnumDef *local_enum_defs;
 
   // for linked-list
   ObjScope *next;
@@ -116,10 +120,14 @@ struct SwitchScope {
   SwitchScope *next;
 };
 
-Analyze *new_analyze_state();
+Analyze *new_analyze_state(void);
+ObjScope *new_obj_scope(void);
 
 void analyze_translation_unit(Tree *ast);
 void analyze_stmt(Tree *ast, Analyze *state);
+
+void push_lvar_scope(Analyze *state);
+void pop_lvar_scope(Analyze *state);
 
 Typedef *find_typedef(Analyze *state, char *typedef_name);
 

@@ -6,4 +6,4 @@
 Token *preprocess(Token *tok);
 Token *remove_newline(Token *tok);
 
-void add_include_path(char *);
+void add_include_path(char *include_path);
