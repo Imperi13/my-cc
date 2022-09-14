@@ -25,7 +25,7 @@ struct StrDictList {
   StrDictList *next;
 };
 
-StrDict *new_str_dict() { return calloc(1, sizeof(StrDict)); }
+StrDict *new_str_dict(void) { return calloc(1, sizeof(StrDict)); }
 
 void *find_str_dict(StrDict *dict, char *name) {
   if (!dict)

@@ -108,7 +108,7 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len, char *filepath,
   return tok;
 }
 
-Token *new_eof_token() {
+Token *new_eof_token(void) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = TK_EOF;
   return tok;
