@@ -30,12 +30,15 @@ static void push_switch(SwitchScope **switch_scope, Tree *switch_node);
 static void pop_switch(SwitchScope **switch_scope);
 
 static StructDef *find_struct(Analyze *state, char *struct_name);
-static UnionDef *find_union(Analyze *state, char *union_name);
 static Member *find_struct_member(StructDef *st_def, char *mem_name);
-static Member *find_union_member(UnionDef *union_def, char *mem_name);
-static EnumDef *find_enum(EnumDef *en_defs, char *en_name);
 
-static EnumVal *find_enum_val(EnumDef *en_defs, char *name);
+static UnionDef *find_union(Analyze *state, char *union_name);
+static Member *find_union_member(UnionDef *union_def, char *mem_name);
+
+static EnumDef *find_enum(Analyze *state, char *en_name);
+static EnumDef *find_enum_in_scope(EnumDef *en_defs, char *en_name);
+static EnumVal *find_enum_val(Analyze *state, char *name);
+static EnumVal *find_enum_val_in_scope(EnumDef *en_defs, char *name);
 
 Analyze *new_analyze_state(void) {
   Analyze *state = calloc(1, sizeof(Analyze));
@@ -325,15 +328,21 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     EnumDef *en_def = NULL;
 
     if (decl_spec->en_spec->en_name)
-      en_def = find_enum(state->glb_enum_defs, decl_spec->en_spec->en_name);
+      en_def = find_enum(state, decl_spec->en_spec->en_name);
 
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
 
       if (decl_spec->en_spec->en_name) {
-        en_def->en_name = decl_spec->en_spec->en_name;
-        en_def->next = state->glb_enum_defs;
-        state->glb_enum_defs = en_def;
+        if (is_global) {
+          en_def->en_name = decl_spec->en_spec->en_name;
+          en_def->next = state->glb_enum_defs;
+          state->glb_enum_defs = en_def;
+        } else {
+          en_def->en_name = decl_spec->en_spec->en_name;
+          en_def->next = state->locals->local_enum_defs;
+          state->locals->local_enum_defs = en_def;
+        }
       }
     }
 
@@ -951,7 +960,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    EnumVal *en_val = find_enum_val(state->glb_enum_defs, ast->var_name);
+    EnumVal *en_val = find_enum_val(state, ast->var_name);
     if (en_val) {
       ast->kind = NUM;
       ast->num = en_val->val;
@@ -1162,14 +1171,28 @@ Member *find_union_member(UnionDef *union_def, char *mem_name) {
   return NULL;
 }
 
-EnumDef *find_enum(EnumDef *en_defs, char *en_name) {
+EnumDef *find_enum(Analyze *state, char *en_name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_enum_in_scope(cur->local_enum_defs, en_name))
+      return find_enum_in_scope(cur->local_enum_defs, en_name);
+  return find_enum_in_scope(state->glb_enum_defs, en_name);
+}
+
+EnumDef *find_enum_in_scope(EnumDef *en_defs, char *en_name) {
   for (EnumDef *cur = en_defs; cur; cur = cur->next)
     if (strcmp(en_name, cur->en_name) == 0)
       return cur;
   return NULL;
 }
 
-EnumVal *find_enum_val(EnumDef *en_defs, char *name) {
+EnumVal *find_enum_val(Analyze *state, char *name) {
+  for (ObjScope *cur = state->locals; cur; cur = cur->next)
+    if (find_enum_val_in_scope(cur->local_enum_defs, name))
+      return find_enum_val_in_scope(cur->local_enum_defs, name);
+  return find_enum_val_in_scope(state->glb_enum_defs, name);
+}
+
+EnumVal *find_enum_val_in_scope(EnumDef *en_defs, char *name) {
   for (EnumDef *cur_def = en_defs; cur_def; cur_def = cur_def->next)
     for (EnumVal *cur = cur_def->members; cur; cur = cur->next)
       if (strcmp(name, cur->name) == 0)

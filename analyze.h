@@ -59,6 +59,7 @@ struct ObjScope {
   StrDict *local_struct_def_dict;
   StrDict *local_union_def_dict;
   StrDict *local_typedef_dict;
+  EnumDef *local_enum_defs;
 
   // for linked-list
   ObjScope *next;
