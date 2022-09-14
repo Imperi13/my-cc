@@ -489,6 +489,9 @@ run_test local_union_2 'int main(){ { union Test{char c;}; }  { union Test{int *
 run_test local_typedef_1 'int main(){typedef char AA; AA n = 10; return 164+ n;}' 174
 run_test local_typedef_1 'int main(){ { typedef int *AA; AA n; } {typedef char AA; AA n = 10; return 164+ n;} }' 174
 
+run_test local_enum_1 'int main(){ enum Test{A,B,C}; int n = C; return 172+n;}' 174
+run_test local_enum_1 'int main(){ { enum Test{A,B,C}; int n = C; } { enum Test{D,E,F}; int n = F; return 172+n;} }' 174
+
 #run_test 316 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return p->a + p->b;}}' 174
 #run_test 317 'struct A{int a; int b; int *p;}; struct A f(void) {struct A u; u.a = 100; u.b = 74; u.p = 0; return u;} int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = f(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174
 #run_test_with_supplement1 318 'struct A{int a; int b; int *p;}; struct A q(void); int g (struct A *p) {return p->a + p->b;} int main(void){struct A u = q(); struct A *p = &u; if (u.p) {return 3;} else {return g(p);}}' 174

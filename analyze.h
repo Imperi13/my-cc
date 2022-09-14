@@ -21,7 +21,7 @@ struct Analyze {
   StrDict *glb_struct_def_dict;
   StrDict *glb_union_def_dict;
   StrDict *glb_typedef_dict;
-  EnumDef *glb_endefs;
+  EnumDef *glb_enum_defs;
   Obj *current_func;
 
   // local scope

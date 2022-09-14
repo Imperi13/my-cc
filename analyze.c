@@ -325,15 +325,15 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     EnumDef *en_def = NULL;
 
     if (decl_spec->en_spec->en_name)
-      en_def = find_enum(state->glb_endefs, decl_spec->en_spec->en_name);
+      en_def = find_enum(state->glb_enum_defs, decl_spec->en_spec->en_name);
 
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
 
       if (decl_spec->en_spec->en_name) {
         en_def->en_name = decl_spec->en_spec->en_name;
-        en_def->next = state->glb_endefs;
-        state->glb_endefs = en_def;
+        en_def->next = state->glb_enum_defs;
+        state->glb_enum_defs = en_def;
       }
     }
 
@@ -951,7 +951,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    EnumVal *en_val = find_enum_val(state->glb_endefs, ast->var_name);
+    EnumVal *en_val = find_enum_val(state->glb_enum_defs, ast->var_name);
     if (en_val) {
       ast->kind = NUM;
       ast->num = en_val->val;
