@@ -11,6 +11,7 @@
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
+static void analyze_declarator(Declarator *declarator, Analyze *state);
 static void analyze_parameter(Tree *arg, Analyze *state);
 
 static void analyze_variable_initialize(Type *var_type, Tree *init_val,
@@ -100,7 +101,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     func->stack_size = 0x0;
 
     state->current_func = func;
-    state->locals = new_obj_scope();
+    push_lvar_scope(state);
 
     ast->declarator->def_obj = func;
 
@@ -114,7 +115,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     // finalize
     func->stack_size = calc_rbp_offset(0, func->stack_size, 8);
-    state->locals = NULL;
+    pop_lvar_scope(state);
 
   } else if (ast->kind == DECLARATION) {
 
