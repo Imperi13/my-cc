@@ -88,6 +88,10 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
 
 Type *gettype_declarator(Declarator *declarator, Type *base_type,
                          Analyze *state) {
+
+  if (declarator->nest)
+    base_type = gettype_declarator(declarator->nest, base_type, state);
+
   for (Pointer *cur = declarator->pointer; cur; cur = cur->nest)
     base_type = newtype_ptr(base_type);
 
@@ -119,24 +123,12 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type,
     error("invalid type_suffix");
   }
 
-  if (declarator->nest) {
-    base_type = gettype_declarator(declarator->nest, base_type, state);
-  }
-
   return base_type;
 }
 
-char *getname_declarator(Declarator *declarator) {
-  if (declarator->nest)
-    return getname_declarator(declarator->nest);
-
-  return declarator->name;
-}
+char *getname_declarator(Declarator *declarator) { return declarator->name; }
 
 Tree *getargs_declarator(Declarator *declarator) {
-  if (declarator->nest)
-    return getargs_declarator(declarator->nest);
-
   if (declarator->type_suffix_kind != FUNC_DECLARATOR)
     error("not function");
 
@@ -144,9 +136,6 @@ Tree *getargs_declarator(Declarator *declarator) {
 }
 
 ArrayDeclarator *get_arr_declarator(Declarator *declarator) {
-  if (declarator->nest)
-    return get_arr_declarator(declarator->nest);
-
   if (declarator->type_suffix_kind != ARRAY_DECLARATOR)
     error("not array");
 
