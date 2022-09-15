@@ -972,7 +972,6 @@ Token *preprocess(Token *tok) {
   pragma_once_dict = new_str_dict();
 
   add_predefine("__STDC_VERSION__", "201112L");
-  add_predefine("__STDC__", "1");
 
   Token head = {.next = NULL};
   Token *cur = &head;

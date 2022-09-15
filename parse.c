@@ -703,12 +703,14 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
     cur = &(*cur)->nest;
   }
 
+  Declarator *nest = NULL;
+
   // parse ident or nest-declarator
   if (equal_kind(tok, TK_IDENT)) {
     declarator->name = getname_ident(&tok, tok);
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
-    declarator->nest = parse_declarator(&tok, tok, state);
+    nest = parse_declarator(&tok, tok, state);
     expect(&tok, tok, ")");
   } else {
     error_token(tok, "cannot parse declarator");
@@ -753,6 +755,17 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   }
 
   *rest = tok;
+
+  // set declarator nest
+  if (nest) {
+    Declarator *cur = nest;
+    while (cur->nest)
+      cur = cur->nest;
+    cur->nest = declarator;
+
+    declarator = nest;
+  }
+
   return declarator;
 }
 
