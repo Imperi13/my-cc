@@ -11,6 +11,7 @@
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
+static void analyze_declarator(Declarator *declarator, Analyze *state);
 
 static void push_lvar_parameter(Tree *arg, Analyze *state);
 
@@ -369,6 +370,27 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     }
 
     decl_spec->en_def = en_def;
+  }
+}
+
+void analyze_declarator(Declarator *declarator, Analyze *state) {
+  if (declarator->nest) {
+    push_lvar_scope(state);
+    analyze_declarator(declarator->nest, state);
+    pop_lvar_scope(state);
+  }
+
+  if (declarator->type_suffix_kind == FUNC_DECLARATOR) {
+
+    for (Tree *cur = declarator->args; cur; cur = cur->next) {
+      analyze_decl_spec(cur->decl_specs, state, false);
+
+      if (cur->declarator) {
+        push_lvar_scope(state);
+        analyze_declarator(cur->declarator, state);
+        pop_lvar_scope(state);
+      }
+    }
   }
 }
 
