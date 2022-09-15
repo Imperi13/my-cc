@@ -78,6 +78,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     analyze_decl_spec(ast->decl_specs, state, true);
 
+    push_lvar_scope(state);
+    analyze_declarator(ast->declarator, state);
+
     Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type, state);
 
@@ -102,13 +105,11 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     func->stack_size = 0x0;
 
     state->current_func = func;
-    push_lvar_scope(state);
 
     ast->declarator->def_obj = func;
 
     Tree *cur = getargs_declarator(ast->declarator);
     while (cur) {
-      analyze_decl_spec(cur->decl_specs, state, false);
       push_lvar_parameter(cur, state);
       cur = cur->next;
     }
@@ -130,6 +131,10 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     Type *base_type = gettype_decl_spec(ast->decl_specs, state);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
+      // push ObjScope for func-prototype
+      push_lvar_scope(state);
+      analyze_declarator(cur, state);
+
       char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type, state);
 
@@ -182,6 +187,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
         cur->def_obj = obj;
       }
+
+      pop_lvar_scope(state);
     }
 
   } else {
