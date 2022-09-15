@@ -11,7 +11,8 @@
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
-static void analyze_parameter(Tree *arg, Analyze *state);
+
+static void push_lvar_parameter(Tree *arg, Analyze *state);
 
 static void analyze_variable_initialize(Type *var_type, Tree *init_val,
                                         Analyze *state, bool is_global);
@@ -106,7 +107,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
     Tree *cur = getargs_declarator(ast->declarator);
     while (cur) {
-      analyze_parameter(cur, state);
+      analyze_decl_spec(cur->decl_specs, state, false);
+      push_lvar_parameter(cur, state);
       cur = cur->next;
     }
 
@@ -370,14 +372,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
   }
 }
 
-void analyze_parameter(Tree *ast, Analyze *state) {
+void push_lvar_parameter(Tree *ast, Analyze *state) {
   if (ast->kind == DECLARATION) {
-
-    analyze_decl_spec(ast->decl_specs, state, false);
-
-    if (!ast->declarator) {
-      return;
-    }
 
     Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
     obj_type = gettype_declarator(ast->declarator, obj_type, state);
@@ -388,7 +384,7 @@ void analyze_parameter(Tree *ast, Analyze *state) {
     char *obj_name = getname_declarator(ast->declarator);
 
     if (ast->decl_specs->has_typedef) {
-      not_implemented(__func__);
+      error("typedef not allowed in args");
     } else {
 
       Obj *lvar = calloc(1, sizeof(Obj));
