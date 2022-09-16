@@ -23,6 +23,9 @@ struct Type {
 
   // for FUNC
   Type *return_type;
+  bool has_arg;
+  bool has_variable_arg;
+  Type *args;
 
   // for PTR,ARRAY
   Type *ptr_to;

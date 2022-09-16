@@ -99,6 +99,23 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
     Type *ty = calloc(1, sizeof(Type));
     ty->kind = FUNC;
     ty->return_type = base_type;
+
+    // arg type
+    ty->has_arg = declarator->has_arg_type;
+    ty->has_variable_arg = declarator->has_variable_arg;
+
+    Type head = {.next = NULL};
+    Type *argtype_cur = &head;
+    for (Tree *cur = declarator->args; cur; cur = cur->next) {
+      Type *argtype = gettype_decl_spec(cur->decl_specs);
+      if (cur->declarator)
+        argtype = gettype_declarator(cur->declarator, argtype);
+
+      argtype_cur->next = argtype;
+      argtype_cur = argtype_cur->next;
+    }
+    ty->args = head.next;
+
     base_type = ty;
   } break;
   case ARRAY_DECLARATOR: {
