@@ -110,6 +110,8 @@ typedef struct ArrayDeclarator ArrayDeclarator;
 
 struct Tree {
   TreeKind kind;
+  Type *type;
+  Token *error_token;
 
   // for FUNC_DEF,DECLARATION
   DeclSpec *decl_specs;
@@ -121,10 +123,7 @@ struct Tree {
   // for FUNC_DEF
   Tree *func_body;
 
-  Type *type;
-
   // for argument
-
   bool has_variable_arg;
   int nth_arg;
 
