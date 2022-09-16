@@ -83,11 +83,12 @@ static bool is_selection_stmt(Token *tok);
 static bool is_iteration_stmt(Token *tok);
 static bool is_jump_stmt(Token *tok);
 
-Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs) {
+Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs, Token *error_token) {
   Tree *node = calloc(1, sizeof(Tree));
   node->kind = kind;
   node->lhs = lhs;
   node->rhs = rhs;
+  node->error_token = error_token;
   return node;
 }
 
@@ -111,6 +112,7 @@ Tree *parse_translation_unit(Token *tok) {
 Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
                           bool is_global) {
   Tree *ex_decl = calloc(1, sizeof(Tree));
+  ex_decl->error_token = tok;
   ex_decl->decl_specs = parse_decl_specs(&tok, tok, state);
 
   if (equal(tok, ";")) {
@@ -189,6 +191,10 @@ Tree *parse_external_decl(Token **rest, Token *tok, Analyze *state,
 }
 
 Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
+  Tree *init_list = calloc(1, sizeof(Tree));
+  init_list->kind = INITIALIZE_LIST;
+  init_list->error_token = tok;
+
   expect(&tok, tok, "{");
 
   InitializeList head = {.next = NULL};
@@ -219,8 +225,6 @@ Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
   consume(&tok, tok, "}");
   *rest = tok;
 
-  Tree *init_list = calloc(1, sizeof(Tree));
-  init_list->kind = INITIALIZE_LIST;
   init_list->init_list = head.next;
   return init_list;
 }
@@ -372,6 +376,7 @@ void parse_primitive_type_spec(Token **rest, Token *tok,
 Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
   Tree *st_decl = calloc(1, sizeof(Tree));
   st_decl->kind = DECLARATION;
+  st_decl->error_token = tok;
   st_decl->decl_specs = parse_decl_specs(&tok, tok, state);
 
   if (equal(tok, ";"))
@@ -774,6 +779,7 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
   if (is_declaration(tok, state)) {
     head = calloc(1, sizeof(Tree));
     head->kind = DECLARATION;
+    head->error_token = tok;
     head->decl_specs = parse_decl_specs(&tok, tok, state);
     head->declarator = parse_declarator(&tok, tok, state);
     head->nth_arg = 1;
@@ -798,6 +804,7 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
     } else if (is_declaration(tok, state)) {
       node = calloc(1, sizeof(Tree));
       node->kind = DECLARATION;
+      node->error_token = tok;
       node->decl_specs = parse_decl_specs(&tok, tok, state);
       node->declarator = parse_declarator(&tok, tok, state);
       node->nth_arg = count;
@@ -815,13 +822,12 @@ Tree *parse_parameter_type_list(Token **rest, Token *tok, Analyze *state) {
 }
 
 Tree *parse_type_name(Token **rest, Token *tok, Analyze *state) {
-  DeclSpec *decl_spec = parse_decl_specs(&tok, tok, state);
-  Declarator *declarator = parse_abstract_declarator(&tok, tok, state);
-
   Tree *ret = calloc(1, sizeof(Tree));
   ret->kind = TYPE_NAME;
-  ret->decl_specs = decl_spec;
-  ret->declarator = declarator;
+  ret->error_token = tok;
+
+  ret->decl_specs = parse_decl_specs(&tok, tok, state);
+  ret->declarator = parse_abstract_declarator(&tok, tok, state);
 
   *rest = tok;
   return ret;
@@ -968,39 +974,46 @@ bool is_label_stmt(Token *tok) {
 Tree *parse_label_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node = NULL;
   if (equal_kind(tok, TK_IDENT) && equal(tok->next, ":")) {
+    Token *error_token = tok;
     char *label_str = getname_ident(&tok, tok);
     consume(&tok, tok, ":");
 
     Tree *lhs = parse_stmt(&tok, tok, state);
-    Tree *node = new_binary_node(LABEL, lhs, NULL);
+    Tree *node = new_binary_node(LABEL, lhs, NULL, error_token);
     node->label_name = label_str;
 
     *rest = tok;
     return node;
   } else if (equal_kind(tok, TK_CASE)) {
+    Token *error_token = tok;
     consume_kind(&tok, tok, TK_CASE);
     Tree *expr = parse_constant_expr(&tok, tok, state);
     consume(&tok, tok, ":");
     Tree *lhs = parse_stmt(&tok, tok, state);
 
     *rest = tok;
-    Tree *node = new_binary_node(CASE, lhs, NULL);
+    Tree *node = new_binary_node(CASE, lhs, NULL, error_token);
     node->case_num_node = expr;
 
     return node;
 
   } else if (equal_kind(tok, TK_DEFAULT)) {
+    Token *error_token = tok;
     consume_kind(&tok, tok, TK_DEFAULT);
     consume(&tok, tok, ":");
     Tree *lhs = parse_stmt(&tok, tok, state);
 
     *rest = tok;
-    return new_binary_node(DEFAULT, lhs, NULL);
+    return new_binary_node(DEFAULT, lhs, NULL, error_token);
   }
   return node;
 }
 
 Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
+  Tree *node = calloc(1, sizeof(Tree));
+  node->kind = COMPOUND_STMT;
+  node->error_token = tok;
+
   expect(&tok, tok, "{");
   push_lvar_scope(state);
 
@@ -1019,8 +1032,6 @@ Tree *parse_compound_stmt(Token **rest, Token *tok, Analyze *state) {
 
   pop_lvar_scope(state);
 
-  Tree *node = calloc(1, sizeof(Tree));
-  node->kind = COMPOUND_STMT;
   node->stmts = head.next;
   return node;
 }
@@ -1032,6 +1043,8 @@ bool is_jump_stmt(Token *tok) {
 
 Tree *parse_jump_stmt(Token **rest, Token *tok, Analyze *state) {
   Tree *node = calloc(1, sizeof(Tree));
+  node->error_token = tok;
+
   if (equal_kind(tok, TK_RETURN)) {
 
     consume_kind(&tok, tok, TK_RETURN);
@@ -1070,11 +1083,12 @@ bool is_iteration_stmt(Token *tok) {
 }
 
 Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state) {
-  Tree *node = NULL;
+  Tree *node = calloc(1, sizeof(Tree));
+  node->error_token = tok;
+
   if (equal_kind(tok, TK_WHILE)) {
     consume_kind(&tok, tok, TK_WHILE);
 
-    node = calloc(1, sizeof(Tree));
     node->kind = WHILE;
 
     expect(&tok, tok, "(");
@@ -1085,7 +1099,6 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state) {
   } else if (equal_kind(tok, TK_DO)) {
     consume_kind(&tok, tok, TK_DO);
 
-    node = calloc(1, sizeof(Tree));
     node->kind = DO_WHILE;
 
     node->lhs = parse_stmt(&tok, tok, state);
@@ -1100,7 +1113,6 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state) {
   } else if (equal_kind(tok, TK_FOR)) {
     consume_kind(&tok, tok, TK_FOR);
 
-    node = calloc(1, sizeof(Tree));
     node->kind = FOR;
 
     consume(&tok, tok, "(");
@@ -1123,6 +1135,7 @@ Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state) {
     } else {
       node->cond = calloc(1, sizeof(Tree));
       node->cond->kind = NUM;
+      node->error_token = tok;
       node->cond->num = 1;
     }
 
@@ -1147,11 +1160,12 @@ bool is_selection_stmt(Token *tok) {
 }
 
 Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state) {
-  Tree *node = NULL;
+  Tree *node = calloc(1, sizeof(Tree));
+  node->error_token = tok;
+
   if (equal_kind(tok, TK_IF)) {
     consume_kind(&tok, tok, TK_IF);
     expect(&tok, tok, "(");
-    node = calloc(1, sizeof(Tree));
     node->kind = IF;
     node->cond = parse_expr(&tok, tok, state);
     expect(&tok, tok, ")");
@@ -1170,7 +1184,6 @@ Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state) {
     Tree *lhs = parse_stmt(&tok, tok, state);
     *rest = tok;
 
-    Tree *node = calloc(1, sizeof(Tree));
     node->kind = SWITCH;
     node->cond = cond;
     node->lhs = lhs;
@@ -1198,9 +1211,10 @@ Tree *parse_expr(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_assign(&tok, tok, state);
   for (;;) {
     if (equal(tok, ",")) {
+      Token *error_token = tok;
       consume(&tok, tok, ",");
       Tree *rhs = parse_assign(&tok, tok, state);
-      lhs = new_binary_node(COMMA, lhs, rhs);
+      lhs = new_binary_node(COMMA, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1212,49 +1226,60 @@ Tree *parse_assign(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_conditional(&tok, tok, state);
 
   if (equal(tok, "=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(ASSIGN, lhs, rhs);
+    lhs = new_binary_node(ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "+=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "+=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(ADD_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(ADD_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "-=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "-=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(SUB_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(SUB_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "*=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "*=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(MUL_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(MUL_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "/=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "/=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(DIV_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(DIV_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "%=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "%=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(MOD_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(MOD_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "&=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "&=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(AND_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(AND_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "|=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "|=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(OR_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(OR_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "^=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "^=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(XOR_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(XOR_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, "<<=")) {
+    Token *error_token = tok;
     consume(&tok, tok, "<<=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(LSHIFT_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(LSHIFT_ASSIGN, lhs, rhs, error_token);
   } else if (equal(tok, ">>=")) {
+    Token *error_token = tok;
     consume(&tok, tok, ">>=");
     Tree *rhs = parse_assign(&tok, tok, state);
-    lhs = new_binary_node(RSHIFT_ASSIGN, lhs, rhs);
+    lhs = new_binary_node(RSHIFT_ASSIGN, lhs, rhs, error_token);
   }
 
   *rest = tok;
@@ -1268,13 +1293,15 @@ Tree *parse_constant_expr(Token **rest, Token *tok, Analyze *state) {
 Tree *parse_conditional(Token **rest, Token *tok, Analyze *state) {
   Tree *cond = parse_logical_or(&tok, tok, state);
   if (equal(tok, "?")) {
+    Tree *node = calloc(1, sizeof(Tree));
+    node->kind = CONDITIONAL;
+    node->error_token = tok;
+
     consume(&tok, tok, "?");
     Tree *lhs = parse_expr(&tok, tok, state);
     expect(&tok, tok, ":");
     Tree *rhs = parse_conditional(&tok, tok, state);
 
-    Tree *node = calloc(1, sizeof(Tree));
-    node->kind = CONDITIONAL;
     node->cond = cond;
     node->lhs = lhs;
     node->rhs = rhs;
@@ -1290,9 +1317,10 @@ Tree *parse_logical_or(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_logical_and(&tok, tok, state);
   for (;;) {
     if (equal(tok, "||")) {
+      Token *error_token = tok;
       consume(&tok, tok, "||");
       Tree *rhs = parse_logical_and(&tok, tok, state);
-      lhs = new_binary_node(LOGICAL_OR, lhs, rhs);
+      lhs = new_binary_node(LOGICAL_OR, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1304,9 +1332,10 @@ Tree *parse_logical_and(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_bit_or(&tok, tok, state);
   for (;;) {
     if (equal(tok, "&&")) {
+      Token *error_token = tok;
       consume(&tok, tok, "&&");
       Tree *rhs = parse_bit_or(&tok, tok, state);
-      lhs = new_binary_node(LOGICAL_AND, lhs, rhs);
+      lhs = new_binary_node(LOGICAL_AND, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1318,9 +1347,10 @@ Tree *parse_bit_or(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_bit_xor(&tok, tok, state);
   for (;;) {
     if (equal(tok, "|")) {
+      Token *error_token = tok;
       consume(&tok, tok, "|");
       Tree *rhs = parse_bit_xor(&tok, tok, state);
-      lhs = new_binary_node(BIT_OR, lhs, rhs);
+      lhs = new_binary_node(BIT_OR, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1332,9 +1362,10 @@ Tree *parse_bit_xor(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_bit_and(&tok, tok, state);
   for (;;) {
     if (equal(tok, "^")) {
+      Token *error_token = tok;
       consume(&tok, tok, "^");
       Tree *rhs = parse_bit_and(&tok, tok, state);
-      lhs = new_binary_node(BIT_XOR, lhs, rhs);
+      lhs = new_binary_node(BIT_XOR, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1346,9 +1377,10 @@ Tree *parse_bit_and(Token **rest, Token *tok, Analyze *state) {
   Tree *lhs = parse_equality(&tok, tok, state);
   for (;;) {
     if (equal(tok, "&")) {
+      Token *error_token = tok;
       consume(&tok, tok, "&");
       Tree *rhs = parse_equality(&tok, tok, state);
-      lhs = new_binary_node(BIT_AND, lhs, rhs);
+      lhs = new_binary_node(BIT_AND, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1361,13 +1393,15 @@ Tree *parse_equality(Token **rest, Token *tok, Analyze *state) {
 
   for (;;) {
     if (equal(tok, "==")) {
+      Token *error_token = tok;
       consume(&tok, tok, "==");
       Tree *rhs = parse_relational(&tok, tok, state);
-      lhs = new_binary_node(EQUAL, lhs, rhs);
+      lhs = new_binary_node(EQUAL, lhs, rhs, error_token);
     } else if (equal(tok, "!=")) {
+      Token *error_token = tok;
       consume(&tok, tok, "!=");
       Tree *rhs = parse_relational(&tok, tok, state);
-      lhs = new_binary_node(NOT_EQUAL, lhs, rhs);
+      lhs = new_binary_node(NOT_EQUAL, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1380,21 +1414,25 @@ Tree *parse_relational(Token **rest, Token *tok, Analyze *state) {
 
   for (;;) {
     if (equal(tok, "<")) {
+      Token *error_token = tok;
       consume(&tok, tok, "<");
       Tree *rhs = parse_shift(&tok, tok, state);
-      lhs = new_binary_node(SMALLER, lhs, rhs);
+      lhs = new_binary_node(SMALLER, lhs, rhs, error_token);
     } else if (equal(tok, "<=")) {
+      Token *error_token = tok;
       consume(&tok, tok, "<=");
       Tree *rhs = parse_shift(&tok, tok, state);
-      lhs = new_binary_node(SMALLER_EQUAL, lhs, rhs);
+      lhs = new_binary_node(SMALLER_EQUAL, lhs, rhs, error_token);
     } else if (equal(tok, ">")) {
+      Token *error_token = tok;
       consume(&tok, tok, ">");
       Tree *rhs = parse_shift(&tok, tok, state);
-      lhs = new_binary_node(GREATER, lhs, rhs);
+      lhs = new_binary_node(GREATER, lhs, rhs, error_token);
     } else if (equal(tok, ">=")) {
+      Token *error_token = tok;
       consume(&tok, tok, ">=");
       Tree *rhs = parse_shift(&tok, tok, state);
-      lhs = new_binary_node(GREATER_EQUAL, lhs, rhs);
+      lhs = new_binary_node(GREATER_EQUAL, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1407,13 +1445,15 @@ Tree *parse_shift(Token **rest, Token *tok, Analyze *state) {
 
   for (;;) {
     if (equal(tok, "<<")) {
+      Token *error_token = tok;
       consume(&tok, tok, "<<");
       Tree *rhs = parse_add(&tok, tok, state);
-      lhs = new_binary_node(LSHIFT, lhs, rhs);
+      lhs = new_binary_node(LSHIFT, lhs, rhs, error_token);
     } else if (equal(tok, ">>")) {
+      Token *error_token = tok;
       consume(&tok, tok, ">>");
       Tree *rhs = parse_add(&tok, tok, state);
-      lhs = new_binary_node(RSHIFT, lhs, rhs);
+      lhs = new_binary_node(RSHIFT, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1426,13 +1466,15 @@ Tree *parse_add(Token **rest, Token *tok, Analyze *state) {
 
   for (;;) {
     if (equal(tok, "+")) {
+      Token *error_token = tok;
       consume(&tok, tok, "+");
       Tree *rhs = parse_mul(&tok, tok, state);
-      lhs = new_binary_node(ADD, lhs, rhs);
+      lhs = new_binary_node(ADD, lhs, rhs, error_token);
     } else if (equal(tok, "-")) {
+      Token *error_token = tok;
       consume(&tok, tok, "-");
       Tree *rhs = parse_mul(&tok, tok, state);
-      lhs = new_binary_node(SUB, lhs, rhs);
+      lhs = new_binary_node(SUB, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1445,17 +1487,20 @@ Tree *parse_mul(Token **rest, Token *tok, Analyze *state) {
 
   for (;;) {
     if (equal(tok, "*")) {
+      Token *error_token = tok;
       consume(&tok, tok, "*");
       Tree *rhs = parse_cast(&tok, tok, state);
-      lhs = new_binary_node(MUL, lhs, rhs);
+      lhs = new_binary_node(MUL, lhs, rhs, error_token);
     } else if (equal(tok, "/")) {
+      Token *error_token = tok;
       consume(&tok, tok, "/");
       Tree *rhs = parse_cast(&tok, tok, state);
-      lhs = new_binary_node(DIV, lhs, rhs);
+      lhs = new_binary_node(DIV, lhs, rhs, error_token);
     } else if (equal(tok, "%")) {
+      Token *error_token = tok;
       consume(&tok, tok, "%");
       Tree *rhs = parse_cast(&tok, tok, state);
-      lhs = new_binary_node(MOD, lhs, rhs);
+      lhs = new_binary_node(MOD, lhs, rhs, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1465,10 +1510,11 @@ Tree *parse_mul(Token **rest, Token *tok, Analyze *state) {
 
 Tree *parse_cast(Token **rest, Token *tok, Analyze *state) {
   if (equal(tok, "(") && is_decl_specs(tok->next, state)) {
-
-    consume(&tok, tok, "(");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = CAST;
+    node->error_token = tok;
+
+    consume(&tok, tok, "(");
     node->type_name = parse_type_name(&tok, tok, state);
     expect(&tok, tok, ")");
     node->lhs = parse_cast(&tok, tok, state);
@@ -1483,6 +1529,7 @@ Tree *parse_cast(Token **rest, Token *tok, Analyze *state) {
 
 Tree *parse_unary(Token **rest, Token *tok, Analyze *state) {
   if (equal_kind(tok, TK_SIZEOF)) {
+    Token *error_token = tok;
     consume_kind(&tok, tok, TK_SIZEOF);
 
     if (equal(tok, "(") && is_decl_specs(tok->next, state)) {
@@ -1490,94 +1537,111 @@ Tree *parse_unary(Token **rest, Token *tok, Analyze *state) {
       Tree *typename = parse_type_name(&tok, tok, state);
       expect(&tok, tok, ")");
       *rest = tok;
-      return new_binary_node(SIZEOF, typename, NULL);
+      return new_binary_node(SIZEOF, typename, NULL, error_token);
     } else {
       Tree *unary = parse_unary(&tok, tok, state);
       *rest = tok;
-      return new_binary_node(SIZEOF, unary, NULL);
+      return new_binary_node(SIZEOF, unary, NULL, error_token);
     }
   }
 
   if (equal_kind(tok, TK_ALIGNOF)) {
+    Token *error_token = tok;
     consume_kind(&tok, tok, TK_ALIGNOF);
     expect(&tok, tok, "(");
     Tree *typename = parse_type_name(&tok, tok, state);
     expect(&tok, tok, ")");
     *rest = tok;
-    return new_binary_node(ALIGNOF, typename, NULL);
+    return new_binary_node(ALIGNOF, typename, NULL, error_token);
   }
 
   if (equal(tok, "++")) {
+    Token *error_token = tok;
     consume(&tok, tok, "++");
     Tree *lhs = parse_cast(&tok, tok, state);
     Tree *rhs = calloc(1, sizeof(Tree));
     rhs->kind = NUM;
+    rhs->error_token = error_token;
     rhs->num = 1;
 
     *rest = tok;
-    return new_binary_node(ADD_ASSIGN, lhs, rhs);
+    return new_binary_node(ADD_ASSIGN, lhs, rhs, error_token);
   }
 
   if (equal(tok, "--")) {
+    Token *error_token = tok;
     consume(&tok, tok, "--");
     Tree *lhs = parse_cast(&tok, tok, state);
     Tree *rhs = calloc(1, sizeof(Tree));
     rhs->kind = NUM;
+    rhs->error_token = error_token;
     rhs->num = 1;
 
     *rest = tok;
-    return new_binary_node(SUB_ASSIGN, lhs, rhs);
+    return new_binary_node(SUB_ASSIGN, lhs, rhs, error_token);
   }
 
   if (equal(tok, "+")) {
-    consume(&tok, tok, "+");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = PLUS;
+    node->error_token = tok;
+
+    consume(&tok, tok, "+");
     node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
 
   if (equal(tok, "-")) {
-    consume(&tok, tok, "-");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = MINUS;
+    node->error_token = tok;
+
+    consume(&tok, tok, "-");
     node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
 
   if (equal(tok, "&")) {
-    consume(&tok, tok, "&");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = ADDR;
+    node->error_token = tok;
+
+    consume(&tok, tok, "&");
     node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
 
   if (equal(tok, "*")) {
-    consume(&tok, tok, "*");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = DEREF;
+    node->error_token = tok;
+
+    consume(&tok, tok, "*");
     node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
 
   if (equal(tok, "!")) {
-    consume(&tok, tok, "!");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = LOGICAL_NOT;
+    node->error_token = tok;
+
+    consume(&tok, tok, "!");
     node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
   }
 
   if (equal(tok, "~")) {
-    consume(&tok, tok, "~");
     Tree *node = calloc(1, sizeof(Tree));
     node->kind = BIT_NOT;
+    node->error_token = tok;
+
+    consume(&tok, tok, "~");
     node->lhs = parse_cast(&tok, tok, state);
     *rest = tok;
     return node;
@@ -1592,15 +1656,18 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
 
   for (;;) {
     if (equal(tok, "[")) {
+      Token *error_token = tok;
       consume(&tok, tok, "[");
       Tree *rhs = parse_expr(&tok, tok, state);
       consume(&tok, tok, "]");
 
-      Tree *add_node = new_binary_node(ADD, lhs, rhs);
-      lhs = new_binary_node(DEREF, add_node, NULL);
+      Tree *add_node = new_binary_node(ADD, lhs, rhs, error_token);
+      lhs = new_binary_node(DEREF, add_node, NULL, error_token);
     } else if (equal(tok, "(")) {
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = FUNC_CALL;
+      node->error_token = tok;
+
       node->lhs = lhs;
       consume(&tok, tok, "(");
 
@@ -1613,29 +1680,35 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
 
       lhs = node;
     } else if (equal(tok, ".")) {
-      consume(&tok, tok, ".");
-
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = DOT;
+      node->error_token = tok;
+
+      consume(&tok, tok, ".");
+
       node->lhs = lhs;
       node->member_name = getname_ident(&tok, tok);
 
       lhs = node;
     } else if (equal(tok, "->")) {
-      consume(&tok, tok, "->");
-
       Tree *node = calloc(1, sizeof(Tree));
       node->kind = ARROW;
+      node->error_token = tok;
+
+      consume(&tok, tok, "->");
+
       node->lhs = lhs;
       node->member_name = getname_ident(&tok, tok);
 
       lhs = node;
     } else if (equal(tok, "++")) {
+      Token *error_token = tok;
       consume(&tok, tok, "++");
-      lhs = new_binary_node(POST_INCREMENT, lhs, NULL);
+      lhs = new_binary_node(POST_INCREMENT, lhs, NULL, error_token);
     } else if (equal(tok, "--")) {
+      Token *error_token = tok;
       consume(&tok, tok, "--");
-      lhs = new_binary_node(POST_DECREMENT, lhs, NULL);
+      lhs = new_binary_node(POST_DECREMENT, lhs, NULL, error_token);
     } else {
       *rest = tok;
       return lhs;
@@ -1653,21 +1726,26 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
 
   if (equal_kind(tok, TK_NUM)) {
     primary = calloc(1, sizeof(Tree));
-    Token *num_tok = consume_kind(&tok, tok, TK_NUM);
     primary->kind = NUM;
+    primary->error_token = tok;
+
+    Token *num_tok = consume_kind(&tok, tok, TK_NUM);
     primary->num = num_tok->val;
     primary->is_long = num_tok->is_long;
   } else if (equal_kind(tok, TK_STR)) {
     primary = calloc(1, sizeof(Tree));
-    StrLiteral *str_literal = consume_kind(&tok, tok, TK_STR)->str_literal;
-
     primary->kind = STR;
+    primary->error_token = tok;
+
+    StrLiteral *str_literal = consume_kind(&tok, tok, TK_STR)->str_literal;
     primary->str_literal = str_literal;
   } else if (is_builtin(tok)) {
     primary = parse_builtin(&tok, tok, state);
   } else if (equal_kind(tok, TK_IDENT)) {
     primary = calloc(1, sizeof(Tree));
     primary->kind = VAR;
+    primary->error_token = tok;
+
     primary->var_name = getname_ident(&tok, tok);
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
@@ -1683,6 +1761,7 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
 
 Tree *parse_builtin(Token **rest, Token *tok, Analyze *state) {
   Tree *node = calloc(1, sizeof(Tree));
+  node->error_token = tok;
   if (cmp_ident(tok, "__builtin_va_start")) {
     expect_ident(&tok, tok, "__builtin_va_start");
     node->kind = BUILTIN_VA_START;
