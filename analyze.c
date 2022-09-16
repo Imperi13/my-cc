@@ -456,6 +456,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     Type *base_type = gettype_decl_spec(ast->decl_specs, state);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
+      // push ObjScope
+      push_lvar_scope(state);
+      analyze_declarator(cur, state);
+      pop_lvar_scope(state);
+
       char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type, state);
 
