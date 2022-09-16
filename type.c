@@ -108,7 +108,8 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type,
       Type *ty = calloc(1, sizeof(Type));
       ty->kind = ARRAY;
       if (!cur->is_null_size) {
-        analyze_stmt(cur->size, state);
+        if (!is_constexpr_integer(cur->size))
+          error_token(cur->size->error_token, "not constexpr");
         ty->arr_size = eval_constexpr_integer(cur->size);
       }
       ty->ptr_to = base_type;

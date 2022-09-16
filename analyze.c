@@ -134,6 +134,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       // push ObjScope for func-prototype
       push_lvar_scope(state);
       analyze_declarator(cur, state);
+      pop_lvar_scope(state);
 
       char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type, state);
@@ -187,8 +188,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
         cur->def_obj = obj;
       }
-
-      pop_lvar_scope(state);
     }
 
   } else {
@@ -233,6 +232,10 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         Type *base_type = gettype_decl_spec(decl_cur->decl_specs, state);
 
         for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
+          push_lvar_scope(state);
+          analyze_declarator(cur, state);
+          pop_lvar_scope(state);
+
           Type *obj_type = gettype_declarator(cur, base_type, state);
           char *obj_name = getname_declarator(cur);
 
@@ -303,6 +306,10 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
         if (decl_cur->declarator->next)
           not_implemented(__func__);
+
+        push_lvar_scope(state);
+        analyze_declarator(decl_cur->declarator, state);
+        pop_lvar_scope(state);
 
         obj_type = gettype_declarator(decl_cur->declarator, obj_type, state);
         char *obj_name = getname_declarator(decl_cur->declarator);
@@ -397,6 +404,11 @@ void analyze_declarator(Declarator *declarator, Analyze *state) {
         analyze_declarator(cur->declarator, state);
         pop_lvar_scope(state);
       }
+    }
+  } else if (declarator->type_suffix_kind == ARRAY_DECLARATOR) {
+    for (ArrayDeclarator *cur = declarator->arr_decl; cur; cur = cur->next) {
+      if (!cur->is_null_size)
+        analyze_stmt(cur->size, state);
     }
   }
 }
