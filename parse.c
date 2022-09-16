@@ -383,9 +383,11 @@ Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
     not_implemented_token(tok);
 
   if (equal(tok, ":")) {
-    warn_token(tok, "ignore bitfield");
-    consume(&tok, tok, ":");
     st_decl->declarator = calloc(1, sizeof(Declarator));
+    st_decl->error_token = tok;
+    warn_token(tok, "ignore bitfield");
+
+    consume(&tok, tok, ":");
     st_decl->declarator->bitfield_expr = parse_constant_expr(&tok, tok, state);
   } else {
     st_decl->declarator = parse_declarator(&tok, tok, state);
@@ -402,9 +404,10 @@ Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
     consume(&tok, tok, ",");
 
     if (equal(tok, ":")) {
+      cur->next = calloc(1, sizeof(Declarator));
+      cur->error_token = tok;
       warn_token(tok, "ignore bitfield");
       consume(&tok, tok, ":");
-      cur->next = calloc(1, sizeof(Declarator));
       cur->next->bitfield_expr = parse_constant_expr(&tok, tok, state);
     } else {
       cur->next = parse_declarator(&tok, tok, state);
@@ -690,6 +693,7 @@ void set_primitive_type_spec_kind(DeclSpec *decl_spec,
 
 Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
   Declarator *declarator = calloc(1, sizeof(Declarator));
+  declarator->error_token = tok;
 
   Pointer **cur = &declarator->pointer;
   while (equal(tok, "*")) {
@@ -836,6 +840,7 @@ Tree *parse_type_name(Token **rest, Token *tok, Analyze *state) {
 Declarator *parse_abstract_declarator(Token **rest, Token *tok,
                                       Analyze *state) {
   Declarator *declarator = calloc(1, sizeof(Declarator));
+  declarator->error_token = tok;
 
   Pointer **cur = &declarator->pointer;
   while (equal(tok, "*")) {

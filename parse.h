@@ -252,6 +252,7 @@ struct EnumVal {
 struct Declarator {
   Pointer *pointer;
   char *name;
+  Token *error_token;
 
   Obj *def_obj;
 
