@@ -754,7 +754,7 @@ Declarator *parse_declarator(Token **rest, Token *tok, Analyze *state) {
       if (equal(tok, "]")) {
         arr_decl->is_null_size = true;
       } else {
-        arr_decl->size = parse_expr(&tok, tok, state);
+        arr_decl->size_expr = parse_expr(&tok, tok, state);
       }
       consume(&tok, tok, "]");
 
@@ -886,7 +886,7 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
       if (equal(tok, "]")) {
         arr_decl->is_null_size = true;
       } else {
-        arr_decl->size = parse_expr(&tok, tok, state);
+        arr_decl->size_expr = parse_expr(&tok, tok, state);
       }
       consume(&tok, tok, "]");
 

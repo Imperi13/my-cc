@@ -290,7 +290,7 @@ struct Pointer {
 
 struct ArrayDeclarator {
   bool is_null_size;
-  Tree *size;
+  Tree *size_expr;
 
   // for linked-list
   ArrayDeclarator *next;

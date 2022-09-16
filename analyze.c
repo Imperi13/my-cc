@@ -410,7 +410,7 @@ void analyze_declarator(Declarator *declarator, Analyze *state) {
   } else if (declarator->type_suffix_kind == ARRAY_DECLARATOR) {
     for (ArrayDeclarator *cur = declarator->arr_decl; cur; cur = cur->next) {
       if (!cur->is_null_size)
-        analyze_stmt(cur->size, state);
+        analyze_stmt(cur->size_expr, state);
     }
   }
 }
