@@ -111,6 +111,9 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
       if (cur->declarator)
         argtype = gettype_declarator(cur->declarator, argtype);
 
+      if (argtype->kind == ARRAY)
+        argtype->kind = PTR;
+
       argtype_cur->next = argtype;
       argtype_cur = argtype_cur->next;
     }
