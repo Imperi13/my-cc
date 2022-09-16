@@ -925,19 +925,22 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = &type_int;
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
+    Type *func_type = NULL;
+    if (ast->lhs->type->kind == FUNC) {
+      func_type = ast->lhs->type;
+    } else if (ast->lhs->type->kind == PTR &&
+               ast->lhs->type->ptr_to->kind == FUNC) {
+      func_type = ast->lhs->type->ptr_to;
+    } else
+      error_token(ast->error_token, "cannot call func");
+
     Tree *cur = ast->call_args;
     while (cur) {
       analyze_stmt(cur, state);
       cur = cur->next;
     }
 
-    if (ast->lhs->type->kind == FUNC) {
-      ast->type = ast->lhs->type->return_type;
-    } else if (ast->lhs->type->kind == PTR &&
-               ast->lhs->type->ptr_to->kind == FUNC) {
-      ast->type = ast->lhs->type->ptr_to->return_type;
-    } else
-      error_token(ast->error_token, "cannot call func");
+    ast->type = func_type->return_type;
 
   } else if (ast->kind == POST_INCREMENT) {
     analyze_stmt(ast->lhs, state);
