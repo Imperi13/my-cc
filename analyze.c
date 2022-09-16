@@ -81,8 +81,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     push_lvar_scope(state);
     analyze_declarator(ast->declarator, state);
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type, state);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
 
@@ -128,7 +128,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *base_type = gettype_decl_spec(ast->decl_specs, state);
+    Type *base_type = gettype_decl_spec(ast->decl_specs);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
       // push ObjScope for func-prototype
@@ -137,7 +137,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       pop_lvar_scope(state);
 
       char *obj_name = getname_declarator(cur);
-      Type *obj_type = gettype_declarator(cur, base_type, state);
+      Type *obj_type = gettype_declarator(cur, base_type);
 
       // get size for null-size array []
       if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
@@ -229,14 +229,14 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       Member *mem_cur = &head;
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
-        Type *base_type = gettype_decl_spec(decl_cur->decl_specs, state);
+        Type *base_type = gettype_decl_spec(decl_cur->decl_specs);
 
         for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
           push_lvar_scope(state);
           analyze_declarator(cur, state);
           pop_lvar_scope(state);
 
-          Type *obj_type = gettype_declarator(cur, base_type, state);
+          Type *obj_type = gettype_declarator(cur, base_type);
           char *obj_name = getname_declarator(cur);
 
           Member *mem = calloc(1, sizeof(Member));
@@ -302,7 +302,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
-        Type *obj_type = gettype_decl_spec(decl_cur->decl_specs, state);
+        Type *obj_type = gettype_decl_spec(decl_cur->decl_specs);
 
         if (decl_cur->declarator->next)
           not_implemented(__func__);
@@ -311,7 +311,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
         analyze_declarator(decl_cur->declarator, state);
         pop_lvar_scope(state);
 
-        obj_type = gettype_declarator(decl_cur->declarator, obj_type, state);
+        obj_type = gettype_declarator(decl_cur->declarator, obj_type);
         char *obj_name = getname_declarator(decl_cur->declarator);
 
         Member *mem = calloc(1, sizeof(Member));
@@ -418,8 +418,8 @@ void analyze_declarator(Declarator *declarator, Analyze *state) {
 void push_lvar_parameter(Tree *ast, Analyze *state) {
   if (ast->kind == DECLARATION) {
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type, state);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    obj_type = gettype_declarator(ast->declarator, obj_type);
 
     if (obj_type->kind == ARRAY)
       obj_type->kind = PTR;
@@ -467,7 +467,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *base_type = gettype_decl_spec(ast->decl_specs, state);
+    Type *base_type = gettype_decl_spec(ast->decl_specs);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
       // push ObjScope
@@ -476,7 +476,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       pop_lvar_scope(state);
 
       char *obj_name = getname_declarator(cur);
-      Type *obj_type = gettype_declarator(cur, base_type, state);
+      Type *obj_type = gettype_declarator(cur, base_type);
 
       // get size for null-size array []
       if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
@@ -837,14 +837,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = ast->lhs->type;
   } else if (ast->kind == CAST) {
     analyze_decl_spec(ast->type_name->decl_specs, state, false);
-    Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs, state);
+    Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs);
     if (ast->type_name->declarator) {
       push_lvar_scope(state);
       analyze_declarator(ast->type_name->declarator, state);
       pop_lvar_scope(state);
 
-      cast_type =
-          gettype_declarator(ast->type_name->declarator, cast_type, state);
+      cast_type = gettype_declarator(ast->type_name->declarator, cast_type);
     }
 
     analyze_stmt(ast->lhs, state);
@@ -888,13 +887,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == SIZEOF) {
     if (ast->lhs->kind == TYPE_NAME) {
       analyze_decl_spec(ast->lhs->decl_specs, state, false);
-      Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
+      Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
       if (ast->lhs->declarator) {
         push_lvar_scope(state);
         analyze_declarator(ast->lhs->declarator, state);
         pop_lvar_scope(state);
 
-        base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+        base_type = gettype_declarator(ast->lhs->declarator, base_type);
       }
 
       // replace "sizeof" -> num
@@ -911,13 +910,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     }
   } else if (ast->kind == ALIGNOF) {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
-    Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
+    Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
     if (ast->lhs->declarator) {
       push_lvar_scope(state);
       analyze_declarator(ast->lhs->declarator, state);
       pop_lvar_scope(state);
 
-      base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+      base_type = gettype_declarator(ast->lhs->declarator, base_type);
     }
 
     // replace "sizeof" -> num

@@ -62,7 +62,7 @@ void builtin_type_init(Analyze *state) {
   add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
 }
 
-Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
+Type *gettype_decl_spec(DeclSpec *decl_spec) {
   if (decl_spec->type_spec_kind == TypeSpec_LONG) {
     return &type_long;
   } else if (decl_spec->type_spec_kind == TypeSpec_INT) {
@@ -86,11 +86,10 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
   return NULL;
 }
 
-Type *gettype_declarator(Declarator *declarator, Type *base_type,
-                         Analyze *state) {
+Type *gettype_declarator(Declarator *declarator, Type *base_type) {
 
   if (declarator->nest)
-    base_type = gettype_declarator(declarator->nest, base_type, state);
+    base_type = gettype_declarator(declarator->nest, base_type);
 
   for (Pointer *cur = declarator->pointer; cur; cur = cur->nest)
     base_type = newtype_ptr(base_type);
