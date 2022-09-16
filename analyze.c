@@ -836,9 +836,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == CAST) {
     analyze_decl_spec(ast->type_name->decl_specs, state, false);
     Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs, state);
-    if (ast->type_name->declarator)
+    if (ast->type_name->declarator) {
+      push_lvar_scope(state);
+      analyze_declarator(ast->type_name->declarator, state);
+      pop_lvar_scope(state);
+
       cast_type =
           gettype_declarator(ast->type_name->declarator, cast_type, state);
+    }
 
     analyze_stmt(ast->lhs, state);
 
@@ -882,7 +887,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (ast->lhs->kind == TYPE_NAME) {
       analyze_decl_spec(ast->lhs->decl_specs, state, false);
       Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
-      base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+      if (ast->lhs->declarator) {
+        push_lvar_scope(state);
+        analyze_declarator(ast->lhs->declarator, state);
+        pop_lvar_scope(state);
+
+        base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+      }
 
       // replace "sizeof" -> num
       ast->kind = NUM;
@@ -899,7 +910,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == ALIGNOF) {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
     Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
-    base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+    if (ast->lhs->declarator) {
+      push_lvar_scope(state);
+      analyze_declarator(ast->lhs->declarator, state);
+      pop_lvar_scope(state);
+
+      base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+    }
 
     // replace "sizeof" -> num
     ast->kind = NUM;
