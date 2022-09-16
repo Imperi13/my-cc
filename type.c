@@ -79,8 +79,8 @@ Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
     return newtype_union(decl_spec->union_def);
   } else if (decl_spec->en_def) {
     return &type_int;
-  } else if (decl_spec->def_name) {
-    return find_typedef(state, decl_spec->def_name)->type;
+  } else if (decl_spec->defined_type) {
+    return decl_spec->defined_type->type;
   } else
     error("empty type");
   return NULL;

@@ -384,6 +384,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     }
 
     decl_spec->en_def = en_def;
+  } else if (decl_spec->type_spec_kind == TypeSpec_TYPEDEF_NAME) {
+    decl_spec->defined_type = find_typedef(state, decl_spec->def_name);
   }
 }
 

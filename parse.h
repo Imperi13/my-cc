@@ -216,6 +216,7 @@ struct DeclSpec {
 
   // for defined_type
   char *def_name;
+  Typedef *defined_type;
 };
 
 struct StructSpec {
