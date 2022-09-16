@@ -89,9 +89,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     Obj *func = find_global(state, obj_name);
     if (func) {
       if (func->is_defined)
-        error("redefined: %s", obj_name);
+        error_token(ast->error_token, "redefined: %s", obj_name);
       if (!is_same_type(func->type, obj_type))
-        error("conflict type: %s", obj_name);
+        error_token(ast->error_token, "conflict type: %s", obj_name);
     } else {
       func = calloc(1, sizeof(Obj));
       func->obj_name = obj_name;
@@ -192,7 +192,7 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     }
 
   } else {
-    error("not external_decl");
+    error_token(ast->error_token, "not external_decl");
   }
 }
 
@@ -367,7 +367,7 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       for (EnumVal *cur = en_def->members; cur; cur = cur->next) {
         if (cur->val_expr) {
           if (!is_constexpr_integer(cur->val_expr))
-            error("not constexpr");
+            error_token(cur->val_expr->error_token, "not constexpr");
 
           val = eval_constexpr_integer(cur->val_expr);
         }
@@ -413,7 +413,7 @@ void push_lvar_parameter(Tree *ast, Analyze *state) {
     char *obj_name = getname_declarator(ast->declarator);
 
     if (ast->decl_specs->has_typedef) {
-      error("typedef not allowed in args");
+      error_token(ast->error_token, "typedef not allowed in args");
     } else {
 
       Obj *lvar = calloc(1, sizeof(Obj));
@@ -431,7 +431,7 @@ void push_lvar_parameter(Tree *ast, Analyze *state) {
     }
 
   } else
-    error("cannot analyze parameter");
+    error_token(ast->error_token, "cannot analyze parameter");
 }
 
 void analyze_stmt(Tree *ast, Analyze *state) {
@@ -528,7 +528,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->case_num = case_num;
 
     if (!state->switch_stmts)
-      error("not in switch-stmt");
+      error_token(ast->error_token, "not in switch-stmt");
 
     Case *new_case = calloc(1, sizeof(Case));
     new_case->case_num = case_num;
@@ -541,10 +541,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == DEFAULT) {
     if (!state->switch_stmts)
-      error("not in switch-stmt");
+      error_token(ast->error_token, "not in switch-stmt");
 
     if (state->switch_stmts->switch_node->has_default)
-      error("already exist default");
+      error_token(ast->error_token, "already exist default");
 
     state->switch_stmts->switch_node->has_default = true;
     ast->label_number = state->switch_stmts->switch_node->label_number;
@@ -558,19 +558,19 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       add_implicit_func_cast(&ast->lhs);
 
       if (!is_compatible(state->current_func->type->return_type, ast->lhs))
-        error("invalid return type");
+        error_token(ast->error_token, "invalid return type");
     } else {
       if (state->current_func->type->return_type->kind != VOID)
-        error("must return value");
+        error_token(ast->error_token, "must return value");
     }
   } else if (ast->kind == BREAK) {
     if (!state->break_labels)
-      error("invalid break stmt");
+      error_token(ast->error_token, "invalid break stmt");
 
     ast->label_number = state->break_labels->label_number;
   } else if (ast->kind == CONTINUE) {
     if (!state->continue_labels)
-      error("invalid continue stmt");
+      error_token(ast->error_token, "invalid continue stmt");
 
     ast->label_number = state->continue_labels->label_number;
   } else if (ast->kind == WHILE) {
@@ -789,7 +789,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     else if (rtype->kind == PTR && is_integer(ltype))
       ast->type = rtype;
     else
-      error("unexpected type pair");
+      error_token(ast->error_token, "unexpected type pair");
 
   } else if (ast->kind == SUB) {
     analyze_stmt(ast->lhs, state);
@@ -807,7 +807,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR)
       ast->type = &type_int;
     else
-      error("unexpected type pair");
+      error_token(ast->error_token, "unexpected type pair");
 
   } else if (ast->kind == MUL) {
     analyze_stmt(ast->lhs, state);
@@ -831,7 +831,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
 
     if (!is_compatible(cast_type, ast->lhs))
-      error("cannot cast");
+      error_token(ast->error_token, "cannot cast");
 
     /*
     if (!is_integer(cast_type) || !is_integer(ast->lhs->type))
@@ -857,7 +857,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     add_implicit_func_cast(&ast->lhs);
 
     if (ast->lhs->type->kind != PTR)
-      error("cannot deref");
+      error_token(ast->error_token, "cannot deref");
     ast->type = ast->lhs->type->ptr_to;
 
   } else if (ast->kind == LOGICAL_NOT) {
@@ -907,7 +907,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
                ast->lhs->type->ptr_to->kind == FUNC) {
       ast->type = ast->lhs->type->ptr_to->return_type;
     } else
-      error("cannot call func");
+      error_token(ast->error_token, "cannot call func");
 
   } else if (ast->kind == POST_INCREMENT) {
     analyze_stmt(ast->lhs, state);
@@ -918,7 +918,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == DOT) {
     analyze_stmt(ast->lhs, state);
     if (ast->lhs->type->kind != STRUCT && ast->lhs->type->kind != UNION)
-      error("lhs is not struct");
+      error_token(ast->error_token, "lhs is not struct");
 
     Member *member;
     if (ast->lhs->type->kind == STRUCT)
@@ -927,7 +927,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       member = find_union_member(ast->lhs->type->union_def, ast->member_name);
 
     if (!member)
-      error("not find member");
+      error_token(ast->error_token, "not find member");
 
     ast->member = member;
     ast->type = member->type;
@@ -937,7 +937,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (ast->lhs->type->kind != PTR ||
         (ast->lhs->type->ptr_to->kind != STRUCT &&
          ast->lhs->type->ptr_to->kind != UNION))
-      error("lhs is not ptr to struct");
+      error_token(ast->error_token, "lhs is not ptr to struct");
 
     Member *member;
     if (ast->lhs->type->ptr_to->kind == STRUCT)
@@ -948,7 +948,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
                                  ast->member_name);
 
     if (!member)
-      error("not find member");
+      error_token(ast->error_token, "not find member");
 
     ast->member = member;
     ast->type = member->type;
@@ -966,7 +966,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (!memcmp(ast->var_name, "__func__", 8)) {
 
       if (!state->current_func)
-        error("__func__ is not in function");
+        error_token(ast->error_token, "__func__ is not in function");
 
       // make str-literal for func-name
       StrLiteral *func_name = calloc(1, sizeof(StrLiteral));
@@ -1005,7 +1005,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (!var) {
       var = find_global(state, ast->var_name);
       if (!var)
-        error("cannot find var: %s", ast->var_name);
+        error_token(ast->error_token, "cannot find var: %s", ast->var_name);
     }
 
     ast->var_obj = var;
@@ -1015,11 +1015,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     if (ast->lhs->kind != VAR || ast->rhs->kind != VAR)
-      error("invalid usage  __builtin_va_start");
+      error_token(ast->error_token, "invalid usage  __builtin_va_start");
   } else if (ast->kind == BUILTIN_VA_END) {
     analyze_stmt(ast->lhs, state);
     if (ast->lhs->kind != VAR)
-      error("invalid usage  __builtin_va_end");
+      error_token(ast->error_token, "invalid usage  __builtin_va_end");
   } else {
     not_implemented(__func__);
   }
@@ -1029,7 +1029,7 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
                                  bool is_global) {
   if (var_type->kind != ARRAY && var_type->kind != STRUCT) {
     if (init_val->kind == INITIALIZE_LIST)
-      error("invalid initialize list");
+      error_token(init_val->error_token, "invalid initialize list");
 
     analyze_stmt(init_val, state);
 
@@ -1037,10 +1037,10 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
     add_implicit_func_cast(&init_val);
 
     if (!is_compatible(var_type, init_val))
-      error("cannot convert type");
+      error_token(init_val->error_token, "cannot convert type");
 
     if (is_global && !is_constexpr(init_val))
-      error("not constexpr for global initialize");
+      error_token(init_val->error_token, "not constexpr for global initialize");
   } else if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
              init_val->kind == STR) {
     not_implemented("array of char initialize with str-literal");
@@ -1051,13 +1051,14 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
     add_implicit_func_cast(&init_val);
 
     if (!is_compatible(var_type, init_val))
-      error("cannot convert type");
+      error_token(init_val->error_token, "cannot convert type");
 
     if (is_global && !is_constexpr(init_val))
-      error("not constexpr for global initialize");
+      error_token(init_val->error_token, "not constexpr for global initialize");
   } else if (var_type->kind == ARRAY) {
     if (init_val->kind != INITIALIZE_LIST)
-      error("must initialize with INITIALIZE_LIST");
+      error_token(init_val->error_token,
+                  "must initialize with INITIALIZE_LIST");
 
     int cnt = 0;
     for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
@@ -1067,21 +1068,24 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
     }
 
     if (cnt > var_type->arr_size)
-      error("excess elements");
+      error_token(init_val->error_token, "excess elements");
   } else if (var_type->kind == STRUCT) {
     if (init_val->kind != INITIALIZE_LIST)
-      error("must initialize with INITIALIZE_LIST");
+      error_token(init_val->error_token,
+                  "must initialize with INITIALIZE_LIST");
 
     Member *mem_cur = var_type->st_def->members;
     for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
       if (!mem_cur)
-        error("excess elements");
+        error_token(init_val->error_token, "excess elements");
 
       if (cur->member_name) {
         while (strcmp(cur->member_name, mem_cur->member_name) != 0) {
           mem_cur = mem_cur->next;
           if (!mem_cur)
-            error("not found member %s in initialize-list", cur->member_name);
+            error_token(init_val->error_token,
+                        "not found member %s in initialize-list",
+                        cur->member_name);
         }
       }
 
