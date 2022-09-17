@@ -9,12 +9,6 @@
 #include "str_dict.h"
 #include "type.h"
 
-Type type_void = {.kind = VOID};
-Type type_long = {.kind = LONG};
-Type type_int = {.kind = INT};
-Type type_char = {.kind = CHAR};
-Type type_bool = {.kind = BOOL};
-
 void builtin_type_init(Analyze *state) {
 
   // struct __builtin_va_list
@@ -30,28 +24,28 @@ void builtin_type_init(Analyze *state) {
   Member *cur = st_def->members;
 
   cur->member_name = "gp_offset";
-  cur->type = &type_int;
+  cur->type = newtype_int();
   cur->offset = 0x0;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "fp_offset";
-  cur->type = &type_int;
+  cur->type = newtype_int();
   cur->offset = 0x4;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "overflow_arg_area";
-  cur->type = newtype_ptr(&type_void);
+  cur->type = newtype_ptr(newtype_void());
   cur->offset = 0x8;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "reg_save_area";
-  cur->type = newtype_ptr(&type_void);
+  cur->type = newtype_ptr(newtype_void());
   cur->offset = 0x10;
 
   // typedef struct __builtin_va_list __builtin_va_list
@@ -64,21 +58,21 @@ void builtin_type_init(Analyze *state) {
 
 Type *gettype_decl_spec(DeclSpec *decl_spec) {
   if (decl_spec->type_spec_kind == TypeSpec_LONG) {
-    return &type_long;
+    return newtype_long();
   } else if (decl_spec->type_spec_kind == TypeSpec_INT) {
-    return &type_int;
+    return newtype_int();
   } else if (decl_spec->type_spec_kind == TypeSpec_CHAR) {
-    return &type_char;
+    return newtype_char();
   } else if (decl_spec->type_spec_kind == TypeSpec_VOID) {
-    return &type_void;
+    return newtype_void();
   } else if (decl_spec->type_spec_kind == TypeSpec_BOOL) {
-    return &type_bool;
+    return newtype_bool();
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->union_def) {
     return newtype_union(decl_spec->union_def);
   } else if (decl_spec->en_def) {
-    return &type_int;
+    return newtype_int();
   } else if (decl_spec->defined_type) {
     return decl_spec->defined_type->type;
   } else
@@ -160,6 +154,36 @@ ArrayDeclarator *get_arr_declarator(Declarator *declarator) {
     error("not array");
 
   return declarator->arr_decl;
+}
+
+Type *newtype_void(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = VOID;
+  return ty;
+}
+
+Type *newtype_long(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = LONG;
+  return ty;
+}
+
+Type *newtype_int(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = INT;
+  return ty;
+}
+
+Type *newtype_char(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = CHAR;
+  return ty;
+}
+
+Type *newtype_bool(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = BOOL;
+  return ty;
 }
 
 Type *newtype_ptr(Type *type) {
