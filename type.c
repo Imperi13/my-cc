@@ -74,7 +74,9 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
   } else if (decl_spec->en_def) {
     return newtype_int();
   } else if (decl_spec->defined_type) {
-    return decl_spec->defined_type->type;
+    Type *ty = calloc(1, sizeof(Type));
+    memcpy(ty, decl_spec->defined_type->type, sizeof(Type));
+    return ty;
   } else
     error("empty type");
   return NULL;
