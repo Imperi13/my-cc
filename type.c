@@ -8,12 +8,7 @@
 #include "parse.h"
 #include "str_dict.h"
 #include "type.h"
-
-Type type_void = {.kind = VOID};
-Type type_long = {.kind = LONG};
-Type type_int = {.kind = INT};
-Type type_char = {.kind = CHAR};
-Type type_bool = {.kind = BOOL};
+#include "vector.h"
 
 void builtin_type_init(Analyze *state) {
 
@@ -30,28 +25,28 @@ void builtin_type_init(Analyze *state) {
   Member *cur = st_def->members;
 
   cur->member_name = "gp_offset";
-  cur->type = &type_int;
+  cur->type = newtype_int();
   cur->offset = 0x0;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "fp_offset";
-  cur->type = &type_int;
+  cur->type = newtype_int();
   cur->offset = 0x4;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "overflow_arg_area";
-  cur->type = newtype_ptr(&type_void);
+  cur->type = newtype_ptr(newtype_void());
   cur->offset = 0x8;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "reg_save_area";
-  cur->type = newtype_ptr(&type_void);
+  cur->type = newtype_ptr(newtype_void());
   cur->offset = 0x10;
 
   // typedef struct __builtin_va_list __builtin_va_list
@@ -62,35 +57,36 @@ void builtin_type_init(Analyze *state) {
   add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
 }
 
-Type *gettype_decl_spec(DeclSpec *decl_spec, Analyze *state) {
+Type *gettype_decl_spec(DeclSpec *decl_spec) {
   if (decl_spec->type_spec_kind == TypeSpec_LONG) {
-    return &type_long;
+    return newtype_long();
   } else if (decl_spec->type_spec_kind == TypeSpec_INT) {
-    return &type_int;
+    return newtype_int();
   } else if (decl_spec->type_spec_kind == TypeSpec_CHAR) {
-    return &type_char;
+    return newtype_char();
   } else if (decl_spec->type_spec_kind == TypeSpec_VOID) {
-    return &type_void;
+    return newtype_void();
   } else if (decl_spec->type_spec_kind == TypeSpec_BOOL) {
-    return &type_bool;
+    return newtype_bool();
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->union_def) {
     return newtype_union(decl_spec->union_def);
   } else if (decl_spec->en_def) {
-    return &type_int;
-  } else if (decl_spec->def_name) {
-    return find_typedef(state, decl_spec->def_name)->type;
+    return newtype_int();
+  } else if (decl_spec->defined_type) {
+    Type *ty = calloc(1, sizeof(Type));
+    memcpy(ty, decl_spec->defined_type->type, sizeof(Type));
+    return ty;
   } else
     error("empty type");
   return NULL;
 }
 
-Type *gettype_declarator(Declarator *declarator, Type *base_type,
-                         Analyze *state) {
+Type *gettype_declarator(Declarator *declarator, Type *base_type) {
 
   if (declarator->nest)
-    base_type = gettype_declarator(declarator->nest, base_type, state);
+    base_type = gettype_declarator(declarator->nest, base_type);
 
   for (Pointer *cur = declarator->pointer; cur; cur = cur->nest)
     base_type = newtype_ptr(base_type);
@@ -100,6 +96,24 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type,
     Type *ty = calloc(1, sizeof(Type));
     ty->kind = FUNC;
     ty->return_type = base_type;
+
+    // arg type
+    ty->has_arg = declarator->has_arg_type;
+    ty->has_variable_arg = declarator->has_variable_arg;
+
+    ty->args_vector = new_vector();
+
+    for (Tree *cur = declarator->args; cur; cur = cur->next) {
+      Type *argtype = gettype_decl_spec(cur->decl_specs);
+      if (cur->declarator)
+        argtype = gettype_declarator(cur->declarator, argtype);
+
+      if (argtype->kind == ARRAY)
+        argtype->kind = PTR;
+
+      push_back_vector(ty->args_vector, argtype);
+    }
+
     base_type = ty;
   } break;
   case ARRAY_DECLARATOR: {
@@ -108,8 +122,9 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type,
       Type *ty = calloc(1, sizeof(Type));
       ty->kind = ARRAY;
       if (!cur->is_null_size) {
-        analyze_stmt(cur->size, state);
-        ty->arr_size = eval_constexpr_integer(cur->size);
+        if (!is_constexpr_integer(cur->size_expr))
+          error_token(cur->size_expr->error_token, "not constexpr");
+        ty->arr_size = eval_constexpr_integer(cur->size_expr);
       }
       ty->ptr_to = base_type;
       base_type = ty;
@@ -140,6 +155,36 @@ ArrayDeclarator *get_arr_declarator(Declarator *declarator) {
     error("not array");
 
   return declarator->arr_decl;
+}
+
+Type *newtype_void(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = VOID;
+  return ty;
+}
+
+Type *newtype_long(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = LONG;
+  return ty;
+}
+
+Type *newtype_int(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = INT;
+  return ty;
+}
+
+Type *newtype_char(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = CHAR;
+  return ty;
+}
+
+Type *newtype_bool(void) {
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = BOOL;
+  return ty;
 }
 
 Type *newtype_ptr(Type *type) {

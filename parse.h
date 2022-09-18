@@ -107,6 +107,7 @@ typedef struct ArrayDeclarator ArrayDeclarator;
 #include "analyze.h"
 #include "tokenize.h"
 #include "type.h"
+#include "vector.h"
 
 struct Tree {
   TreeKind kind;
@@ -158,7 +159,7 @@ struct Tree {
   Tree *rhs;
 
   // for func-call
-  Tree *call_args;
+  Vector *call_args_vector;
 
   // for const-val
   int num;
@@ -216,6 +217,7 @@ struct DeclSpec {
 
   // for defined_type
   char *def_name;
+  Typedef *defined_type;
 };
 
 struct StructSpec {
@@ -252,6 +254,7 @@ struct EnumVal {
 struct Declarator {
   Pointer *pointer;
   char *name;
+  Token *error_token;
 
   Obj *def_obj;
 
@@ -288,7 +291,7 @@ struct Pointer {
 
 struct ArrayDeclarator {
   bool is_null_size;
-  Tree *size;
+  Tree *size_expr;
 
   // for linked-list
   ArrayDeclarator *next;

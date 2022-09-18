@@ -81,8 +81,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
     push_lvar_scope(state);
     analyze_declarator(ast->declarator, state);
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type, state);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    obj_type = gettype_declarator(ast->declarator, obj_type);
 
     char *obj_name = getname_declarator(ast->declarator);
 
@@ -128,15 +128,16 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *base_type = gettype_decl_spec(ast->decl_specs, state);
+    Type *base_type = gettype_decl_spec(ast->decl_specs);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
       // push ObjScope for func-prototype
       push_lvar_scope(state);
       analyze_declarator(cur, state);
+      pop_lvar_scope(state);
 
       char *obj_name = getname_declarator(cur);
-      Type *obj_type = gettype_declarator(cur, base_type, state);
+      Type *obj_type = gettype_declarator(cur, base_type);
 
       // get size for null-size array []
       if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
@@ -187,8 +188,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
         cur->def_obj = obj;
       }
-
-      pop_lvar_scope(state);
     }
 
   } else {
@@ -230,10 +229,14 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       Member *mem_cur = &head;
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
-        Type *base_type = gettype_decl_spec(decl_cur->decl_specs, state);
+        Type *base_type = gettype_decl_spec(decl_cur->decl_specs);
 
         for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
-          Type *obj_type = gettype_declarator(cur, base_type, state);
+          push_lvar_scope(state);
+          analyze_declarator(cur, state);
+          pop_lvar_scope(state);
+
+          Type *obj_type = gettype_declarator(cur, base_type);
           char *obj_name = getname_declarator(cur);
 
           Member *mem = calloc(1, sizeof(Member));
@@ -299,12 +302,16 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
 
       while (decl_cur) {
         analyze_decl_spec(decl_cur->decl_specs, state, false);
-        Type *obj_type = gettype_decl_spec(decl_cur->decl_specs, state);
+        Type *obj_type = gettype_decl_spec(decl_cur->decl_specs);
 
         if (decl_cur->declarator->next)
           not_implemented(__func__);
 
-        obj_type = gettype_declarator(decl_cur->declarator, obj_type, state);
+        push_lvar_scope(state);
+        analyze_declarator(decl_cur->declarator, state);
+        pop_lvar_scope(state);
+
+        obj_type = gettype_declarator(decl_cur->declarator, obj_type);
         char *obj_name = getname_declarator(decl_cur->declarator);
 
         Member *mem = calloc(1, sizeof(Member));
@@ -377,6 +384,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     }
 
     decl_spec->en_def = en_def;
+  } else if (decl_spec->type_spec_kind == TypeSpec_TYPEDEF_NAME) {
+    decl_spec->defined_type = find_typedef(state, decl_spec->def_name);
   }
 }
 
@@ -398,14 +407,19 @@ void analyze_declarator(Declarator *declarator, Analyze *state) {
         pop_lvar_scope(state);
       }
     }
+  } else if (declarator->type_suffix_kind == ARRAY_DECLARATOR) {
+    for (ArrayDeclarator *cur = declarator->arr_decl; cur; cur = cur->next) {
+      if (!cur->is_null_size)
+        analyze_stmt(cur->size_expr, state);
+    }
   }
 }
 
 void push_lvar_parameter(Tree *ast, Analyze *state) {
   if (ast->kind == DECLARATION) {
 
-    Type *obj_type = gettype_decl_spec(ast->decl_specs, state);
-    obj_type = gettype_declarator(ast->declarator, obj_type, state);
+    Type *obj_type = gettype_decl_spec(ast->decl_specs);
+    obj_type = gettype_declarator(ast->declarator, obj_type);
 
     if (obj_type->kind == ARRAY)
       obj_type->kind = PTR;
@@ -453,7 +467,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       return;
     }
 
-    Type *base_type = gettype_decl_spec(ast->decl_specs, state);
+    Type *base_type = gettype_decl_spec(ast->decl_specs);
 
     for (Declarator *cur = ast->declarator; cur; cur = cur->next) {
       // push ObjScope
@@ -462,7 +476,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       pop_lvar_scope(state);
 
       char *obj_name = getname_declarator(cur);
-      Type *obj_type = gettype_declarator(cur, base_type, state);
+      Type *obj_type = gettype_declarator(cur, base_type);
 
       // get size for null-size array []
       if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
@@ -719,13 +733,13 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == LOGICAL_AND) {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == BIT_OR) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
@@ -741,27 +755,27 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == NOT_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == SMALLER) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == SMALLER_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == GREATER) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == GREATER_EQUAL) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == LSHIFT) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
@@ -783,7 +797,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     Type *rtype = ast->rhs->type;
 
     if (is_integer(ltype) && is_integer(rtype))
-      ast->type = &type_int;
+      ast->type = newtype_int();
     else if (ltype->kind == PTR && is_integer(rtype))
       ast->type = ltype;
     else if (rtype->kind == PTR && is_integer(ltype))
@@ -801,11 +815,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     add_implicit_func_cast(&ast->rhs);
 
     if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type))
-      ast->type = &type_int;
+      ast->type = newtype_int();
     else if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type))
       ast->type = ast->lhs->type;
     else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR)
-      ast->type = &type_int;
+      ast->type = newtype_int();
     else
       error_token(ast->error_token, "unexpected type pair");
 
@@ -823,10 +837,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->type = ast->lhs->type;
   } else if (ast->kind == CAST) {
     analyze_decl_spec(ast->type_name->decl_specs, state, false);
-    Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs, state);
-    if (ast->type_name->declarator)
-      cast_type =
-          gettype_declarator(ast->type_name->declarator, cast_type, state);
+    Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs);
+    if (ast->type_name->declarator) {
+      push_lvar_scope(state);
+      analyze_declarator(ast->type_name->declarator, state);
+      pop_lvar_scope(state);
+
+      cast_type = gettype_declarator(ast->type_name->declarator, cast_type);
+    }
 
     analyze_stmt(ast->lhs, state);
 
@@ -862,52 +880,84 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == LOGICAL_NOT) {
     analyze_stmt(ast->lhs, state);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == BIT_NOT) {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
   } else if (ast->kind == SIZEOF) {
     if (ast->lhs->kind == TYPE_NAME) {
       analyze_decl_spec(ast->lhs->decl_specs, state, false);
-      Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
-      base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+      Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
+      if (ast->lhs->declarator) {
+        push_lvar_scope(state);
+        analyze_declarator(ast->lhs->declarator, state);
+        pop_lvar_scope(state);
+
+        base_type = gettype_declarator(ast->lhs->declarator, base_type);
+      }
 
       // replace "sizeof" -> num
       ast->kind = NUM;
       ast->num = type_size(base_type);
-      ast->type = &type_int;
+      ast->type = newtype_int();
     } else {
       analyze_stmt(ast->lhs, state);
 
       // replace "sizeof" -> num
       ast->kind = NUM;
       ast->num = type_size(ast->lhs->type);
-      ast->type = &type_int;
+      ast->type = newtype_int();
     }
   } else if (ast->kind == ALIGNOF) {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
-    Type *base_type = gettype_decl_spec(ast->lhs->decl_specs, state);
-    base_type = gettype_declarator(ast->lhs->declarator, base_type, state);
+    Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
+    if (ast->lhs->declarator) {
+      push_lvar_scope(state);
+      analyze_declarator(ast->lhs->declarator, state);
+      pop_lvar_scope(state);
+
+      base_type = gettype_declarator(ast->lhs->declarator, base_type);
+    }
 
     // replace "sizeof" -> num
     ast->kind = NUM;
     ast->num = type_alignment(base_type);
-    ast->type = &type_int;
+    ast->type = newtype_int();
   } else if (ast->kind == FUNC_CALL) {
     analyze_stmt(ast->lhs, state);
-    Tree *cur = ast->call_args;
-    while (cur) {
-      analyze_stmt(cur, state);
-      cur = cur->next;
-    }
-
+    Type *func_type = NULL;
     if (ast->lhs->type->kind == FUNC) {
-      ast->type = ast->lhs->type->return_type;
+      func_type = ast->lhs->type;
     } else if (ast->lhs->type->kind == PTR &&
                ast->lhs->type->ptr_to->kind == FUNC) {
-      ast->type = ast->lhs->type->ptr_to->return_type;
+      func_type = ast->lhs->type->ptr_to;
     } else
       error_token(ast->error_token, "cannot call func");
+
+    long argtype_size = size_vector(func_type->args_vector);
+    long arg_size = size_vector(ast->call_args_vector);
+
+    if (arg_size < argtype_size)
+      error_token(ast->error_token, "less arguments");
+
+    if (func_type->has_arg && !func_type->has_variable_arg &&
+        (argtype_size != arg_size))
+      error_token(ast->error_token, "excess arguments");
+
+    for (long i = 0; i < arg_size; i++) {
+      Tree *arg = get_vector(ast->call_args_vector, i);
+      analyze_stmt(arg, state);
+      add_implicit_array_cast(&arg);
+      add_implicit_func_cast(&arg);
+
+      if (i < argtype_size) {
+        Type *argtype = get_vector(func_type->args_vector, i);
+        if (!is_compatible(argtype, arg))
+          error_token(arg->error_token, "invalid argtype");
+      }
+    }
+
+    ast->type = func_type->return_type;
 
   } else if (ast->kind == POST_INCREMENT) {
     analyze_stmt(ast->lhs, state);
@@ -955,11 +1005,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
   } else if (ast->kind == NUM) {
     if (ast->is_long)
-      ast->type = &type_long;
+      ast->type = newtype_long();
     else
-      ast->type = &type_int;
+      ast->type = newtype_int();
   } else if (ast->kind == STR) {
-    ast->type = newtype_ptr(&type_char);
+    ast->type = newtype_ptr(newtype_char());
   } else if (ast->kind == VAR) {
 
     // predefined ident
@@ -986,7 +1036,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       // replace ast type
       ast->kind = STR;
       ast->str_literal = func_name;
-      ast->type = newtype_ptr(&type_char);
+      ast->type = newtype_ptr(newtype_char());
       return;
     }
 
@@ -994,7 +1044,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (en_val) {
       ast->kind = NUM;
       ast->num = en_val->val;
-      ast->type = &type_int;
+      ast->type = newtype_int();
       return;
     }
 

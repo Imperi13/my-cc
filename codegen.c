@@ -570,31 +570,26 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  and rsp,0xfffffffffffffff0\n");
     fprintf(codegen_output, "  push r10\n");
     fprintf(codegen_output, "  push 0\n");
-    int stack_count = 0;
-    Tree *cur = stmt->call_args;
-    while (cur) {
-      stack_count++;
-      cur = cur->next;
-    }
 
-    bool need_padding = (stack_count > 6) && (stack_count % 2 == 1);
+    long call_arg_size = size_vector(stmt->call_args_vector);
+
+    bool need_padding = (call_arg_size > 6) && (call_arg_size % 2 == 1);
     if (need_padding)
       fprintf(codegen_output, "  push 0\n");
 
-    cur = stmt->call_args;
-    while (cur) {
-      codegen_stmt(codegen_output, cur);
+    for (long i = call_arg_size - 1; i >= 0; i--) {
+      Tree *arg = get_vector(stmt->call_args_vector, i);
+      codegen_stmt(codegen_output, arg);
       fprintf(codegen_output, "  push rax\n");
-      cur = cur->next;
     }
 
     codegen_stmt(codegen_output, stmt->lhs);
-    for (int i = 0; i < ((stack_count > 6) ? 6 : stack_count); i++)
+    for (int i = 0; i < ((call_arg_size > 6) ? 6 : call_arg_size); i++)
       fprintf(codegen_output, "  pop %s\n", call_register64[i]);
     fprintf(codegen_output, "  call rax\n");
 
     // clean stack_arg
-    for (int i = 0; i < ((stack_count > 6) ? stack_count - 6 : 0); i++)
+    for (int i = 0; i < ((call_arg_size > 6) ? call_arg_size - 6 : 0); i++)
       fprintf(codegen_output, " pop r10\n");
 
     if (need_padding)
@@ -608,27 +603,29 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     load2rax_from_raxaddr(codegen_output, stmt->lhs->type);
-    fprintf(codegen_output, "  mov rsi,rax\n");
+    fprintf(codegen_output, "  push rax\n");
     if (stmt->lhs->type->kind == PTR)
       fprintf(codegen_output, "  mov rdx, %d\n",
               type_size(stmt->lhs->type->ptr_to));
     else
       fprintf(codegen_output, "  mov rdx, 1\n");
-    fprintf(codegen_output, "  add rsi, rdx\n");
-    fprintf(codegen_output, "  mov [rdi],esi\n");
+    fprintf(codegen_output, "  add rax, rdx\n");
+    store2rdiaddr_from_rax(codegen_output, stmt->lhs->type);
+    fprintf(codegen_output, "  pop rax\n");
     return;
   case POST_DECREMENT:
     codegen_addr(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     load2rax_from_raxaddr(codegen_output, stmt->lhs->type);
-    fprintf(codegen_output, "  mov rsi,rax\n");
+    fprintf(codegen_output, "  push rax\n");
     if (stmt->lhs->type->kind == PTR)
       fprintf(codegen_output, "  mov rdx, %d\n",
               type_size(stmt->lhs->type->ptr_to));
     else
       fprintf(codegen_output, "  mov rdx, 1\n");
-    fprintf(codegen_output, "  sub rsi, rdx\n");
-    fprintf(codegen_output, "  mov [rdi],esi\n");
+    fprintf(codegen_output, "  sub rax, rdx\n");
+    store2rdiaddr_from_rax(codegen_output, stmt->lhs->type);
+    fprintf(codegen_output, "  pop rax\n");
     return;
   case DOT:
     codegen_addr(codegen_output, stmt);
