@@ -433,8 +433,8 @@ run_test long_2 'int main(){ long n = 10; return 164 + n;}' 174
 run_test long_3 'int main(){ long n = 10L; return 164 + n;}' 174
 
 run_test_with_supplement0 more_6_args_1 'int add8(); int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
-run_test more_6_args_2 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d\n",1,2,3,4,5,6,7,8);return 174; }' 174
-run_test more_6_args_3 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d,%d\n",1,2,3,4,5,6,7,8,9);return 174; }' 174
+run_test more_6_args_2 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d",1,2,3,4,5,6,7,8);return 174; }' 174
+run_test more_6_args_3 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d,%d",1,2,3,4,5,6,7,8,9);return 174; }' 174
 run_test more_6_args_4 'int add8(int a,int b,int c,int d,int e,int f,int g,int h){return a+b+c+d+e+f+g+h;} int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
 
 run_test type_spec_1 'int main(){unsigned long n = 10; return 164+n;}' 174
@@ -461,6 +461,7 @@ run_test initialize_list_3 'struct Test{int n;int *p;}; struct Test t = {10,(voi
 run_test initialize_list_4 'int a[] = {1,2,3,4}; int main(){return 164+a[0]+a[1]+a[2]+a[3];}' 174
 run_test initialize_list_5 'int main(){int a[4] = {1,2,3,4}; return 164+a[0]+a[1]+a[2]+a[3];}' 174
 run_test initialize_list_6 'struct Test{int n;int *p;}; int main(){ struct Test t = {10,(void *)0}; return 164 + t.n + (t.p ? 10 : 0);}' 174
+run_test initialize_list_7 'struct Register{char *alias[4];}; struct Register t = {.alias={"al","ax","eax","rax"}}; int main(){return 174+t.alias[0][0] - 97 + t.alias[3][0] - 114;}' 174
 
 run_test function_like_macro_1 '#define DOUBLE(a) 174\n int main(){return DOUBLE(87);}' 174
 run_test function_like_macro_2 '#define DOUBLE(a) 2*a\n int main(){return DOUBLE(87);}' 174
@@ -550,7 +551,7 @@ run_test 359 'int main() {goto a; return 3; a: return 0;} ' 0
 run_test 360 'int main(){ int i = 3; goto a; for (i = 0; i < 10; i++) { a: return i; } }' 3
 
 run_test_with_supplement0 361 'int add8(); int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
-run_test_with_supplement0 362 'struct INT_CHARS_INT { int a; char c[100]; int b; };struct INT_CHARS_INT merge7(); int main(){ struct INT_CHARS_INT st = merge7(1,2,3,4,5,6,7); return st.b - st.a; }' 4
+# run_test_with_supplement0 362 'struct INT_CHARS_INT { int a; char c[100]; int b; };struct INT_CHARS_INT merge7(); int main(){ struct INT_CHARS_INT st = merge7(1,2,3,4,5,6,7); return st.b - st.a; }' 4
 
 run_test 363 'union A { char a[7]; int b; }; int main(void) { return sizeof(union A); }' 8
 run_test 364 'union A { char a[4]; int b; }; int main(void) { union A x; x.a[0] = 0x4b; x.a[1] = 0x6f; x.a[2] = 0x72; x.a[3] = 0x79; return x.b - 0x79726f4b; }' 0

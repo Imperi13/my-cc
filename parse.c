@@ -213,7 +213,7 @@ Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state) {
     }
 
     if (equal(tok, "{")) {
-      not_implemented_token(tok);
+      now->init_val = parse_initialize_list(&tok, tok, state);
     } else {
       now->init_val = parse_assign(&tok, tok, state);
     }
