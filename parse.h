@@ -107,6 +107,7 @@ typedef struct ArrayDeclarator ArrayDeclarator;
 #include "analyze.h"
 #include "tokenize.h"
 #include "type.h"
+#include "vector.h"
 
 struct Tree {
   TreeKind kind;
@@ -158,7 +159,7 @@ struct Tree {
   Tree *rhs;
 
   // for func-call
-  Tree *call_args;
+  Vector *call_args_vector;
 
   // for const-val
   int num;

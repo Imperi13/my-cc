@@ -934,10 +934,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     } else
       error_token(ast->error_token, "cannot call func");
 
-    Tree *cur = ast->call_args;
-    while (cur) {
-      analyze_stmt(cur, state);
-      cur = cur->next;
+    long arg_size = size_vector(ast->call_args_vector);
+    for (long i = 0; i < arg_size; i++) {
+      Tree *arg = get_vector(ast->call_args_vector, i);
+      analyze_stmt(arg, state);
     }
 
     ast->type = func_type->return_type;

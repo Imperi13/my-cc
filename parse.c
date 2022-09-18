@@ -7,6 +7,7 @@
 #include "error.h"
 #include "parse.h"
 #include "tokenize.h"
+#include "vector.h"
 
 typedef struct PrimitiveTypeToken PrimitiveTypeToken;
 struct PrimitiveTypeToken {
@@ -1676,10 +1677,11 @@ Tree *parse_postfix(Token **rest, Token *tok, Analyze *state) {
       node->lhs = lhs;
       consume(&tok, tok, "(");
 
+      node->call_args_vector = new_vector();
+
       while (!consume(&tok, tok, ")")) {
         Tree *arg = parse_assign(&tok, tok, state);
-        arg->next = node->call_args;
-        node->call_args = arg;
+        push_back_vector(node->call_args_vector, arg);
         consume(&tok, tok, ",");
       }
 
