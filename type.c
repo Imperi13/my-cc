@@ -8,6 +8,7 @@
 #include "parse.h"
 #include "str_dict.h"
 #include "type.h"
+#include "vector.h"
 
 void builtin_type_init(Analyze *state) {
 
@@ -100,8 +101,8 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
     ty->has_arg = declarator->has_arg_type;
     ty->has_variable_arg = declarator->has_variable_arg;
 
-    Type head = {.next = NULL};
-    Type *argtype_cur = &head;
+    ty->args_vector = new_vector();
+
     for (Tree *cur = declarator->args; cur; cur = cur->next) {
       Type *argtype = gettype_decl_spec(cur->decl_specs);
       if (cur->declarator)
@@ -110,10 +111,8 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
       if (argtype->kind == ARRAY)
         argtype->kind = PTR;
 
-      argtype_cur->next = argtype;
-      argtype_cur = argtype_cur->next;
+      push_back_vector(ty->args_vector, argtype);
     }
-    ty->args = head.next;
 
     base_type = ty;
   } break;

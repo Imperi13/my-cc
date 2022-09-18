@@ -17,6 +17,7 @@ typedef struct Type Type;
 
 #include "analyze.h"
 #include "parse.h"
+#include "vector.h"
 
 struct Type {
   TypeKind kind;
@@ -25,7 +26,7 @@ struct Type {
   Type *return_type;
   bool has_arg;
   bool has_variable_arg;
-  Type *args;
+  Vector *args_vector;
 
   // for PTR,ARRAY
   Type *ptr_to;
@@ -38,9 +39,6 @@ struct Type {
 
   // for UNION
   UnionDef *union_def;
-
-  // for linked-list
-  Type *next;
 };
 
 void builtin_type_init(Analyze *state);
