@@ -934,7 +934,16 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     } else
       error_token(ast->error_token, "cannot call func");
 
+    long argtype_size = size_vector(func_type->args_vector);
     long arg_size = size_vector(ast->call_args_vector);
+
+    if (arg_size < argtype_size)
+      error_token(ast->error_token, "less arguments");
+
+    if (func_type->has_arg && !func_type->has_variable_arg &&
+        (argtype_size != arg_size))
+      error_token(ast->error_token, "excess arguments");
+
     for (long i = 0; i < arg_size; i++) {
       Tree *arg = get_vector(ast->call_args_vector, i);
       analyze_stmt(arg, state);
