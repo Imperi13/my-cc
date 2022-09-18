@@ -947,6 +947,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     for (long i = 0; i < arg_size; i++) {
       Tree *arg = get_vector(ast->call_args_vector, i);
       analyze_stmt(arg, state);
+      add_implicit_array_cast(&arg);
+      add_implicit_func_cast(&arg);
+
+      if (i < argtype_size) {
+        Type *argtype = get_vector(func_type->args_vector, i);
+        if (!is_compatible(argtype, arg))
+          error_token(arg->error_token, "invalid argtype");
+      }
     }
 
     ast->type = func_type->return_type;
