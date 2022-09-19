@@ -22,6 +22,9 @@ static void add_implicit_array_cast(Tree *ast);
 static void add_implicit_func_cast(Tree *ast);
 static void add_implicit_integer_promotion(Tree *ast);
 
+static void add_cast_stmt(Tree *ast, Type *cast_type);
+static void add_arithmetic_conversions(Tree *lhs, Tree *rhs);
+
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name);
 static Obj *find_global(Analyze *state, char *var_name);
@@ -1198,6 +1201,43 @@ void add_implicit_integer_promotion(Tree *ast) {
   ast->is_implicit = true;
   ast->lhs = new_node;
   ast->type = &type_int;
+}
+
+void add_cast_stmt(Tree *ast, Type *cast_type) {
+  if (!is_compatible(cast_type, ast))
+    error_token(ast->error_token, "cannot cast");
+
+  Tree *new_node = calloc(1, sizeof(Tree));
+  memcpy(new_node, ast, sizeof(Tree));
+
+  ast->kind = CAST;
+  ast->is_implicit = true;
+  ast->lhs = new_node;
+  ast->type = cast_type;
+}
+
+void add_arithmetic_conversions(Tree *lhs, Tree *rhs) {
+  Type *ltype = lhs->type;
+  Type *rtype = rhs->type;
+
+  if (!is_integer(ltype) || !is_integer(rtype))
+    error("not integer");
+
+  if (integer_rank(ltype) >= integer_rank(rtype)) {
+    Tree *new_node = calloc(1, sizeof(Tree));
+    memcpy(new_node, rhs, sizeof(Tree));
+    rhs->kind = CAST;
+    rhs->is_implicit = true;
+    rhs->lhs = new_node;
+    rhs->type = ltype;
+  } else {
+    Tree *new_node = calloc(1, sizeof(Tree));
+    memcpy(new_node, lhs, sizeof(Tree));
+    lhs->kind = CAST;
+    lhs->is_implicit = true;
+    lhs->lhs = new_node;
+    lhs->type = rtype;
+  }
 }
 
 void pop_lvar_scope(Analyze *state) { state->locals = state->locals->next; }

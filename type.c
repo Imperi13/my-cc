@@ -190,6 +190,24 @@ Type *newtype_union(UnionDef *union_def) {
   return nt;
 }
 
+int integer_rank(Type *type) {
+  if (!is_integer(type))
+    error("not integer");
+
+  if (type->kind == CHAR)
+    return 1;
+  else if (type->kind == SHORT)
+    return 2;
+  else if (type->kind == INT)
+    return 3;
+  else if (type->kind == LONG)
+    return 4;
+  else if (type->kind == LONGLONG)
+    return 5;
+
+  error("unreachable");
+}
+
 int type_size(Type *type) {
   if (type->kind == LONG || type->kind == LONGLONG)
     return 8;

@@ -63,6 +63,8 @@ Type *newtype_ptr(Type *type);
 Type *newtype_struct(StructDef *st_def);
 Type *newtype_union(UnionDef *union_def);
 
+int integer_rank(Type *type);
+
 int type_size(Type *type);
 int type_alignment(Type *type);
 
