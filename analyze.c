@@ -20,6 +20,7 @@ static void analyze_variable_initialize(Type *var_type, Tree *init_val,
 
 static void add_implicit_array_cast(Tree *ast);
 static void add_implicit_func_cast(Tree *ast);
+static void add_implicit_integer_promotion(Tree *ast);
 
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name);
@@ -1180,6 +1181,23 @@ void push_lvar_scope(Analyze *state) {
   ObjScope *lsc = new_obj_scope();
   lsc->next = state->locals;
   state->locals = lsc;
+}
+
+void add_implicit_integer_promotion(Tree *ast) {
+  Type *integer_type = ast->type;
+  if (!is_integer(integer_type))
+    return;
+
+  if (integer_type->kind == LONG || integer_type->kind == LONGLONG)
+    return;
+
+  Tree *new_node = calloc(1, sizeof(Tree));
+  memcpy(new_node, ast, sizeof(Tree));
+
+  ast->kind = CAST;
+  ast->is_implicit = true;
+  ast->lhs = new_node;
+  ast->type = &type_int;
 }
 
 void pop_lvar_scope(Analyze *state) { state->locals = state->locals->next; }
