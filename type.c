@@ -11,8 +11,10 @@
 #include "vector.h"
 
 Type type_void = {.kind = VOID};
+Type type_longlong = {.kind = LONGLONG};
 Type type_long = {.kind = LONG};
 Type type_int = {.kind = INT};
+Type type_short = {.kind = SHORT};
 Type type_char = {.kind = CHAR};
 Type type_bool = {.kind = BOOL};
 
@@ -64,10 +66,14 @@ void builtin_type_init(Analyze *state) {
 }
 
 Type *gettype_decl_spec(DeclSpec *decl_spec) {
-  if (decl_spec->type_spec_kind == TypeSpec_LONG) {
+  if (decl_spec->type_spec_kind == TypeSpec_LONGLONG) {
+    return &type_longlong;
+  } else if (decl_spec->type_spec_kind == TypeSpec_LONG) {
     return &type_long;
   } else if (decl_spec->type_spec_kind == TypeSpec_INT) {
     return &type_int;
+  } else if (decl_spec->type_spec_kind == TypeSpec_SHORT) {
+    return &type_short;
   } else if (decl_spec->type_spec_kind == TypeSpec_CHAR) {
     return &type_char;
   } else if (decl_spec->type_spec_kind == TypeSpec_VOID) {
@@ -163,36 +169,6 @@ ArrayDeclarator *get_arr_declarator(Declarator *declarator) {
   return declarator->arr_decl;
 }
 
-Type *newtype_void(void) {
-  Type *ty = calloc(1, sizeof(Type));
-  ty->kind = VOID;
-  return ty;
-}
-
-Type *newtype_long(void) {
-  Type *ty = calloc(1, sizeof(Type));
-  ty->kind = LONG;
-  return ty;
-}
-
-Type *newtype_int(void) {
-  Type *ty = calloc(1, sizeof(Type));
-  ty->kind = INT;
-  return ty;
-}
-
-Type *newtype_char(void) {
-  Type *ty = calloc(1, sizeof(Type));
-  ty->kind = CHAR;
-  return ty;
-}
-
-Type *newtype_bool(void) {
-  Type *ty = calloc(1, sizeof(Type));
-  ty->kind = BOOL;
-  return ty;
-}
-
 Type *newtype_ptr(Type *type) {
   Type *nt = calloc(1, sizeof(Type));
   nt->kind = PTR;
@@ -215,10 +191,12 @@ Type *newtype_union(UnionDef *union_def) {
 }
 
 int type_size(Type *type) {
-  if (type->kind == LONG)
+  if (type->kind == LONG || type->kind == LONGLONG)
     return 8;
   else if (type->kind == INT)
     return 4;
+  else if (type->kind == SHORT)
+    return 2;
   else if (type->kind == CHAR)
     return 1;
   else if (type->kind == BOOL)
@@ -239,10 +217,12 @@ int type_size(Type *type) {
 }
 
 int type_alignment(Type *type) {
-  if (type->kind == LONG)
+  if (type->kind == LONG || type->kind == LONGLONG)
     return 8;
   else if (type->kind == INT)
     return 4;
+  else if (type->kind == SHORT)
+    return 2;
   else if (type->kind == CHAR)
     return 1;
   else if (type->kind == BOOL)
@@ -263,14 +243,14 @@ int type_alignment(Type *type) {
 }
 
 bool is_integer(Type *type) {
-  if (type->kind == LONG || type->kind == INT || type->kind == CHAR)
+  if (type->kind == LONGLONG || type->kind == LONG || type->kind == INT ||
+      type->kind == SHORT || type->kind == CHAR)
     return true;
   return false;
 }
 
 bool is_scalar(Type *type) {
-  if (type->kind == LONG || type->kind == INT || type->kind == CHAR ||
-      type->kind == BOOL || type->kind == PTR)
+  if (is_integer(type) || type->kind == BOOL || type->kind == PTR)
     return true;
   else
     return false;
@@ -280,9 +260,8 @@ bool is_void_ptr(Type *type) {
   return type->kind == PTR && type->ptr_to->kind == VOID;
 }
 
-bool is_primitive_type(Type *a) {
-  if (a->kind == VOID || a->kind == CHAR || a->kind == LONG || a->kind == INT ||
-      a->kind == BOOL)
+bool is_primitive_type(Type *type) {
+  if (is_integer(type) || type->kind == BOOL || type->kind == VOID)
     return true;
   else
     return false;
