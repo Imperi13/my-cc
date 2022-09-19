@@ -10,6 +10,12 @@
 #include "type.h"
 #include "vector.h"
 
+Type type_void = {.kind = VOID};
+Type type_long = {.kind = LONG};
+Type type_int = {.kind = INT};
+Type type_char = {.kind = CHAR};
+Type type_bool = {.kind = BOOL};
+
 void builtin_type_init(Analyze *state) {
 
   // struct __builtin_va_list
@@ -25,28 +31,28 @@ void builtin_type_init(Analyze *state) {
   Member *cur = st_def->members;
 
   cur->member_name = "gp_offset";
-  cur->type = newtype_int();
+  cur->type = &type_int;
   cur->offset = 0x0;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "fp_offset";
-  cur->type = newtype_int();
+  cur->type = &type_int;
   cur->offset = 0x4;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "overflow_arg_area";
-  cur->type = newtype_ptr(newtype_void());
+  cur->type = newtype_ptr(&type_void);
   cur->offset = 0x8;
 
   cur->next = calloc(1, sizeof(Member));
   cur = cur->next;
 
   cur->member_name = "reg_save_area";
-  cur->type = newtype_ptr(newtype_void());
+  cur->type = newtype_ptr(&type_void);
   cur->offset = 0x10;
 
   // typedef struct __builtin_va_list __builtin_va_list
@@ -59,21 +65,21 @@ void builtin_type_init(Analyze *state) {
 
 Type *gettype_decl_spec(DeclSpec *decl_spec) {
   if (decl_spec->type_spec_kind == TypeSpec_LONG) {
-    return newtype_long();
+    return &type_long;
   } else if (decl_spec->type_spec_kind == TypeSpec_INT) {
-    return newtype_int();
+    return &type_int;
   } else if (decl_spec->type_spec_kind == TypeSpec_CHAR) {
-    return newtype_char();
+    return &type_char;
   } else if (decl_spec->type_spec_kind == TypeSpec_VOID) {
-    return newtype_void();
+    return &type_void;
   } else if (decl_spec->type_spec_kind == TypeSpec_BOOL) {
-    return newtype_bool();
+    return &type_bool;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->union_def) {
     return newtype_union(decl_spec->union_def);
   } else if (decl_spec->en_def) {
-    return newtype_int();
+    return &type_int;
   } else if (decl_spec->defined_type) {
     Type *ty = calloc(1, sizeof(Type));
     memcpy(ty, decl_spec->defined_type->type, sizeof(Type));
