@@ -18,8 +18,8 @@ static void push_lvar_parameter(Tree *arg, Analyze *state);
 static void analyze_variable_initialize(Type *var_type, Tree *init_val,
                                         Analyze *state, bool is_global);
 
-static void add_implicit_array_cast(Tree **ast);
-static void add_implicit_func_cast(Tree **ast);
+static void add_implicit_array_cast(Tree *ast);
+static void add_implicit_func_cast(Tree *ast);
 
 static void push_lvar(ObjScope *locals, Obj *lvar);
 static Obj *find_lvar(ObjScope *locals, char *lvar_name);
@@ -568,8 +568,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (ast->lhs) {
       analyze_stmt(ast->lhs, state);
 
-      add_implicit_array_cast(&ast->lhs);
-      add_implicit_func_cast(&ast->lhs);
+      add_implicit_array_cast(ast->lhs);
+      add_implicit_func_cast(ast->lhs);
 
       if (!is_compatible(state->current_func->type->return_type, ast->lhs))
         error_token(ast->error_token, "invalid return type");
@@ -661,8 +661,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
-    add_implicit_array_cast(&ast->rhs);
-    add_implicit_func_cast(&ast->rhs);
+    add_implicit_array_cast(ast->rhs);
+    add_implicit_func_cast(ast->rhs);
 
     ast->type = ast->rhs->type;
   } else if (ast->kind == ASSIGN) {
@@ -716,10 +716,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
-    add_implicit_array_cast(&ast->lhs);
-    add_implicit_func_cast(&ast->lhs);
-    add_implicit_array_cast(&ast->rhs);
-    add_implicit_func_cast(&ast->rhs);
+    add_implicit_array_cast(ast->lhs);
+    add_implicit_func_cast(ast->lhs);
+    add_implicit_array_cast(ast->rhs);
+    add_implicit_func_cast(ast->rhs);
 
     if (is_constexpr_zero(ast->lhs) && ast->rhs->type->kind == PTR)
       ast->type = ast->rhs->type;
@@ -788,10 +788,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
-    add_implicit_array_cast(&ast->lhs);
-    add_implicit_func_cast(&ast->lhs);
-    add_implicit_array_cast(&ast->rhs);
-    add_implicit_func_cast(&ast->rhs);
+    add_implicit_array_cast(ast->lhs);
+    add_implicit_func_cast(ast->lhs);
+    add_implicit_array_cast(ast->rhs);
+    add_implicit_func_cast(ast->rhs);
 
     Type *ltype = ast->lhs->type;
     Type *rtype = ast->rhs->type;
@@ -809,10 +809,10 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
-    add_implicit_array_cast(&ast->lhs);
-    add_implicit_func_cast(&ast->lhs);
-    add_implicit_array_cast(&ast->rhs);
-    add_implicit_func_cast(&ast->rhs);
+    add_implicit_array_cast(ast->lhs);
+    add_implicit_func_cast(ast->lhs);
+    add_implicit_array_cast(ast->rhs);
+    add_implicit_func_cast(ast->rhs);
 
     if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type))
       ast->type = &type_int;
@@ -871,8 +871,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   } else if (ast->kind == DEREF) {
     analyze_stmt(ast->lhs, state);
 
-    add_implicit_array_cast(&ast->lhs);
-    add_implicit_func_cast(&ast->lhs);
+    add_implicit_array_cast(ast->lhs);
+    add_implicit_func_cast(ast->lhs);
 
     if (ast->lhs->type->kind != PTR)
       error_token(ast->error_token, "cannot deref");
@@ -947,8 +947,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     for (long i = 0; i < arg_size; i++) {
       Tree *arg = get_vector(ast->call_args_vector, i);
       analyze_stmt(arg, state);
-      add_implicit_array_cast(&arg);
-      add_implicit_func_cast(&arg);
+      add_implicit_array_cast(arg);
+      add_implicit_func_cast(arg);
 
       if (i < argtype_size) {
         Type *argtype = get_vector(func_type->args_vector, i);
@@ -1083,8 +1083,8 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
 
     analyze_stmt(init_val, state);
 
-    add_implicit_array_cast(&init_val);
-    add_implicit_func_cast(&init_val);
+    add_implicit_array_cast(init_val);
+    add_implicit_func_cast(init_val);
 
     if (!is_compatible(var_type, init_val))
       error_token(init_val->error_token, "cannot convert type");
@@ -1097,8 +1097,8 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
   } else if (init_val->kind != INITIALIZE_LIST) {
     analyze_stmt(init_val, state);
 
-    add_implicit_array_cast(&init_val);
-    add_implicit_func_cast(&init_val);
+    add_implicit_array_cast(init_val);
+    add_implicit_func_cast(init_val);
 
     if (!is_compatible(var_type, init_val))
       error_token(init_val->error_token, "cannot convert type");
@@ -1148,32 +1148,32 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
   }
 }
 
-void add_implicit_array_cast(Tree **ast) {
-  Type *arr_type = (*ast)->type;
+void add_implicit_array_cast(Tree *ast) {
+  Type *arr_type = ast->type;
   if (arr_type->kind != ARRAY)
     return;
 
-  Tree *cast_node = calloc(1, sizeof(Tree));
-  cast_node->kind = CAST;
-  cast_node->is_implicit = true;
-  cast_node->lhs = *ast;
-  cast_node->type = newtype_ptr(arr_type->ptr_to);
+  Tree *new_node = calloc(1, sizeof(Tree));
+  memcpy(new_node, ast, sizeof(Tree));
 
-  *ast = cast_node;
+  ast->kind = CAST;
+  ast->is_implicit = true;
+  ast->lhs = new_node;
+  ast->type = newtype_ptr(arr_type->ptr_to);
 }
 
-void add_implicit_func_cast(Tree **ast) {
-  Type *func_type = (*ast)->type;
+void add_implicit_func_cast(Tree *ast) {
+  Type *func_type = ast->type;
   if (func_type->kind != FUNC)
     return;
 
-  Tree *cast_node = calloc(1, sizeof(Tree));
-  cast_node->kind = CAST;
-  cast_node->is_implicit = true;
-  cast_node->lhs = *ast;
-  cast_node->type = newtype_ptr(func_type);
+  Tree *new_node = calloc(1, sizeof(Tree));
+  memcpy(new_node, ast, sizeof(Tree));
 
-  *ast = cast_node;
+  ast->kind = CAST;
+  ast->is_implicit = true;
+  ast->lhs = new_node;
+  ast->type = newtype_ptr(func_type);
 }
 
 void push_lvar_scope(Analyze *state) {
