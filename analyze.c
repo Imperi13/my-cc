@@ -13,6 +13,8 @@ static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
 static void analyze_declarator(Declarator *declarator, Analyze *state);
 
+static void analyze_expr(Tree *ast, Analyze *state);
+
 static void push_lvar_parameter(Tree *arg, Analyze *state);
 
 static void analyze_variable_initialize(Type *var_type, Tree *init_val,
@@ -670,6 +672,78 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_label(&state->break_labels);
     pop_switch(&state->switch_stmts);
   } break;
+
+    // analyze builtin_function here
+  case BUILTIN_VA_START: {
+    analyze_stmt(ast->lhs, state);
+    analyze_stmt(ast->rhs, state);
+    if (ast->lhs->kind != VAR || ast->rhs->kind != VAR)
+      error_token(ast->error_token, "invalid usage  __builtin_va_start");
+  } break;
+  case BUILTIN_VA_END: {
+    analyze_stmt(ast->lhs, state);
+    if (ast->lhs->kind != VAR)
+      error_token(ast->error_token, "invalid usage  __builtin_va_end");
+  } break;
+
+    // call analyze_expr
+  case COMMA:
+  case ASSIGN:
+  case ADD_ASSIGN:
+  case SUB_ASSIGN:
+  case MUL_ASSIGN:
+  case DIV_ASSIGN:
+  case MOD_ASSIGN:
+  case AND_ASSIGN:
+  case OR_ASSIGN:
+  case XOR_ASSIGN:
+  case LSHIFT_ASSIGN:
+  case RSHIFT_ASSIGN:
+  case CONDITIONAL:
+  case LOGICAL_OR:
+  case LOGICAL_AND:
+  case BIT_OR:
+  case BIT_XOR:
+  case BIT_AND:
+  case EQUAL:
+  case NOT_EQUAL:
+  case SMALLER:
+  case SMALLER_EQUAL:
+  case GREATER:
+  case GREATER_EQUAL:
+  case LSHIFT:
+  case RSHIFT:
+  case ADD:
+  case SUB:
+  case MUL:
+  case DIV:
+  case MOD:
+  case CAST:
+  case PLUS:
+  case MINUS:
+  case ADDR:
+  case DEREF:
+  case LOGICAL_NOT:
+  case BIT_NOT:
+  case SIZEOF:
+  case ALIGNOF:
+  case FUNC_CALL:
+  case POST_INCREMENT:
+  case POST_DECREMENT:
+  case DOT:
+  case ARROW:
+  case NUM:
+  case STR:
+  case VAR: {
+    analyze_expr(ast, state);
+  } break;
+  default:
+    error("invalid ast kind");
+  }
+}
+
+void analyze_expr(Tree *ast, Analyze *state) {
+  switch (ast->kind) {
   case COMMA: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
@@ -1112,21 +1186,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->var_obj = var;
     ast->type = var->type;
   } break;
-  case BUILTIN_VA_START: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    if (ast->lhs->kind != VAR || ast->rhs->kind != VAR)
-      error_token(ast->error_token, "invalid usage  __builtin_va_start");
-  } break;
-  case BUILTIN_VA_END: {
-    analyze_stmt(ast->lhs, state);
-    if (ast->lhs->kind != VAR)
-      error_token(ast->error_token, "invalid usage  __builtin_va_end");
-  } break;
-  default: {
-    error("invalid ast kind");
-    break;
-  }
+  default:
+    error("not expr");
   }
 }
 
