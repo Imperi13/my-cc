@@ -453,7 +453,8 @@ void push_lvar_parameter(Tree *ast, Analyze *state) {
 }
 
 void analyze_stmt(Tree *ast, Analyze *state) {
-  if (ast->kind == COMPOUND_STMT) {
+  switch (ast->kind) {
+  case COMPOUND_STMT: {
     push_lvar_scope(state);
 
     Tree *cur = ast->stmts;
@@ -463,8 +464,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     }
 
     pop_lvar_scope(state);
-  } else if (ast->kind == DECLARATION) {
-
+  } break;
+  case DECLARATION: {
     analyze_decl_spec(ast->decl_specs, state, false);
 
     if (!ast->declarator) {
@@ -523,7 +524,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
           analyze_variable_initialize(obj_type, cur->init_expr, state, false);
       }
     }
-  } else if (ast->kind == LABEL) {
+  } break;
+  case LABEL: {
     int label_len =
         strlen(state->current_func->obj_name) + strlen(ast->label_name) + 1;
     char *label_name = calloc(label_len + 1, sizeof(char));
@@ -532,14 +534,16 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_name = label_name;
 
     analyze_stmt(ast->lhs, state);
-  } else if (ast->kind == GOTO) {
+  } break;
+  case GOTO: {
     int label_len =
         strlen(state->current_func->obj_name) + strlen(ast->label_name) + 1;
     char *label_name = calloc(label_len + 1, sizeof(char));
     snprintf(label_name, label_len + 1, "%s.%s", state->current_func->obj_name,
              ast->label_name);
     ast->label_name = label_name;
-  } else if (ast->kind == CASE) {
+  } break;
+  case CASE: {
     analyze_stmt(ast->case_num_node, state);
     int case_num = eval_constexpr_integer(ast->case_num_node);
 
@@ -556,8 +560,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_number = state->switch_stmts->switch_node->label_number;
 
     analyze_stmt(ast->lhs, state);
-
-  } else if (ast->kind == DEFAULT) {
+  } break;
+  case DEFAULT: {
     if (!state->switch_stmts)
       error_token(ast->error_token, "not in switch-stmt");
 
@@ -568,7 +572,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->label_number = state->switch_stmts->switch_node->label_number;
 
     analyze_stmt(ast->lhs, state);
-  } else if (ast->kind == RETURN) {
+  } break;
+  case RETURN: {
     if (ast->lhs) {
       analyze_stmt(ast->lhs, state);
 
@@ -581,17 +586,20 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       if (state->current_func->type->return_type->kind != VOID)
         error_token(ast->error_token, "must return value");
     }
-  } else if (ast->kind == BREAK) {
+  } break;
+  case BREAK: {
     if (!state->break_labels)
       error_token(ast->error_token, "invalid break stmt");
 
     ast->label_number = state->break_labels->label_number;
-  } else if (ast->kind == CONTINUE) {
+  } break;
+  case CONTINUE: {
     if (!state->continue_labels)
       error_token(ast->error_token, "invalid continue stmt");
 
     ast->label_number = state->continue_labels->label_number;
-  } else if (ast->kind == WHILE) {
+  } break;
+  case WHILE: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
@@ -604,8 +612,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
-
-  } else if (ast->kind == DO_WHILE) {
+  } break;
+  case DO_WHILE: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
@@ -618,8 +626,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     pop_label(&state->break_labels);
     pop_label(&state->continue_labels);
-
-  } else if (ast->kind == FOR) {
+  } break;
+  case FOR: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
 
@@ -640,15 +648,16 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     pop_label(&state->continue_labels);
 
     pop_lvar_scope(state);
-
-  } else if (ast->kind == IF) {
+  } break;
+  case IF: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->cond, state);
     analyze_stmt(ast->lhs, state);
     if (ast->rhs)
       analyze_stmt(ast->rhs, state);
-  } else if (ast->kind == SWITCH) {
+  } break;
+  case SWITCH: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->cond, state);
@@ -660,8 +669,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     pop_label(&state->break_labels);
     pop_switch(&state->switch_stmts);
-
-  } else if (ast->kind == COMMA) {
+  } break;
+  case COMMA: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
@@ -669,51 +678,63 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     add_implicit_func_cast(ast->rhs);
 
     ast->type = ast->rhs->type;
-  } else if (ast->kind == ASSIGN) {
+  } break;
+  case ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == ADD_ASSIGN) {
+  } break;
+  case ADD_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == SUB_ASSIGN) {
+  } break;
+  case SUB_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == MUL_ASSIGN) {
+  } break;
+  case MUL_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == DIV_ASSIGN) {
+  } break;
+  case DIV_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == MOD_ASSIGN) {
+  } break;
+  case MOD_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == AND_ASSIGN) {
+  } break;
+  case AND_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == OR_ASSIGN) {
+  } break;
+  case OR_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == XOR_ASSIGN) {
+  } break;
+  case XOR_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == LSHIFT_ASSIGN) {
+  } break;
+  case LSHIFT_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == RSHIFT_ASSIGN) {
+  } break;
+  case RSHIFT_ASSIGN: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == CONDITIONAL) {
+  } break;
+  case CONDITIONAL: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->cond, state);
@@ -731,64 +752,77 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       ast->type = ast->lhs->type;
     else
       ast->type = ast->lhs->type;
-
-  } else if (ast->kind == LOGICAL_OR) {
+  } break;
+  case LOGICAL_OR: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == LOGICAL_AND) {
+  } break;
+  case LOGICAL_AND: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == BIT_OR) {
+  } break;
+  case BIT_OR: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == BIT_XOR) {
+  } break;
+  case BIT_XOR: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == BIT_AND) {
+  } break;
+  case BIT_AND: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == EQUAL) {
+  } break;
+  case EQUAL: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == NOT_EQUAL) {
+  } break;
+  case NOT_EQUAL: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == SMALLER) {
+  } break;
+  case SMALLER: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == SMALLER_EQUAL) {
+  } break;
+  case SMALLER_EQUAL: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == GREATER) {
+  } break;
+  case GREATER: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == GREATER_EQUAL) {
+  } break;
+  case GREATER_EQUAL: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == LSHIFT) {
+  } break;
+  case LSHIFT: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == RSHIFT) {
+  } break;
+  case RSHIFT: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == ADD) {
+  } break;
+  case ADD: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
@@ -808,8 +842,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       ast->type = rtype;
     else
       error_token(ast->error_token, "unexpected type pair");
-
-  } else if (ast->kind == SUB) {
+  } break;
+  case SUB: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
@@ -826,20 +860,23 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       ast->type = &type_int;
     else
       error_token(ast->error_token, "unexpected type pair");
-
-  } else if (ast->kind == MUL) {
+  } break;
+  case MUL: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == DIV) {
+  } break;
+  case DIV: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == MOD) {
+  } break;
+  case MOD: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == CAST) {
+  } break;
+  case CAST: {
     analyze_decl_spec(ast->type_name->decl_specs, state, false);
     Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs);
     if (ast->type_name->declarator) {
@@ -861,18 +898,21 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       */
 
     ast->type = cast_type;
-
-  } else if (ast->kind == PLUS) {
+  } break;
+  case PLUS: {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == MINUS) {
+  } break;
+  case MINUS: {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == ADDR) {
+  } break;
+  case ADDR: {
     analyze_stmt(ast->lhs, state);
 
     ast->type = newtype_ptr(ast->lhs->type);
-  } else if (ast->kind == DEREF) {
+  } break;
+  case DEREF: {
     analyze_stmt(ast->lhs, state);
 
     add_implicit_array_cast(ast->lhs);
@@ -881,14 +921,16 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (ast->lhs->type->kind != PTR)
       error_token(ast->error_token, "cannot deref");
     ast->type = ast->lhs->type->ptr_to;
-
-  } else if (ast->kind == LOGICAL_NOT) {
+  } break;
+  case LOGICAL_NOT: {
     analyze_stmt(ast->lhs, state);
     ast->type = &type_int;
-  } else if (ast->kind == BIT_NOT) {
+  } break;
+  case BIT_NOT: {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == SIZEOF) {
+  } break;
+  case SIZEOF: {
     if (ast->lhs->kind == TYPE_NAME) {
       analyze_decl_spec(ast->lhs->decl_specs, state, false);
       Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
@@ -912,7 +954,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       ast->num = type_size(ast->lhs->type);
       ast->type = &type_int;
     }
-  } else if (ast->kind == ALIGNOF) {
+  } break;
+  case ALIGNOF: {
     analyze_decl_spec(ast->lhs->decl_specs, state, false);
     Type *base_type = gettype_decl_spec(ast->lhs->decl_specs);
     if (ast->lhs->declarator) {
@@ -927,7 +970,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     ast->kind = NUM;
     ast->num = type_alignment(base_type);
     ast->type = &type_int;
-  } else if (ast->kind == FUNC_CALL) {
+  } break;
+  case FUNC_CALL: {
     analyze_stmt(ast->lhs, state);
     Type *func_type = NULL;
     if (ast->lhs->type->kind == FUNC) {
@@ -962,14 +1006,16 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     }
 
     ast->type = func_type->return_type;
-
-  } else if (ast->kind == POST_INCREMENT) {
+  } break;
+  case POST_INCREMENT: {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == POST_DECREMENT) {
+  } break;
+  case POST_DECREMENT: {
     analyze_stmt(ast->lhs, state);
     ast->type = ast->lhs->type;
-  } else if (ast->kind == DOT) {
+  } break;
+  case DOT: {
     analyze_stmt(ast->lhs, state);
     if (ast->lhs->type->kind != STRUCT && ast->lhs->type->kind != UNION)
       error_token(ast->error_token, "lhs is not struct");
@@ -985,8 +1031,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     ast->member = member;
     ast->type = member->type;
-
-  } else if (ast->kind == ARROW) {
+  } break;
+  case ARROW: {
     analyze_stmt(ast->lhs, state);
     if (ast->lhs->type->kind != PTR ||
         (ast->lhs->type->ptr_to->kind != STRUCT &&
@@ -1006,16 +1052,17 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     ast->member = member;
     ast->type = member->type;
-
-  } else if (ast->kind == NUM) {
+  } break;
+  case NUM: {
     if (ast->is_long)
       ast->type = &type_long;
     else
       ast->type = &type_int;
-  } else if (ast->kind == STR) {
+  } break;
+  case STR: {
     ast->type = newtype_ptr(&type_char);
-  } else if (ast->kind == VAR) {
-
+  } break;
+  case VAR: {
     // predefined ident
     if (!memcmp(ast->var_name, "__func__", 8)) {
 
@@ -1064,18 +1111,22 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     ast->var_obj = var;
     ast->type = var->type;
-
-  } else if (ast->kind == BUILTIN_VA_START) {
+  } break;
+  case BUILTIN_VA_START: {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
     if (ast->lhs->kind != VAR || ast->rhs->kind != VAR)
       error_token(ast->error_token, "invalid usage  __builtin_va_start");
-  } else if (ast->kind == BUILTIN_VA_END) {
+  } break;
+  case BUILTIN_VA_END: {
     analyze_stmt(ast->lhs, state);
     if (ast->lhs->kind != VAR)
       error_token(ast->error_token, "invalid usage  __builtin_va_end");
-  } else {
-    not_implemented(__func__);
+  } break;
+  default: {
+    error("invalid ast kind");
+    break;
+  }
   }
 }
 
