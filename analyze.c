@@ -1147,9 +1147,27 @@ void analyze_binary_operator(Tree *ast, Analyze *state) {
     ast->type = ast->lhs->type;
   } break;
   case EQUAL: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+    } else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR) {
+      // TODO check compatible ptr
+    } else if (ast->lhs->type->kind == PTR && is_constexpr_zero(ast->rhs)) {
+    } else if (ast->rhs->type->kind == PTR && is_constexpr_zero(ast->lhs)) {
+    } else
+      error_token(ast->error_token, "invalid type pair");
+
     ast->type = &type_int;
   } break;
   case NOT_EQUAL: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+    } else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR) {
+      // TODO check compatible ptr
+    } else if (ast->lhs->type->kind == PTR && is_constexpr_zero(ast->rhs)) {
+    } else if (ast->rhs->type->kind == PTR && is_constexpr_zero(ast->lhs)) {
+    } else
+      error_token(ast->error_token, "invalid type pair");
+
     ast->type = &type_int;
   } break;
   case SMALLER: {
