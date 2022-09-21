@@ -973,18 +973,46 @@ void analyze_expr(Tree *ast, Analyze *state) {
 
     ast->type = cast_type;
   } break;
+
+    // unary
   case PLUS: {
     analyze_stmt(ast->lhs, state);
+    if (!is_arithmetic(ast->lhs->type))
+      error_token(ast->lhs->error_token, "not arithmetic type");
+
+    add_implicit_integer_promotion(ast->lhs);
     ast->type = ast->lhs->type;
   } break;
   case MINUS: {
     analyze_stmt(ast->lhs, state);
+    if (!is_arithmetic(ast->lhs->type))
+      error_token(ast->lhs->error_token, "not arithmetic type");
+
+    add_implicit_integer_promotion(ast->lhs);
     ast->type = ast->lhs->type;
+  } break;
+  case BIT_NOT: {
+    analyze_stmt(ast->lhs, state);
+    if (!is_integer(ast->lhs->type))
+      error_token(ast->lhs->error_token, "not integer type");
+
+    add_implicit_integer_promotion(ast->lhs);
+    ast->type = ast->lhs->type;
+  } break;
+  case LOGICAL_NOT: {
+    analyze_stmt(ast->lhs, state);
+    if (!is_scalar(ast->lhs->type))
+      error_token(ast->lhs->error_token, "not scalar type");
+
+    ast->type = &type_int;
   } break;
   case ADDR: {
     analyze_stmt(ast->lhs, state);
 
-    ast->type = newtype_ptr(ast->lhs->type);
+    if (ast->lhs->type->kind == FUNC)
+      ast->type = ast->lhs->type;
+    else
+      ast->type = newtype_ptr(ast->lhs->type);
   } break;
   case DEREF: {
     analyze_stmt(ast->lhs, state);
@@ -995,14 +1023,6 @@ void analyze_expr(Tree *ast, Analyze *state) {
     if (ast->lhs->type->kind != PTR)
       error_token(ast->error_token, "cannot deref");
     ast->type = ast->lhs->type->ptr_to;
-  } break;
-  case LOGICAL_NOT: {
-    analyze_stmt(ast->lhs, state);
-    ast->type = &type_int;
-  } break;
-  case BIT_NOT: {
-    analyze_stmt(ast->lhs, state);
-    ast->type = ast->lhs->type;
   } break;
   case SIZEOF: {
     if (ast->lhs->kind == TYPE_NAME) {
@@ -1019,7 +1039,7 @@ void analyze_expr(Tree *ast, Analyze *state) {
       // replace "sizeof" -> num
       ast->kind = NUM;
       ast->num = type_size(base_type);
-      ast->type = &type_int;
+      ast->type = &type_int; // TODO size_t in stddef.h
     } else {
       analyze_stmt(ast->lhs, state);
 
@@ -1043,8 +1063,10 @@ void analyze_expr(Tree *ast, Analyze *state) {
     // replace "sizeof" -> num
     ast->kind = NUM;
     ast->num = type_alignment(base_type);
-    ast->type = &type_int;
+    ast->type = &type_int; // TODO size_t in stddef.h
   } break;
+
+    // postfix
   case FUNC_CALL: {
     analyze_stmt(ast->lhs, state);
     Type *func_type = NULL;
@@ -1127,6 +1149,8 @@ void analyze_expr(Tree *ast, Analyze *state) {
     ast->member = member;
     ast->type = member->type;
   } break;
+
+    // primary
   case NUM: {
     if (ast->is_long)
       ast->type = &type_long;

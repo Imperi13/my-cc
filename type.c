@@ -260,6 +260,10 @@ int type_alignment(Type *type) {
   return 0;
 }
 
+bool is_arithmetic(Type *type) {
+  return is_integer(type); // TODO check float
+}
+
 bool is_integer(Type *type) {
   if (type->kind == LONGLONG || type->kind == LONG || type->kind == INT ||
       type->kind == SHORT || type->kind == CHAR)
