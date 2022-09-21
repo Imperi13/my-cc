@@ -1128,22 +1128,40 @@ void analyze_binary_operator(Tree *ast, Analyze *state) {
 
   switch (ast->kind) {
   case LOGICAL_OR: {
+    if (!is_scalar(ast->lhs->type) || !is_scalar(ast->rhs->type))
+      error_token(ast->error_token, "not scalar type");
+
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     ast->type = &type_int;
   } break;
   case LOGICAL_AND: {
+    if (!is_scalar(ast->lhs->type) || !is_scalar(ast->rhs->type))
+      error_token(ast->error_token, "not scalar type");
+
     ast->label_number = state->label_cnt;
     state->label_cnt++;
     ast->type = &type_int;
   } break;
   case BIT_OR: {
+    if (!is_integer(ast->lhs->type) || !is_integer(ast->rhs->type))
+      error_token(ast->error_token, "not integer type");
+
+    add_arithmetic_conversions(ast->lhs, ast->rhs);
     ast->type = ast->lhs->type;
   } break;
   case BIT_XOR: {
+    if (!is_integer(ast->lhs->type) || !is_integer(ast->rhs->type))
+      error_token(ast->error_token, "not integer type");
+
+    add_arithmetic_conversions(ast->lhs, ast->rhs);
     ast->type = ast->lhs->type;
   } break;
   case BIT_AND: {
+    if (!is_integer(ast->lhs->type) || !is_integer(ast->rhs->type))
+      error_token(ast->error_token, "not integer type");
+
+    add_arithmetic_conversions(ast->lhs, ast->rhs);
     ast->type = ast->lhs->type;
   } break;
   case EQUAL: {
