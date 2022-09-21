@@ -1175,33 +1175,53 @@ void analyze_binary_operator(Tree *ast, Analyze *state) {
     Type *ltype = ast->lhs->type;
     Type *rtype = ast->rhs->type;
 
-    if (is_integer(ltype) && is_integer(rtype))
-      ast->type = &type_int;
-    else if (ltype->kind == PTR && is_integer(rtype))
+    if (is_arithmetic(ltype) && is_arithmetic(rtype)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+      ast->type = ast->lhs->type;
+    } else if (ltype->kind == PTR && is_integer(rtype)) {
+      add_cast_stmt(ast->rhs, &type_long); // TODO ptrdiff_t in stddef.h
       ast->type = ltype;
-    else if (rtype->kind == PTR && is_integer(ltype))
+    } else if (rtype->kind == PTR && is_integer(ltype)) {
+      add_cast_stmt(ast->lhs, &type_long);
       ast->type = rtype;
-    else
+    } else
       error_token(ast->error_token, "unexpected type pair");
   } break;
   case SUB: {
 
-    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type))
-      ast->type = &type_int;
-    else if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type))
+    Type *ltype = ast->lhs->type;
+    Type *rtype = ast->rhs->type;
+
+    if (is_arithmetic(ltype) && is_arithmetic(rtype)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
       ast->type = ast->lhs->type;
-    else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR)
-      ast->type = &type_int;
-    else
+    } else if (ltype->kind == PTR && is_integer(rtype)) {
+      add_cast_stmt(ast->rhs, &type_long); // TODO ptrdiff_t in stddef.h
+      ast->type = ltype;
+    } else if (rtype->kind == PTR && ltype->kind == PTR) {
+      ast->type = &type_long; // TODO ptrdiff_t in stddef.h
+    } else
       error_token(ast->error_token, "unexpected type pair");
   } break;
   case MUL: {
+    if (!is_arithmetic(ast->lhs->type) || !is_arithmetic(ast->rhs->type))
+      error_token(ast->error_token, "not arithmetic type");
+
+    add_arithmetic_conversions(ast->lhs, ast->rhs);
     ast->type = ast->lhs->type;
   } break;
   case DIV: {
+    if (!is_arithmetic(ast->lhs->type) || !is_arithmetic(ast->rhs->type))
+      error_token(ast->error_token, "not arithmetic type");
+
+    add_arithmetic_conversions(ast->lhs, ast->rhs);
     ast->type = ast->lhs->type;
   } break;
   case MOD: {
+    if (!is_integer(ast->lhs->type) || !is_integer(ast->rhs->type))
+      error_token(ast->error_token, "not integer type");
+
+    add_arithmetic_conversions(ast->lhs, ast->rhs);
     ast->type = ast->lhs->type;
   } break;
   default:
