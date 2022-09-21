@@ -1153,21 +1153,53 @@ void analyze_binary_operator(Tree *ast, Analyze *state) {
     ast->type = &type_int;
   } break;
   case SMALLER: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+    } else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR) {
+      // TODO check compatible ptr
+    } else
+      error_token(ast->error_token, "invalid type pair");
+
     ast->type = &type_int;
   } break;
   case SMALLER_EQUAL: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+    } else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR) {
+      // TODO check compatible ptr
+    } else
+      error_token(ast->error_token, "invalid type pair");
+
     ast->type = &type_int;
   } break;
   case GREATER: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+    } else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR) {
+      // TODO check compatible ptr
+    } else
+      error_token(ast->error_token, "invalid type pair");
+
     ast->type = &type_int;
   } break;
   case GREATER_EQUAL: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+    } else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR) {
+      // TODO check compatible ptr
+    } else
+      error_token(ast->error_token, "invalid type pair");
+
     ast->type = &type_int;
   } break;
   case LSHIFT: {
+    if (!is_integer(ast->lhs->type) || !is_integer(ast->rhs->type))
+      error_token(ast->error_token, "not integer type");
     ast->type = ast->lhs->type;
   } break;
   case RSHIFT: {
+    if (!is_integer(ast->lhs->type) || !is_integer(ast->rhs->type))
+      error_token(ast->error_token, "not integer type");
     ast->type = ast->lhs->type;
   } break;
   case ADD: {
