@@ -950,6 +950,8 @@ void analyze_expr(Tree *ast, Analyze *state) {
     analyze_stmt(ast->rhs, state);
     ast->type = ast->lhs->type;
   } break;
+
+    // cast
   case CAST: {
     analyze_decl_spec(ast->type_name->decl_specs, state, false);
     Type *cast_type = gettype_decl_spec(ast->type_name->decl_specs);
@@ -965,11 +967,6 @@ void analyze_expr(Tree *ast, Analyze *state) {
 
     if (!is_compatible(cast_type, ast->lhs))
       error_token(ast->error_token, "cannot cast");
-
-    /*
-    if (!is_integer(cast_type) || !is_integer(ast->lhs->type))
-      not_implemented("not integer cast");
-      */
 
     ast->type = cast_type;
   } break;
