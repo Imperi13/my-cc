@@ -194,7 +194,9 @@ int integer_rank(Type *type) {
   if (!is_integer(type))
     error("not integer");
 
-  if (type->kind == CHAR)
+  if (type->kind == BOOL)
+    return 0;
+  else if (type->kind == CHAR)
     return 1;
   else if (type->kind == SHORT)
     return 2;
@@ -266,13 +268,13 @@ bool is_arithmetic(Type *type) {
 
 bool is_integer(Type *type) {
   if (type->kind == LONGLONG || type->kind == LONG || type->kind == INT ||
-      type->kind == SHORT || type->kind == CHAR)
+      type->kind == SHORT || type->kind == CHAR || type->kind == BOOL)
     return true;
   return false;
 }
 
 bool is_scalar(Type *type) {
-  if (is_integer(type) || type->kind == BOOL || type->kind == PTR)
+  if (is_integer(type) || type->kind == PTR)
     return true;
   else
     return false;
@@ -283,7 +285,7 @@ bool is_void_ptr(Type *type) {
 }
 
 bool is_primitive_type(Type *type) {
-  if (is_integer(type) || type->kind == BOOL || type->kind == VOID)
+  if (is_integer(type) || type->kind == VOID)
     return true;
   else
     return false;

@@ -812,21 +812,42 @@ void analyze_expr(Tree *ast, Analyze *state) {
   case CONDITIONAL: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
-    analyze_stmt(ast->cond, state);
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
 
+    analyze_stmt(ast->cond, state);
+    if (!is_scalar(ast->cond->type))
+      error_token(ast->cond->error_token, "not scalar type");
+
+    analyze_stmt(ast->lhs, state);
     add_implicit_array_cast(ast->lhs);
     add_implicit_func_cast(ast->lhs);
+    add_implicit_integer_promotion(ast->lhs);
+
+    analyze_stmt(ast->rhs, state);
     add_implicit_array_cast(ast->rhs);
     add_implicit_func_cast(ast->rhs);
+    add_implicit_integer_promotion(ast->rhs);
 
-    if (is_constexpr_zero(ast->lhs) && ast->rhs->type->kind == PTR)
+    // TODO type check
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+      add_arithmetic_conversions(ast->lhs, ast->rhs);
+      ast->type = ast->lhs->type;
+    } else if (ast->lhs->type->kind == STRUCT &&
+               is_same_type(ast->lhs->type, ast->rhs->type)) {
+      ast->type = ast->lhs->type;
+    } else if (ast->lhs->type->kind == UNION &&
+               is_same_type(ast->lhs->type, ast->rhs->type)) {
+      ast->type = ast->lhs->type;
+    } else if (ast->lhs->type->kind == VOID && ast->rhs->type->kind == VOID) {
+      ast->type = &type_void;
+    } else if (ast->lhs->type->kind == PTR && ast->rhs->type->kind == PTR) {
+      ast->type = ast->lhs->type;
+    } else if (is_constexpr_zero(ast->lhs) && ast->rhs->type->kind == PTR) {
       ast->type = ast->rhs->type;
-    else if (ast->lhs->type->kind == PTR && is_constexpr_zero(ast->rhs))
+    } else if (ast->lhs->type->kind == PTR && is_constexpr_zero(ast->rhs)) {
       ast->type = ast->lhs->type;
-    else
-      ast->type = ast->lhs->type;
+    } else
+      error_token(ast->error_token, "invalid type pair");
+
   } break;
 
     // binary operator
