@@ -14,6 +14,7 @@ static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
 static void analyze_declarator(Declarator *declarator, Analyze *state);
 
 static void analyze_expr(Tree *ast, Analyze *state);
+static void analyze_assign(Tree *ast, Analyze *state);
 static void analyze_binary_operator(Tree *ast, Analyze *state);
 
 static void push_lvar_parameter(Tree *arg, Analyze *state);
@@ -749,66 +750,24 @@ void analyze_expr(Tree *ast, Analyze *state) {
     analyze_stmt(ast->lhs, state);
     analyze_stmt(ast->rhs, state);
 
-    add_implicit_array_cast(ast->rhs);
-    add_implicit_func_cast(ast->rhs);
-
     ast->type = ast->rhs->type;
   } break;
-  case ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case ADD_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case SUB_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case MUL_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case DIV_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case MOD_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case AND_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case OR_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case XOR_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
-  case LSHIFT_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
-  } break;
+
+    // assign
+  case ASSIGN:
+  case ADD_ASSIGN:
+  case SUB_ASSIGN:
+  case MUL_ASSIGN:
+  case DIV_ASSIGN:
+  case MOD_ASSIGN:
+  case AND_ASSIGN:
+  case OR_ASSIGN:
+  case XOR_ASSIGN:
+  case LSHIFT_ASSIGN:
   case RSHIFT_ASSIGN: {
-    analyze_stmt(ast->lhs, state);
-    analyze_stmt(ast->rhs, state);
-    ast->type = ast->lhs->type;
+    analyze_assign(ast, state);
   } break;
+
   case CONDITIONAL: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
@@ -1130,6 +1089,97 @@ void analyze_expr(Tree *ast, Analyze *state) {
   } break;
   default:
     error("not expr");
+  }
+}
+
+void analyze_assign(Tree *ast, Analyze *state) {
+
+  analyze_stmt(ast->lhs, state);
+
+  analyze_stmt(ast->rhs, state);
+  add_implicit_array_cast(ast->rhs);
+  add_implicit_func_cast(ast->rhs);
+  add_implicit_integer_promotion(ast->rhs);
+
+  switch (ast->kind) {
+  case ASSIGN: {
+    add_cast_stmt(ast->rhs, ast->lhs->type);
+    ast->type = ast->lhs->type;
+  } break;
+  case ADD_ASSIGN: {
+    if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type)) {
+    } else if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot add-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case SUB_ASSIGN: {
+    if (ast->lhs->type->kind == PTR && is_integer(ast->rhs->type)) {
+    } else if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot sub-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case MUL_ASSIGN: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot mul-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case DIV_ASSIGN: {
+    if (is_arithmetic(ast->lhs->type) && is_arithmetic(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot div-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case MOD_ASSIGN: {
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot mod-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case AND_ASSIGN: {
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot and-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case OR_ASSIGN: {
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot or-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case XOR_ASSIGN: {
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot xor-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case LSHIFT_ASSIGN: {
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot lshift-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  case RSHIFT_ASSIGN: {
+    if (is_integer(ast->lhs->type) && is_integer(ast->rhs->type)) {
+    } else
+      error_token(ast->error_token, "cannot rshift-assign");
+
+    ast->type = ast->lhs->type;
+  } break;
+  default:
+    error("invalid ast kind");
   }
 }
 
