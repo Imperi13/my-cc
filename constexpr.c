@@ -56,8 +56,15 @@ long eval_constexpr_integer(Tree *expr) {
 
 bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
-  case NUM:
+  case CAST: {
+    if (is_integer(expr->type) && is_integer(expr->lhs->type))
+      return true;
+    else
+      not_implemented(__func__);
+  } break;
+  case NUM: {
     return true;
+  } break;
   default:
     return false;
   }
@@ -68,13 +75,18 @@ ConstValue *eval_constexpr(Tree *expr) {
   if (!is_constexpr(expr))
     error("not constexpr");
 
-  ConstValue *ret = calloc(1, sizeof(ConstValue));
-
   switch (expr->kind) {
+  case CAST: {
+    if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
+      return eval_constexpr(expr->lhs);
+    } else
+      not_implemented(__func__);
+  } break;
   case NUM: {
+    ConstValue *ret = calloc(1, sizeof(ConstValue));
     ret->value_int = expr->num;
     return ret;
-  }
+  } break;
   default:
     error("invalid ast kind");
   }
