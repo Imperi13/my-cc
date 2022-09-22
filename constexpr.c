@@ -18,11 +18,28 @@
 /*
  * ConstExpr{
  *   ConstExprType {INT,PTR}
- *   LabelName;
+ *   LabelName
  *   Sign
- *   Interger
+ *   Value
  * }
  */
+
+typedef enum ConstValueKind {
+  ConstValueKind_INT,
+  ConstValueKind_PTR,
+} ConstValueKind;
+
+typedef struct ConstExpr ConstExpr;
+struct ConstExpr {
+  ConstValueKind kind;
+
+  // for INT
+  bool sign;
+  long value;
+
+  // for PTR
+  char *label_name;
+};
 
 void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
                                Tree *expr) {
