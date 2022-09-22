@@ -7,6 +7,23 @@
 #include "parse.h"
 #include "type.h"
 
+/*
+ * const expression
+ * - constexpr interger
+ * - constexpr pointer
+ *   - & global variable
+ *   - (void *) constexpr 0
+ */
+
+/*
+ * ConstExpr{
+ *   ConstExprType {INT,PTR}
+ *   LabelName;
+ *   Sign
+ *   Interger
+ * }
+ */
+
 void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
                                Tree *expr) {
   if (is_integer(obj_type)) {
