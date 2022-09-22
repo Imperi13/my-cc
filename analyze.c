@@ -1370,26 +1370,13 @@ void analyze_binary_operator(Tree *ast, Analyze *state) {
 
 void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
                                  bool is_global) {
-  if (var_type->kind != ARRAY && var_type->kind != STRUCT) {
-    if (init_val->kind == INITIALIZE_LIST)
-      error_token(init_val->error_token, "invalid initialize list");
-
-    analyze_stmt(init_val, state);
-
-    add_implicit_array_cast(init_val);
-    add_implicit_func_cast(init_val);
-
-    if (!is_compatible(var_type, init_val))
-      error_token(init_val->error_token, "cannot convert type");
-
-    if (is_global && !is_constexpr(init_val))
-      error_token(init_val->error_token, "not constexpr for global initialize");
-
-    // TODO add cast
-  } else if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
-             init_val->kind == STR) {
+  if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
+      init_val->kind == STR) {
     not_implemented("array of char initialize with str-literal");
   } else if (init_val->kind != INITIALIZE_LIST) {
+    if (var_type->kind == ARRAY)
+      error("array must initialize with str-literal or initialize-list");
+
     analyze_stmt(init_val, state);
 
     add_implicit_array_cast(init_val);
@@ -1401,7 +1388,7 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
     if (is_global && !is_constexpr(init_val))
       error_token(init_val->error_token, "not constexpr for global initialize");
 
-    // TODO add cast
+    add_cast_stmt(init_val, var_type);
   } else if (var_type->kind == ARRAY) {
     if (init_val->kind != INITIALIZE_LIST)
       error_token(init_val->error_token,

@@ -33,7 +33,20 @@ static ConstValue *eval_constexpr(Tree *expr);
 
 void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
                                Tree *expr) {
-  not_implemented(__func__);
+  if (is_integer(obj_type)) {
+    if (type_size(obj_type) == 1)
+      fprintf(codegen_output, "  .byte %ld\n", eval_constexpr_integer(expr));
+    else if (type_size(obj_type) == 2)
+      fprintf(codegen_output, "  .short %ld\n", eval_constexpr_integer(expr));
+    else if (type_size(obj_type) == 4)
+      fprintf(codegen_output, "  .long %ld\n", eval_constexpr_integer(expr));
+    else if (type_size(obj_type) == 8)
+      fprintf(codegen_output, "  .quad %ld\n", eval_constexpr_integer(expr));
+    else
+      error("invalid type_size");
+  } else {
+    not_implemented(__func__);
+  }
 }
 
 bool is_constexpr_integer(Tree *expr) {
