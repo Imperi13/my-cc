@@ -1,6 +1,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "constexpr.h"
 #include "error.h"
@@ -28,15 +29,53 @@ struct ConstValue {
   long value_int;
 };
 
+static ConstValue *eval_constexpr(Tree *expr);
+
 void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
                                Tree *expr) {
   not_implemented(__func__);
 }
 
-bool is_constexpr(Tree *expr) { return false; }
+bool is_constexpr_integer(Tree *expr) {
+  return is_constexpr(expr) && is_integer(expr->type);
+}
 
-bool is_constexpr_integer(Tree *expr) { return false; }
+// check if expr is 0, nullptr
+bool is_constexpr_zero(Tree *expr) {
+  if (!is_constexpr(expr))
+    return false;
+  ConstValue *val = eval_constexpr(expr);
+  return !val->label_name && val->value_int == 0;
+}
 
-bool is_constexpr_zero(Tree *expr) { return false; }
+long eval_constexpr_integer(Tree *expr) {
+  if (!is_constexpr_integer(expr))
+    error("not constexpr integer");
+  return eval_constexpr(expr)->value_int;
+}
 
-int eval_constexpr_integer(Tree *expr) { return 0; }
+bool is_constexpr(Tree *expr) {
+  switch (expr->kind) {
+  case NUM:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// TODO pass by value
+ConstValue *eval_constexpr(Tree *expr) {
+  if (!is_constexpr(expr))
+    error("not constexpr");
+
+  ConstValue *ret = calloc(1, sizeof(ConstValue));
+
+  switch (expr->kind) {
+  case NUM: {
+    ret->value_int = expr->num;
+    return ret;
+  }
+  default:
+    error("invalid ast kind");
+  }
+}
