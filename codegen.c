@@ -802,7 +802,9 @@ void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
   if (type_size(type) == 8)
     fprintf(codegen_output, "  mov rax,[rax]\n");
   else if (type_size(type) == 4)
-    fprintf(codegen_output, "  movsxd rax,[rax]\n");
+    fprintf(codegen_output, "  movsx rax, DWORD PTR [rax]\n");
+  else if (type_size(type) == 2)
+    fprintf(codegen_output, "movsx rax, WORD PTR [rax]\n");
   else if (type_size(type) == 1)
     fprintf(codegen_output, "movsx rax, BYTE PTR [rax]\n");
   else
@@ -824,6 +826,8 @@ void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
       fprintf(codegen_output, "  mov [rdi],rax\n");
     else if (type_size(type) == 4)
       fprintf(codegen_output, "  mov [rdi],eax\n");
+    else if (type_size(type) == 2)
+      fprintf(codegen_output, "  mov [rdi],ax\n");
     else if (type_size(type) == 1)
       fprintf(codegen_output, "  mov [rdi],al\n");
     else
