@@ -1384,6 +1384,8 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
 
     if (is_global && !is_constexpr(init_val))
       error_token(init_val->error_token, "not constexpr for global initialize");
+
+    // TODO add cast
   } else if (var_type->kind == ARRAY && var_type->ptr_to->kind == CHAR &&
              init_val->kind == STR) {
     not_implemented("array of char initialize with str-literal");
@@ -1398,6 +1400,8 @@ void analyze_variable_initialize(Type *var_type, Tree *init_val, Analyze *state,
 
     if (is_global && !is_constexpr(init_val))
       error_token(init_val->error_token, "not constexpr for global initialize");
+
+    // TODO add cast
   } else if (var_type->kind == ARRAY) {
     if (init_val->kind != INITIALIZE_LIST)
       error_token(init_val->error_token,
