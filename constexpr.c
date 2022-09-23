@@ -118,6 +118,15 @@ long eval_constexpr_integer(Tree *expr) {
 bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
 
+  // equality
+  case EQUAL:
+  case NOT_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type))
+      return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+    else
+      not_implemented(__func__);
+  } break;
+
     // relational
   case SMALLER:
   case SMALLER_EQUAL:
@@ -184,6 +193,24 @@ ConstValue *eval_constexpr(Tree *expr) {
     ConstValue *rhs = eval_constexpr(expr->rhs);
     lhs->value_int &= rhs->value_int;
     return lhs;
+  } break;
+  case EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int == rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case NOT_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int != rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
   } break;
   case SMALLER: {
     if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
