@@ -973,6 +973,7 @@ void analyze_expr(Tree *ast, Analyze *state) {
       analyze_stmt(arg, state);
       add_implicit_array_cast(arg);
       add_implicit_func_cast(arg);
+      add_implicit_integer_promotion(arg);
 
       if (i < argtype_size) {
         Type *argtype = get_vector(func_type->args_vector, i);
