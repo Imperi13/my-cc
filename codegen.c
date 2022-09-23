@@ -546,7 +546,13 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  not rax\n");
     return;
   case CAST:
-    codegen_stmt(codegen_output, stmt->lhs);
+    if (stmt->type->kind == BOOL) {
+      codegen_stmt(codegen_output, stmt->lhs);
+      fprintf(codegen_output, "  cmp rax,0\n");
+      fprintf(codegen_output, "  setne al\n");
+    } else {
+      codegen_stmt(codegen_output, stmt->lhs);
+    }
     return;
   case PLUS:
     codegen_stmt(codegen_output, stmt->lhs);

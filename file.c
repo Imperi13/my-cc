@@ -56,14 +56,14 @@ char *rename_file_ext(char *path, FileType file_type) {
 
   int filename_len = dot - path;
   char *renamed_path = calloc(filename_len + 3, sizeof(char));
-  char *dst = strncpy(renamed_path, path, filename_len + 1);
+  strncpy(renamed_path, path, filename_len + 1);
 
   if (file_type == C_SOURCE)
-    strncpy(dst, ".c", 3);
+    strncpy(renamed_path + filename_len, ".c", 3);
   else if (file_type == ASSEBLER_SOURCE)
-    strncpy(dst, ".s", 3);
+    strncpy(renamed_path + filename_len, ".s", 3);
   else if (file_type == OBJECT_FILE)
-    strncpy(dst, ".o", 3);
+    strncpy(renamed_path + filename_len, ".o", 3);
 
   return renamed_path;
 }
