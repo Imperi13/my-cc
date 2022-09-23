@@ -44,8 +44,16 @@ void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
       fprintf(codegen_output, "  .quad %ld\n", eval_constexpr_integer(expr));
     else
       error("invalid type_size");
-  } else {
-    not_implemented(__func__);
+  } else if (obj_type->kind == PTR) {
+    ConstValue *val = eval_constexpr(expr);
+    if (val->label_name) {
+      fprintf(codegen_output, "  .quad %s + %ld\n", val->label_name,
+              val->value_int);
+    } else {
+      if (val->value_int != 0)
+        error("not zero constexpr integer cannot be ptr");
+      fprintf(codegen_output, "  .quad 0\n");
+    }
   }
 }
 
@@ -75,6 +83,9 @@ bool is_constexpr(Tree *expr) {
   case NUM: {
     return true;
   } break;
+  case STR: {
+    return true;
+  } break;
   default:
     return false;
   }
@@ -88,9 +99,11 @@ ConstValue *eval_constexpr(Tree *expr) {
   switch (expr->kind) {
   case CAST: {
     if (expr->type->kind == BOOL && is_scalar(expr->lhs->type)) {
-      ConstValue *ret = eval_constexpr(expr->lhs);
-      ret->value_int = ret->label_name || ret->value_int;
-      ret->label_name = NULL;
+      ConstValue *ret = calloc(1, sizeof(ConstValue));
+      if (is_constexpr_zero(expr->lhs))
+        ret->value_int = 0;
+      else
+        ret->value_int = 1;
       return ret;
     } else if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
       return eval_constexpr(expr->lhs);
@@ -103,6 +116,12 @@ ConstValue *eval_constexpr(Tree *expr) {
   case NUM: {
     ConstValue *ret = calloc(1, sizeof(ConstValue));
     ret->value_int = expr->num;
+    return ret;
+  } break;
+  case STR: {
+    ConstValue *ret = calloc(1, sizeof(ConstValue));
+    ret->label_name = calloc(36, sizeof(char));
+    snprintf(ret->label_name, 36, ".LC%d", expr->str_literal->id);
     return ret;
   } break;
   default:
