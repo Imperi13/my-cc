@@ -78,6 +78,9 @@ long eval_constexpr_integer(Tree *expr) {
 bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
     // binary op
+
+  case LSHIFT:
+  case RSHIFT:
   case ADD:
   case SUB:
   case MUL:
@@ -106,6 +109,18 @@ ConstValue *eval_constexpr(Tree *expr) {
     error("not constexpr");
 
   switch (expr->kind) {
+  case LSHIFT: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int <<= rhs->value_int;
+    return lhs;
+  } break;
+  case RSHIFT: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int >>= rhs->value_int;
+    return lhs;
+  } break;
   case ADD: {
     if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
       ConstValue *lhs = eval_constexpr(expr->lhs);
