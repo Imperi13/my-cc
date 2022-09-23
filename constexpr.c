@@ -117,8 +117,19 @@ long eval_constexpr_integer(Tree *expr) {
 
 bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
-    // binary op
 
+    // relational
+  case SMALLER:
+  case SMALLER_EQUAL:
+  case GREATER:
+  case GREATER_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type))
+      return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+    else
+      not_implemented(__func__);
+  } break;
+
+    // binary op
   case BIT_AND:
   case BIT_XOR:
   case BIT_OR:
@@ -133,6 +144,10 @@ bool is_constexpr(Tree *expr) {
   } break;
 
   case CAST: {
+    return is_constexpr(expr->lhs);
+  } break;
+  case PLUS:
+  case MINUS: {
     return is_constexpr(expr->lhs);
   } break;
   case NUM: {
@@ -169,6 +184,42 @@ ConstValue *eval_constexpr(Tree *expr) {
     ConstValue *rhs = eval_constexpr(expr->rhs);
     lhs->value_int &= rhs->value_int;
     return lhs;
+  } break;
+  case SMALLER: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int < rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case SMALLER_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int <= rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case GREATER: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int > rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case GREATER_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int >= rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
   } break;
   case LSHIFT: {
     ConstValue *lhs = eval_constexpr(expr->lhs);
@@ -229,6 +280,14 @@ ConstValue *eval_constexpr(Tree *expr) {
     } else {
       return eval_constexpr(expr->lhs);
     }
+  } break;
+  case PLUS: {
+    return eval_constexpr(expr->lhs);
+  } break;
+  case MINUS: {
+    ConstValue *ret = eval_constexpr(expr->lhs);
+    ret->value_int = -ret->value_int;
+    return ret;
   } break;
   case NUM: {
     ConstValue *ret = calloc(1, sizeof(ConstValue));
