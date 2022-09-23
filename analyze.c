@@ -1493,6 +1493,9 @@ void add_cast_stmt(Tree *ast, Type *cast_type) {
   if (!is_compatible(cast_type, ast))
     error_token(ast->error_token, "cannot cast");
 
+  if (is_same_type(cast_type, ast->type))
+    return;
+
   Tree *new_node = calloc(1, sizeof(Tree));
   memcpy(new_node, ast, sizeof(Tree));
 
