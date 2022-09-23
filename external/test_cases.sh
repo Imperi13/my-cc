@@ -449,6 +449,8 @@ run_test multiple_declarator_4 'int main(){int a,b,c,d;a = 114;b = 10;c = 20;d =
 run_test multiple_declarator_5 'struct Test{int a,b;};int main(){return 166 + sizeof(struct Test);}' 174
 run_test multiple_declarator_6 'struct Test{int a,b;};int main(){struct Test t;t.a = 10;t.b = 20; return 144+t.a+t.b;}' 174
 
+run_test constexpr_cast '_Bool n = 256; int main(){return 173+n;}' 174
+
 run_test constexpr_1 'int n = 6+4; int main(){return 164+n;}' 174
 run_test constexpr_2 'int n = 2*3 + 1*4; int main(){return 164+n;}' 174
 run_test constexpr_3 'int n = (3 | 8) ^ 1; int main(){return 164+n;}' 174

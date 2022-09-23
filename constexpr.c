@@ -70,10 +70,7 @@ long eval_constexpr_integer(Tree *expr) {
 bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
   case CAST: {
-    if (is_integer(expr->type) && is_integer(expr->lhs->type))
-      return true;
-    else
-      not_implemented(__func__);
+    return is_constexpr(expr->lhs);
   } break;
   case NUM: {
     return true;
@@ -90,7 +87,15 @@ ConstValue *eval_constexpr(Tree *expr) {
 
   switch (expr->kind) {
   case CAST: {
-    if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
+    if (expr->type->kind == BOOL && is_scalar(expr->lhs->type)) {
+      ConstValue *ret = eval_constexpr(expr->lhs);
+      ret->value_int = ret->label_name || ret->value_int;
+      ret->label_name = NULL;
+      return ret;
+    } else if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
+      return eval_constexpr(expr->lhs);
+    } else if (expr->type->kind == PTR && (expr->lhs->type->kind == ARRAY ||
+                                           expr->lhs->type->kind == FUNC)) {
       return eval_constexpr(expr->lhs);
     } else
       not_implemented(__func__);
