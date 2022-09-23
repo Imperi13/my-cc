@@ -21,16 +21,13 @@ Vector *new_vector(void) {
 }
 
 long size_vector(Vector *vec) {
-  if (!vec)
-    error("invalid vector");
+  assert(vec, "vec is NULL");
   return vec->size;
 }
 
 void push_back_vector(Vector *vec, void *val) {
-  if (!vec)
-    error("invalid vector");
-  if (!val)
-    error("cannot append null ptr");
+  assert(vec, "vec is NULL");
+  assert(val, "invalid val");
 
   if (vec->size == vec->capacity) {
 
@@ -48,10 +45,8 @@ void push_back_vector(Vector *vec, void *val) {
 }
 
 void *get_vector(Vector *vec, long index) {
-  if (!vec)
-    error("invalid vector");
-  if (index < 0 || index >= vec->size)
-    error("out of bounds");
+  assert(vec, "vec is NULL");
+  assert(0 <= index && index < vec->size, "out of bounds");
 
   return vec->data[index];
 }

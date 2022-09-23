@@ -28,10 +28,8 @@ struct StrDictList {
 StrDict *new_str_dict(void) { return calloc(1, sizeof(StrDict)); }
 
 void *find_str_dict(StrDict *dict, char *name) {
-  if (!dict)
-    error("dict is NULL");
-  if (!name)
-    error("invalid key");
+  assert(dict, "dict is NULL");
+  assert(name, "invalid key");
 
   for (StrDictList *cur = dict->head; cur; cur = cur->next)
     if (strcmp(cur->name, name) == 0)
@@ -40,14 +38,10 @@ void *find_str_dict(StrDict *dict, char *name) {
 }
 
 void add_str_dict(StrDict *dict, char *name, void *val) {
-  if (!dict)
-    error("dict is NULL");
-  if (!name)
-    error("invalid key");
-  if (!val)
-    error("invalid val");
-  if (find_str_dict(dict, name))
-    error("already exist in dict : \"%s\"", name);
+  assert(dict, "dict is NULL");
+  assert(name, "invalid key");
+  assert(val, "invalid val");
+  assert(!find_str_dict(dict, name), "already exist in dict : \"%s\"", name);
 
   StrDictList *node = calloc(1, sizeof(StrDictList));
   node->name = name;
@@ -58,12 +52,9 @@ void add_str_dict(StrDict *dict, char *name, void *val) {
 }
 
 void remove_str_dict(StrDict *dict, char *name) {
-  if (!dict)
-    error("dict is NULL");
-  if (!name)
-    error("invalid key");
-  if (!find_str_dict(dict, name))
-    error("not exist in dict : \"%s\"", name);
+  assert(dict, "dict is NULL");
+  assert(name, "invalid key");
+  assert(find_str_dict(dict, name), "not exist in dict : \"%s\"", name);
 
   if (strcmp(dict->head->name, name) == 0) {
     dict->head = dict->head->next;
