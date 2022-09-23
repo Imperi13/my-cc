@@ -54,6 +54,8 @@ void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
         error("not zero constexpr integer cannot be ptr");
       fprintf(codegen_output, "  .quad 0\n");
     }
+  } else {
+    not_implemented(__func__);
   }
 }
 
@@ -79,6 +81,9 @@ bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
     // binary op
 
+  case BIT_AND:
+  case BIT_XOR:
+  case BIT_OR:
   case LSHIFT:
   case RSHIFT:
   case ADD:
@@ -109,6 +114,24 @@ ConstValue *eval_constexpr(Tree *expr) {
     error("not constexpr");
 
   switch (expr->kind) {
+  case BIT_OR: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int |= rhs->value_int;
+    return lhs;
+  } break;
+  case BIT_XOR: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int ^= rhs->value_int;
+    return lhs;
+  } break;
+  case BIT_AND: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int &= rhs->value_int;
+    return lhs;
+  } break;
   case LSHIFT: {
     ConstValue *lhs = eval_constexpr(expr->lhs);
     ConstValue *rhs = eval_constexpr(expr->rhs);
@@ -165,13 +188,9 @@ ConstValue *eval_constexpr(Tree *expr) {
       else
         ret->value_int = 1;
       return ret;
-    } else if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
+    } else {
       return eval_constexpr(expr->lhs);
-    } else if (expr->type->kind == PTR && (expr->lhs->type->kind == ARRAY ||
-                                           expr->lhs->type->kind == FUNC)) {
-      return eval_constexpr(expr->lhs);
-    } else
-      not_implemented(__func__);
+    }
   } break;
   case NUM: {
     ConstValue *ret = calloc(1, sizeof(ConstValue));
