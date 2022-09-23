@@ -118,6 +118,20 @@ long eval_constexpr_integer(Tree *expr) {
 bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
 
+  case CONDITIONAL: {
+    if (!is_constexpr(expr->cond))
+      return false;
+
+    return (!is_constexpr_zero(expr->cond) ? is_constexpr(expr->lhs)
+                                           : is_constexpr(expr->rhs));
+  } break;
+
+  case BIT_AND:
+  case BIT_XOR:
+  case BIT_OR: {
+    return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+  } break;
+
   // equality
   case EQUAL:
   case NOT_EQUAL: {
@@ -139,9 +153,6 @@ bool is_constexpr(Tree *expr) {
   } break;
 
     // binary op
-  case BIT_AND:
-  case BIT_XOR:
-  case BIT_OR:
   case LSHIFT:
   case RSHIFT:
   case ADD:
@@ -176,6 +187,14 @@ ConstValue *eval_constexpr(Tree *expr) {
     error("not constexpr");
 
   switch (expr->kind) {
+
+  case CONDITIONAL: {
+    if (!is_constexpr_zero(expr->cond))
+      return eval_constexpr(expr->lhs);
+    else
+      return eval_constexpr(expr->rhs);
+  } break;
+
   case BIT_OR: {
     ConstValue *lhs = eval_constexpr(expr->lhs);
     ConstValue *rhs = eval_constexpr(expr->rhs);
