@@ -587,6 +587,8 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
       if (!is_compatible(state->current_func->type->return_type, ast->lhs))
         error_token(ast->error_token, "invalid return type");
+
+      add_cast_stmt(ast->lhs, state->current_func->type->return_type);
     } else {
       if (state->current_func->type->return_type->kind != VOID)
         error_token(ast->error_token, "must return value");
@@ -976,6 +978,8 @@ void analyze_expr(Tree *ast, Analyze *state) {
         Type *argtype = get_vector(func_type->args_vector, i);
         if (!is_compatible(argtype, arg))
           error_token(arg->error_token, "invalid argtype");
+
+        add_cast_stmt(arg, argtype);
       }
     }
 
