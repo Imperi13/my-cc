@@ -77,6 +77,13 @@ long eval_constexpr_integer(Tree *expr) {
 
 bool is_constexpr(Tree *expr) {
   switch (expr->kind) {
+    // binary op
+  case MUL:
+  case DIV:
+  case MOD: {
+    return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+  } break;
+
   case CAST: {
     return is_constexpr(expr->lhs);
   } break;
@@ -97,6 +104,24 @@ ConstValue *eval_constexpr(Tree *expr) {
     error("not constexpr");
 
   switch (expr->kind) {
+  case MUL: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int *= rhs->value_int;
+    return lhs;
+  } break;
+  case DIV: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int /= rhs->value_int;
+    return lhs;
+  } break;
+  case MOD: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int %= rhs->value_int;
+    return lhs;
+  } break;
   case CAST: {
     if (expr->type->kind == BOOL && is_scalar(expr->lhs->type)) {
       ConstValue *ret = calloc(1, sizeof(ConstValue));

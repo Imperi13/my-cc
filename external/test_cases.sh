@@ -451,6 +451,7 @@ run_test multiple_declarator_6 'struct Test{int a,b;};int main(){struct Test t;t
 
 run_test constexpr_cast '_Bool n = 256; int main(){return 173+n;}' 174
 
+run_test constexpr_1 'int n = 2*5; int main() {return 164+n;}' 174
 run_test constexpr_1 'int n = 6+4; int main(){return 164+n;}' 174
 run_test constexpr_2 'int n = 2*3 + 1*4; int main(){return 164+n;}' 174
 run_test constexpr_3 'int n = (3 | 8) ^ 1; int main(){return 164+n;}' 174
