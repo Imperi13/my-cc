@@ -13,4 +13,4 @@ bool is_constexpr(Tree *expr);
 bool is_constexpr_integer(Tree *expr);
 bool is_constexpr_zero(Tree *expr);
 
-int eval_constexpr_integer(Tree *expr);
+long eval_constexpr_integer(Tree *expr);

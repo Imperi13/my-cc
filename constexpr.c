@@ -1,30 +1,59 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "type.h"
 
+/*
+ * const expression
+ * - constexpr interger
+ * - constexpr pointer
+ *   - & global variable
+ *   - (void *) constexpr 0
+ */
+
+// current ConstValue impl cannot handle the following code
+// ex)
+// unsigned long long a = 0xffff,ffff,ffff,ffff;
+// long long b = -0x8000,0000,0000,0000;
+//
+// TODO Implement "strict" compile-time constants
+
+typedef struct ConstValue ConstValue;
+struct ConstValue {
+  char *label_name;
+  long value_int;
+};
+
+static ConstValue *eval_constexpr(Tree *expr);
+
 void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
                                Tree *expr) {
   if (is_integer(obj_type)) {
     if (type_size(obj_type) == 1)
-      fprintf(codegen_output, "  .byte %d\n", eval_constexpr_integer(expr));
+      fprintf(codegen_output, "  .byte %ld\n", eval_constexpr_integer(expr));
+    else if (type_size(obj_type) == 2)
+      fprintf(codegen_output, "  .short %ld\n", eval_constexpr_integer(expr));
     else if (type_size(obj_type) == 4)
-      fprintf(codegen_output, "  .long %d\n", eval_constexpr_integer(expr));
+      fprintf(codegen_output, "  .long %ld\n", eval_constexpr_integer(expr));
     else if (type_size(obj_type) == 8)
-      fprintf(codegen_output, "  .quad %d\n", eval_constexpr_integer(expr));
+      fprintf(codegen_output, "  .quad %ld\n", eval_constexpr_integer(expr));
+    else
+      error("invalid type_size");
   } else if (obj_type->kind == PTR) {
-    // only impl NULL and STR
-    if (expr->kind == STR) {
-      fprintf(codegen_output, "  .quad .LC%d\n", expr->str_literal->id);
-    } else if (expr->kind == CAST) {
-      fprintf(codegen_output, "  .quad %d\n",
-              eval_constexpr_integer(expr->lhs));
-    } else
-      not_implemented(__func__);
+    ConstValue *val = eval_constexpr(expr);
+    if (val->label_name) {
+      fprintf(codegen_output, "  .quad %s + %ld\n", val->label_name,
+              val->value_int);
+    } else {
+      if (val->value_int != 0)
+        error("not zero constexpr integer cannot be ptr");
+      fprintf(codegen_output, "  .quad 0\n");
+    }
   } else if (obj_type->kind == ARRAY && obj_type->ptr_to->kind == CHAR &&
              expr->kind == STR) {
     // TODO str_literal initialize
@@ -43,7 +72,6 @@ void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
     if (cnt < obj_type->arr_size)
       fprintf(codegen_output, "  .zero %d\n",
               type_size(obj_type->ptr_to) * (obj_type->arr_size - cnt));
-
   } else if (obj_type->kind == STRUCT) {
     int write_bytes = 0;
     Member *mem_cur = obj_type->st_def->members;
@@ -69,144 +97,256 @@ void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
     error("invalid global_initialize");
 }
 
-bool is_constexpr(Tree *expr) {
-  if (expr->kind == INITIALIZE_LIST) {
-    for (InitializeList *cur = expr->init_list; cur; cur = cur->next)
-      if (!is_constexpr(cur->init_val))
-        return false;
-    return true;
-  } else if (expr->kind == CONDITIONAL)
-    return is_constexpr_integer(expr->cond) &&
-           (!is_constexpr_zero(expr->cond) ? is_constexpr(expr->lhs)
-                                           : is_constexpr(expr->rhs));
-  else if (expr->kind == LOGICAL_OR)
-    return !is_constexpr(expr->lhs) || is_constexpr(expr->rhs);
-  else if (expr->kind == LOGICAL_AND)
-    return is_constexpr(expr->lhs) || is_constexpr(expr->rhs);
-  else if (expr->kind == BIT_AND || expr->kind == BIT_XOR ||
-           expr->kind == BIT_OR || expr->kind == EQUAL ||
-           expr->kind == NOT_EQUAL || expr->kind == SMALLER ||
-           expr->kind == SMALLER_EQUAL || expr->kind == GREATER ||
-           expr->kind == GREATER_EQUAL || expr->kind == LSHIFT ||
-           expr->kind == RSHIFT || expr->kind == ADD || expr->kind == SUB ||
-           expr->kind == MUL || expr->kind == DIV || expr->kind == MOD)
-    return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
-  else if (expr->kind == CAST)
-    return is_constexpr(expr->lhs);
-  else if (expr->kind == PLUS || expr->kind == MINUS || expr->kind == BIT_NOT)
-    return is_constexpr(expr->lhs);
-  else if (expr->kind == LOGICAL_NOT)
-    return is_constexpr(expr->lhs);
-  else if (expr->kind == NUM || expr->kind == STR)
-    return true;
-  else
-    return false;
-}
-
 bool is_constexpr_integer(Tree *expr) {
-  if (expr->kind == CONDITIONAL)
-    return is_constexpr_integer(expr->cond) &&
-           (!is_constexpr_zero(expr->cond) ? is_constexpr_integer(expr->lhs)
-                                           : is_constexpr_integer(expr->rhs));
-  else if (expr->kind == LOGICAL_OR)
-    return !is_constexpr_zero(expr->lhs) || is_constexpr_integer(expr->rhs);
-  else if (expr->kind == LOGICAL_AND)
-    return is_constexpr_zero(expr->lhs) || is_constexpr_integer(expr->rhs);
-  else if (expr->kind == BIT_AND || expr->kind == BIT_XOR ||
-           expr->kind == BIT_OR || expr->kind == EQUAL ||
-           expr->kind == NOT_EQUAL || expr->kind == SMALLER ||
-           expr->kind == SMALLER_EQUAL || expr->kind == GREATER ||
-           expr->kind == GREATER_EQUAL || expr->kind == LSHIFT ||
-           expr->kind == RSHIFT || expr->kind == ADD || expr->kind == SUB ||
-           expr->kind == MUL || expr->kind == DIV || expr->kind == MOD)
-    return is_constexpr_integer(expr->lhs) && is_constexpr_integer(expr->rhs);
-  else if (expr->kind == CAST)
-    return is_integer(expr->type) && is_constexpr_integer(expr->lhs);
-  else if (expr->kind == PLUS || expr->kind == MINUS || expr->kind == BIT_NOT)
-    return is_constexpr_integer(expr->lhs);
-  else if (expr->kind == LOGICAL_NOT)
-    return is_constexpr_integer(expr->lhs);
-  else if (expr->kind == NUM)
-    return true;
-  else
-    return false;
+  return is_constexpr(expr) && is_integer(expr->type);
 }
 
+// check if expr is 0, nullptr
 bool is_constexpr_zero(Tree *expr) {
-  if (!is_constexpr_integer(expr))
+  if (!is_constexpr(expr))
     return false;
-  return eval_constexpr_integer(expr) == 0;
+  ConstValue *val = eval_constexpr(expr);
+  return !val->label_name && val->value_int == 0;
 }
 
-int eval_constexpr_integer(Tree *expr) {
-  if (expr->kind == CONDITIONAL)
-    return !is_constexpr_zero(expr->cond) ? eval_constexpr_integer(expr->lhs)
-                                          : eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == LOGICAL_OR)
-    return !is_constexpr_zero(expr->lhs) ? 1 : !is_constexpr_zero(expr->rhs);
-  else if (expr->kind == LOGICAL_AND)
-    return is_constexpr_zero(expr->lhs) ? 0 : !is_constexpr_zero(expr->rhs);
-  else if (expr->kind == BIT_AND)
-    return eval_constexpr_integer(expr->lhs) &
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == BIT_XOR)
-    return eval_constexpr_integer(expr->lhs) ^
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == BIT_OR)
-    return eval_constexpr_integer(expr->lhs) |
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == EQUAL)
-    return eval_constexpr_integer(expr->lhs) ==
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == NOT_EQUAL)
-    return eval_constexpr_integer(expr->lhs) !=
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == SMALLER)
-    return eval_constexpr_integer(expr->lhs) <
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == SMALLER_EQUAL)
-    return eval_constexpr_integer(expr->lhs) <=
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == GREATER)
-    return eval_constexpr_integer(expr->lhs) >
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == GREATER_EQUAL)
-    return eval_constexpr_integer(expr->lhs) >=
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == LSHIFT)
-    return eval_constexpr_integer(expr->lhs)
-           << eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == RSHIFT)
-    return eval_constexpr_integer(expr->lhs) >>
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == ADD)
-    return eval_constexpr_integer(expr->lhs) +
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == SUB)
-    return eval_constexpr_integer(expr->lhs) -
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == MUL)
-    return eval_constexpr_integer(expr->lhs) *
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == DIV)
-    return eval_constexpr_integer(expr->lhs) /
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == MOD)
-    return eval_constexpr_integer(expr->lhs) %
-           eval_constexpr_integer(expr->rhs);
-  else if (expr->kind == CAST)
-    return eval_constexpr_integer(expr->lhs);
-  else if (expr->kind == PLUS)
-    return eval_constexpr_integer(expr->lhs);
-  else if (expr->kind == MINUS)
-    return -eval_constexpr_integer(expr->lhs);
-  else if (expr->kind == LOGICAL_NOT)
-    return !eval_constexpr_integer(expr->lhs);
-  else if (expr->kind == BIT_NOT)
-    return ~eval_constexpr_integer(expr->lhs);
-  else if (expr->kind == NUM)
-    return expr->num;
-  else
-    not_implemented(__func__);
-  return 0;
+long eval_constexpr_integer(Tree *expr) {
+  if (!is_constexpr_integer(expr))
+    error("not constexpr integer");
+  return eval_constexpr(expr)->value_int;
+}
+
+bool is_constexpr(Tree *expr) {
+  switch (expr->kind) {
+
+  case CONDITIONAL: {
+    if (!is_constexpr(expr->cond))
+      return false;
+
+    return (!is_constexpr_zero(expr->cond) ? is_constexpr(expr->lhs)
+                                           : is_constexpr(expr->rhs));
+  } break;
+
+  case BIT_AND:
+  case BIT_XOR:
+  case BIT_OR: {
+    return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+  } break;
+
+  // equality
+  case EQUAL:
+  case NOT_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type))
+      return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+    else
+      not_implemented(__func__);
+  } break;
+
+    // relational
+  case SMALLER:
+  case SMALLER_EQUAL:
+  case GREATER:
+  case GREATER_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type))
+      return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+    else
+      not_implemented(__func__);
+  } break;
+
+    // binary op
+  case LSHIFT:
+  case RSHIFT:
+  case ADD:
+  case SUB:
+  case MUL:
+  case DIV:
+  case MOD: {
+    return is_constexpr(expr->lhs) && is_constexpr(expr->rhs);
+  } break;
+
+  case CAST: {
+    return is_constexpr(expr->lhs);
+  } break;
+  case PLUS:
+  case MINUS: {
+    return is_constexpr(expr->lhs);
+  } break;
+  case NUM: {
+    return true;
+  } break;
+  case STR: {
+    return true;
+  } break;
+  default:
+    return false;
+  }
+}
+
+// TODO pass by value
+ConstValue *eval_constexpr(Tree *expr) {
+  if (!is_constexpr(expr))
+    error("not constexpr");
+
+  switch (expr->kind) {
+
+  case CONDITIONAL: {
+    if (!is_constexpr_zero(expr->cond))
+      return eval_constexpr(expr->lhs);
+    else
+      return eval_constexpr(expr->rhs);
+  } break;
+
+  case BIT_OR: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int |= rhs->value_int;
+    return lhs;
+  } break;
+  case BIT_XOR: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int ^= rhs->value_int;
+    return lhs;
+  } break;
+  case BIT_AND: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int &= rhs->value_int;
+    return lhs;
+  } break;
+  case EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int == rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case NOT_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int != rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case SMALLER: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int < rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case SMALLER_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int <= rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case GREATER: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int > rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case GREATER_EQUAL: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int = lhs->value_int >= rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case LSHIFT: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int <<= rhs->value_int;
+    return lhs;
+  } break;
+  case RSHIFT: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int >>= rhs->value_int;
+    return lhs;
+  } break;
+  case ADD: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int += rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case SUB: {
+    if (is_integer(expr->lhs->type) && is_integer(expr->rhs->type)) {
+      ConstValue *lhs = eval_constexpr(expr->lhs);
+      ConstValue *rhs = eval_constexpr(expr->rhs);
+      lhs->value_int -= rhs->value_int;
+      return lhs;
+    } else
+      not_implemented(__func__);
+  } break;
+  case MUL: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int *= rhs->value_int;
+    return lhs;
+  } break;
+  case DIV: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int /= rhs->value_int;
+    return lhs;
+  } break;
+  case MOD: {
+    ConstValue *lhs = eval_constexpr(expr->lhs);
+    ConstValue *rhs = eval_constexpr(expr->rhs);
+    lhs->value_int %= rhs->value_int;
+    return lhs;
+  } break;
+  case CAST: {
+    if (expr->type->kind == BOOL && is_scalar(expr->lhs->type)) {
+      ConstValue *ret = calloc(1, sizeof(ConstValue));
+      if (is_constexpr_zero(expr->lhs))
+        ret->value_int = 0;
+      else
+        ret->value_int = 1;
+      return ret;
+    } else {
+      return eval_constexpr(expr->lhs);
+    }
+  } break;
+  case PLUS: {
+    return eval_constexpr(expr->lhs);
+  } break;
+  case MINUS: {
+    ConstValue *ret = eval_constexpr(expr->lhs);
+    ret->value_int = -ret->value_int;
+    return ret;
+  } break;
+  case NUM: {
+    ConstValue *ret = calloc(1, sizeof(ConstValue));
+    ret->value_int = expr->num;
+    return ret;
+  } break;
+  case STR: {
+    ConstValue *ret = calloc(1, sizeof(ConstValue));
+    ret->label_name = calloc(36, sizeof(char));
+    snprintf(ret->label_name, 36, ".LC%d", expr->str_literal->id);
+    return ret;
+  } break;
+  default:
+    error("invalid ast kind");
+  }
 }
