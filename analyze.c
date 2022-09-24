@@ -611,6 +611,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     state->label_cnt++;
 
     analyze_stmt(ast->cond, state);
+    add_implicit_array_cast(ast->cond);
+    add_implicit_func_cast(ast->cond);
+    if (!is_scalar(ast->cond->type))
+      error_token(ast->cond->error_token,
+                  "controlling expr is not scalar type");
 
     push_label(&state->break_labels, ast->label_number);
     push_label(&state->continue_labels, ast->label_number);
@@ -625,6 +630,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     state->label_cnt++;
 
     analyze_stmt(ast->cond, state);
+    add_implicit_array_cast(ast->cond);
+    add_implicit_func_cast(ast->cond);
+    if (!is_scalar(ast->cond->type))
+      error_token(ast->cond->error_token,
+                  "controlling expr is not scalar type");
 
     push_label(&state->break_labels, ast->label_number);
     push_label(&state->continue_labels, ast->label_number);
@@ -642,7 +652,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
 
     if (ast->for_init)
       analyze_stmt(ast->for_init, state);
+
     analyze_stmt(ast->cond, state);
+    add_implicit_array_cast(ast->cond);
+    add_implicit_func_cast(ast->cond);
+    if (!is_scalar(ast->cond->type))
+      error_token(ast->cond->error_token,
+                  "controlling expr is not scalar type");
+
     if (ast->for_update)
       analyze_stmt(ast->for_update, state);
 
@@ -659,7 +676,14 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   case IF: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
+
     analyze_stmt(ast->cond, state);
+    add_implicit_array_cast(ast->cond);
+    add_implicit_func_cast(ast->cond);
+    if (!is_scalar(ast->cond->type))
+      error_token(ast->cond->error_token,
+                  "controlling expr is not scalar type");
+
     analyze_stmt(ast->lhs, state);
     if (ast->rhs)
       analyze_stmt(ast->rhs, state);
@@ -667,7 +691,11 @@ void analyze_stmt(Tree *ast, Analyze *state) {
   case SWITCH: {
     ast->label_number = state->label_cnt;
     state->label_cnt++;
+
     analyze_stmt(ast->cond, state);
+    if (!is_integer(ast->cond->type))
+      error_token(ast->cond->error_token,
+                  "controlling expr is not integer type");
 
     push_label(&state->break_labels, ast->label_number);
     push_switch(&state->switch_stmts, ast);
