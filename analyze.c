@@ -1069,7 +1069,11 @@ void analyze_expr(Tree *ast, Analyze *state) {
       ast->type = &type_int;
   } break;
   case STR: {
-    ast->type = newtype_ptr(&type_char);
+    Type *array_char = calloc(1, sizeof(Type));
+    array_char->kind = ARRAY;
+    array_char->ptr_to = &type_char;
+    array_char->arr_size = ast->str_literal->len + 1;
+    ast->type = array_char;
   } break;
   case VAR: {
     // predefined ident
