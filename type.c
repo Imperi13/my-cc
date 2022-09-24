@@ -315,7 +315,7 @@ bool is_compatible(Type *a, Tree *b) {
     return true;
   else if (is_integer(a) && is_integer(b->type))
     return true;
-  else if (a->kind == BOOL && is_integer(b->type))
+  else if (a->kind == BOOL && is_scalar(b->type))
     return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
