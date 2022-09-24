@@ -378,10 +378,10 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  mov rax,rsi\n");
     load2rax_from_raxaddr(codegen_output, stmt->lhs->type);
     // lhs:rax, rhs:rdi
-    if (stmt->lhs->type->kind == PTR || stmt->lhs->type->kind == ARRAY)
+    if (stmt->lhs->type->kind == PTR)
       fprintf(codegen_output, "  imul rdi,%d\n",
               type_size(stmt->lhs->type->ptr_to));
-    else if (stmt->rhs->type->kind == PTR || stmt->rhs->type->kind == ARRAY)
+    else if (stmt->rhs->type->kind == PTR)
       fprintf(codegen_output, "  imul rax,%d\n",
               type_size(stmt->rhs->type->ptr_to));
     fprintf(codegen_output, "  add rax,rdi\n");
@@ -749,10 +749,10 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  sar rax, cl\n");
     break;
   case ADD:
-    if (stmt->lhs->type->kind == PTR || stmt->lhs->type->kind == ARRAY)
+    if (stmt->lhs->type->kind == PTR)
       fprintf(codegen_output, "  imul rdi,%d\n",
               type_size(stmt->lhs->type->ptr_to));
-    else if (stmt->rhs->type->kind == PTR || stmt->rhs->type->kind == ARRAY)
+    else if (stmt->rhs->type->kind == PTR)
       fprintf(codegen_output, "  imul rax,%d\n",
               type_size(stmt->rhs->type->ptr_to));
     fprintf(codegen_output, "  add rax,rdi\n");
