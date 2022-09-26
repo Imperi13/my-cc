@@ -809,7 +809,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     break;
   case BIT_OR:
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
-           "not same type on bit or");
+           "not same type on BIT_OR");
     fprintf(codegen_output, "  or%c %s, %s\n", get_size_suffix(expr->type),
             get_reg_alias(&reg_rdi, expr->rhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
@@ -825,6 +825,8 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movzb rax,al\n");
     break;
   case SMALLER:
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on SMALLER");
     fprintf(codegen_output, "  cmp rax,rdi\n");
     fprintf(codegen_output, "  setl al\n");
     fprintf(codegen_output, "  movzb rax,al\n");
@@ -855,7 +857,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case ADD: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
-             "not same type on arithmetic add");
+             "not same type on arithmetic ADD");
       fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
@@ -869,7 +871,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case SUB:
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
-             "not same type on arithmetic sub");
+             "not same type on arithmetic SUB");
       fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
@@ -880,7 +882,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     break;
   case MUL:
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
-           "not same type on mul");
+           "not same type on MUL");
     fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(expr->type),
             get_reg_alias(&reg_rdi, expr->rhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
