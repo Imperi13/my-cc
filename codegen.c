@@ -491,22 +491,40 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     }
   } break;
   case SUB_ASSIGN: {
-    codegen_addr(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(codegen_output, expr->rhs);
-    fprintf(codegen_output, "  mov rdi,rax\n");
-    fprintf(codegen_output, "  pop rsi\n");
-    fprintf(codegen_output, "  mov rax,rsi\n");
-    load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    // sub
-    if (expr->lhs->type->kind == PTR && is_integer(expr->rhs->type))
-      fprintf(codegen_output, "  imul rdi, %d\n",
-              type_size(expr->lhs->type->ptr_to));
-    fprintf(codegen_output, "  sub rax, rdi\n");
+    if (expr->lhs->type->kind == PTR) {
+      not_implemented(__func__);
+    } else {
+      // arithmetic SUB_ASSIGN
 
-    // store
-    fprintf(codegen_output, "  mov rdi,rsi\n");
-    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
+      Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
+      Type *result_type =
+          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+
+      codegen_addr(codegen_output, expr->lhs);
+      fprintf(codegen_output, "  pushq %%rax\n");
+      codegen_stmt(codegen_output, expr->rhs);
+      mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+      fprintf(codegen_output, "  popq %%rsi\n");
+      fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+      load2rax_from_raxaddr(codegen_output, expr->lhs->type);
+
+      // lhs value: rax , rhs value: rdi
+      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type,
+                       promoted_ltype);
+      reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type,
+                       promoted_rtype);
+      reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
+      reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+
+      fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(result_type),
+              get_reg_alias(&reg_rdi, result_type),
+              get_reg_alias(&reg_rax, result_type));
+
+      reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+      fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+    }
   } break;
   case MUL_ASSIGN: {
     Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
@@ -537,15 +555,30 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
   } break;
   case DIV_ASSIGN: {
+    Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
+    Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
+    Type *result_type =
+        get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+
     codegen_addr(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  push rax\n");
+    fprintf(codegen_output, "  pushq %%rax\n");
     codegen_stmt(codegen_output, expr->rhs);
-    fprintf(codegen_output, "  mov rdi,rax\n");
-    fprintf(codegen_output, "  pop rsi\n");
-    fprintf(codegen_output, "  movsxd rax,[rsi]\n");
-    fprintf(codegen_output, "  cqo\n");
-    fprintf(codegen_output, "  idiv rdi\n");
-    fprintf(codegen_output, "  mov [rsi], eax\n");
+    mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+    fprintf(codegen_output, "  popq %%rsi\n");
+    fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+    load2rax_from_raxaddr(codegen_output, expr->lhs->type);
+
+    // lhs value: rax , rhs value: rdi
+    reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
+    reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
+    reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
+    reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+
+    div_reg(codegen_output, result_type);
+
+    reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+    fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
+    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
   } break;
   case MOD_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
