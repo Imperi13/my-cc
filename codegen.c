@@ -604,15 +604,19 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     return;
   case LOGICAL_OR:
     codegen_stmt(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  cmp rax,0\n");
+    fprintf(codegen_output, "  cmp%c $0, %s\n",
+            get_size_suffix(expr->lhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     fprintf(codegen_output, "  jne .Ltrue%d\n", expr->label_number);
     codegen_stmt(codegen_output, expr->rhs);
-    fprintf(codegen_output, "  cmp rax,0\n");
+    fprintf(codegen_output, "  cmp%c $0, %s\n",
+            get_size_suffix(expr->rhs->type),
+            get_reg_alias(&reg_rax, expr->rhs->type));
     fprintf(codegen_output, "  jne .Ltrue%d\n", expr->label_number);
-    fprintf(codegen_output, "  mov rax, 0\n");
+    mov_imm(codegen_output, &reg_rax, &type_int, 0);
     fprintf(codegen_output, "  jmp .Lend%d\n", expr->label_number);
     fprintf(codegen_output, ".Ltrue%d:\n", expr->label_number);
-    fprintf(codegen_output, "  mov rax, 1\n");
+    mov_imm(codegen_output, &reg_rax, &type_int, 1);
     fprintf(codegen_output, ".Lend%d:\n", expr->label_number);
     return;
   case LOGICAL_AND:
