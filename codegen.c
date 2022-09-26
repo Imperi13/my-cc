@@ -875,7 +875,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       error("invalid type pair");
     break;
   case MUL:
-    fprintf(codegen_output, "  imul rax,rdi\n");
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on mul");
+    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_prefix(expr->type),
+            get_reg_alias(&reg_rdi, expr->rhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case DIV:
     fprintf(codegen_output, "  cqo\n");
