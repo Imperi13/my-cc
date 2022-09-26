@@ -239,7 +239,7 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
       fprintf(codegen_output, "  lea rax, [rip + %s]\n",
               stmt->var_obj->obj_name);
     else
-      fprintf(codegen_output, "  mov rax, [%s@GOTPCREL + rip]\n",
+      fprintf(codegen_output, "  movq %s@GOTPCREL(%%rip), %%rax\n",
               stmt->var_obj->obj_name);
   } else if (stmt->kind == DEREF) {
     codegen_stmt(codegen_output, stmt->lhs);
@@ -676,10 +676,10 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     load2rax_from_raxaddr(codegen_output, expr->type);
     return;
   case FUNC_CALL: {
-    fprintf(codegen_output, "  mov r10,rsp\n");
-    fprintf(codegen_output, "  and rsp,0xfffffffffffffff0\n");
-    fprintf(codegen_output, "  push r10\n");
-    fprintf(codegen_output, "  push 0\n");
+    fprintf(codegen_output, "  movq %%rsp, %%r10\n");
+    fprintf(codegen_output, "  andq $0xfffffffffffffff0, %%rsp\n");
+    fprintf(codegen_output, "  pushq %%r10\n");
+    fprintf(codegen_output, "  pushq $0\n");
 
     long call_arg_size = size_vector(expr->call_args_vector);
 
@@ -696,7 +696,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     codegen_stmt(codegen_output, expr->lhs);
     for (int i = 0; i < ((call_arg_size > 6) ? 6 : call_arg_size); i++)
       fprintf(codegen_output, "  pop %s\n", call_register64[i]);
-    fprintf(codegen_output, "  call rax\n");
+    fprintf(codegen_output, "  call *%%rax\n");
 
     // clean stack_arg
     for (int i = 0; i < ((call_arg_size > 6) ? call_arg_size - 6 : 0); i++)
@@ -705,8 +705,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     if (need_padding)
       fprintf(codegen_output, "  pop r10\n");
 
-    fprintf(codegen_output, "  pop r10\n");
-    fprintf(codegen_output, "  pop rsp\n");
+    fprintf(codegen_output, "  popq %%r10\n");
+    fprintf(codegen_output, "  popq %%rsp\n");
   }
     return;
   case POST_INCREMENT:
