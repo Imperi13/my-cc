@@ -635,9 +635,11 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     return;
   case LOGICAL_NOT:
     codegen_stmt(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  cmp rax,0\n");
-    fprintf(codegen_output, "  sete al\n");
-    fprintf(codegen_output, "  movsx rax,al\n");
+    fprintf(codegen_output, "  cmp%c $0, %s\n",
+            get_size_suffix(expr->lhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
+    fprintf(codegen_output, "  sete %%al\n");
+    fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     return;
   case BIT_NOT:
     codegen_stmt(codegen_output, expr->lhs);
