@@ -80,6 +80,13 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
                       Type *dst_type) {
   assert(is_integer(src_type) && is_integer(dst_type), "not integer type");
 
+  if (dst_type->kind == BOOL) {
+    fprintf(codegen_output, "  cmp%c $0, %s\n", get_size_suffix(src_type),
+            get_reg_alias(reg, src_type));
+    fprintf(codegen_output, "  setne %s\n", get_reg_alias(reg, dst_type));
+    return;
+  }
+
   if (type_size(dst_type) <= type_size(src_type))
     return;
 

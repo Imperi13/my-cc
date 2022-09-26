@@ -816,13 +816,30 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
             get_reg_alias(&reg_rax, expr->lhs->type));
   } break;
   case CAST: {
-    if (expr->type->kind == BOOL) {
-      codegen_stmt(codegen_output, expr->lhs);
-      fprintf(codegen_output, "  cmp rax,0\n");
-      fprintf(codegen_output, "  setne al\n");
-    } else {
-      codegen_stmt(codegen_output, expr->lhs);
+
+    // const zero cast
+    if (expr->type->kind == PTR && is_constexpr_zero(expr->lhs)) {
+      fprintf(codegen_output, "  movq $0, %%rax\n");
+      break;
     }
+
+    codegen_stmt(codegen_output, expr->lhs);
+
+    // do nothing for implicit ARRAY,FUNC cast
+    if (expr->type->kind == PTR &&
+        (expr->lhs->type->kind == ARRAY || expr->lhs->type->kind == FUNC))
+      break;
+
+    // normal cast
+    if (expr->type->kind == BOOL) {
+      fprintf(codegen_output, "  cmp%c $0, %s\n",
+              get_size_suffix(expr->lhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+      fprintf(codegen_output, "  setne %%al\n");
+    } else if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
+      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, expr->type);
+    }
+
   } break;
   case PLUS: {
     codegen_stmt(codegen_output, expr->lhs);
@@ -1111,7 +1128,9 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
     } else if (expr->lhs->type->kind == PTR) {
-      not_implemented(__func__);
+      fprintf(codegen_output, "  imulq $%d, %%rdi\n",
+              type_size(expr->lhs->type->ptr_to));
+      fprintf(codegen_output, "  subq %%rdi, %%rax\n");
     } else
       error("invalid type pair");
   } break;

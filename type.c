@@ -333,9 +333,9 @@ bool is_same_type(Type *a, Type *b) {
 bool is_compatible(Type *a, Tree *b) {
   if (is_same_type(a, b->type))
     return true;
-  else if (is_integer(a) && is_integer(b->type))
-    return true;
   else if (a->kind == BOOL && is_scalar(b->type))
+    return true;
+  else if (is_integer(a) && is_integer(b->type))
     return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
