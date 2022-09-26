@@ -1223,9 +1223,8 @@ void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
     fprintf(codegen_output, "  mov%c %s, (%%rdi)\n", get_size_suffix(type),
             get_reg_alias(&reg_rax, type));
   } else if (type->kind == STRUCT || type->kind == UNION) {
-    not_implemented(__func__);
-    fprintf(codegen_output, "  mov rsi, rax\n");
-    fprintf(codegen_output, "  mov rcx, %d\n", type_size(type));
+    fprintf(codegen_output, "  movq %%rax, %%rsi\n");
+    fprintf(codegen_output, "  movq $%d, %%rcx\n", type_size(type));
     fprintf(codegen_output, "  rep movsb\n");
   } else
     error("invalid type");
