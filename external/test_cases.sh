@@ -457,6 +457,9 @@ run_test constexpr_2 'int n = 2*3 + 1*4; int main(){return 164+n;}' 174
 run_test constexpr_3 'int n = (3 | 8) ^ 1; int main(){return 164+n;}' 174
 run_test constexpr_4 'char *str = "0123456789"; int main(){return str[0] - 0x30 + 174;}' 174
 run_test constexpr_5 'char *str = (void *) 0; int main(){if(str)return 164;else return 174;}' 174
+run_test constexpr_6 'int num; int *p = &num; int main(){return 174;}' 174
+run_test constexpr_7 'int num = 0; int *p = &num; int main(){ *p = 10; return 164+num; }' 174
+run_test constexpr_8 'int a,b,c,d; int *p[4] = {&a,&b,&c,&d}; int main(){ *p[0] = 10; *p[2] = 20; return a+c+144;}' 174
 
 run_test initialize_list_1 'int a[4] = {1,2,3,4}; int main(){return 164+a[0]+a[1]+a[2]+a[3];}' 174
 run_test initialize_list_2 'char *a[4] = {"a","b","c","d"}; int main(){return 174 + (a[0][0] - '\''a'\'' ) + (a[1][0] - '\''b'\'');}' 174

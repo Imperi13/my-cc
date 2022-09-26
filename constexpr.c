@@ -30,6 +30,8 @@ struct ConstValue {
 };
 
 static ConstValue *eval_constexpr(Tree *expr);
+static bool is_constexpr_addr(Tree *expr);
+static ConstValue *eval_constexpr_addr(Tree *expr);
 
 void codegen_global_initialize(FILE *codegen_output, Type *obj_type,
                                Tree *expr) {
@@ -170,6 +172,11 @@ bool is_constexpr(Tree *expr) {
   case MINUS: {
     return is_constexpr(expr->lhs);
   } break;
+
+  case ADDR: {
+    return is_constexpr_addr(expr->lhs);
+  } break;
+
   case NUM: {
     return true;
   } break;
@@ -335,6 +342,9 @@ ConstValue *eval_constexpr(Tree *expr) {
     ret->value_int = -ret->value_int;
     return ret;
   } break;
+  case ADDR: {
+    return eval_constexpr_addr(expr->lhs);
+  } break;
   case NUM: {
     ConstValue *ret = calloc(1, sizeof(ConstValue));
     ret->value_int = expr->num;
@@ -344,6 +354,27 @@ ConstValue *eval_constexpr(Tree *expr) {
     ConstValue *ret = calloc(1, sizeof(ConstValue));
     ret->label_name = calloc(36, sizeof(char));
     snprintf(ret->label_name, 36, ".LC%d", expr->str_literal->id);
+    return ret;
+  } break;
+  default:
+    error("invalid ast kind");
+  }
+}
+
+bool is_constexpr_addr(Tree *expr) {
+  switch (expr->kind) {
+  case VAR:
+    return true;
+  default:
+    return false;
+  }
+}
+
+ConstValue *eval_constexpr_addr(Tree *expr) {
+  switch (expr->kind) {
+  case VAR: {
+    ConstValue *ret = calloc(1, sizeof(ConstValue));
+    ret->label_name = expr->var_name;
     return ret;
   } break;
   default:
