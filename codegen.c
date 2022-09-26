@@ -330,7 +330,9 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   } break;
   case IF: {
     codegen_stmt(codegen_output, stmt->cond);
-    fprintf(codegen_output, "  cmp rax,0\n");
+    fprintf(codegen_output, "  cmp%c $0, %s\n",
+            get_size_suffix(stmt->cond->type),
+            get_reg_alias(&reg_rax, stmt->cond->type));
     fprintf(codegen_output, "  je .Lelse%d\n", stmt->label_number);
     codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  jmp .Lend%d\n", stmt->label_number);
