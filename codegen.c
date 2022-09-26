@@ -236,7 +236,7 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
     codegen_stmt(codegen_output, stmt->lhs);
   } else if (stmt->kind == DOT) {
     codegen_addr(codegen_output, stmt->lhs);
-    fprintf(codegen_output, "  add rax, %d\n", stmt->member->offset);
+    fprintf(codegen_output, "  addq $%d, %%rax\n", stmt->member->offset);
   } else if (stmt->kind == ARROW) {
     codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  add rax, %d\n", stmt->member->offset);
