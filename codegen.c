@@ -823,14 +823,28 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
             get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case EQUAL:
-    fprintf(codegen_output, "  cmp rax,rdi\n");
-    fprintf(codegen_output, "  sete al\n");
-    fprintf(codegen_output, "  movzb rax,al\n");
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on EQUAL");
+      fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+      fprintf(codegen_output, "  sete %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    } else
+      not_implemented(__func__);
     break;
   case NOT_EQUAL:
-    fprintf(codegen_output, "  cmp rax,rdi\n");
-    fprintf(codegen_output, "  setne al\n");
-    fprintf(codegen_output, "  movzb rax,al\n");
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on NOT_EQUAL");
+      fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+      fprintf(codegen_output, "  setne %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    } else
+      not_implemented(__func__);
     break;
   case SMALLER:
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
@@ -847,7 +861,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case SMALLER_EQUAL:
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
-             "not same type on SMALLER");
+             "not same type on SMALLER_EQUAL");
       fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
@@ -859,7 +873,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case GREATER:
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
-             "not same type on SMALLER");
+             "not same type on GREATER");
       fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
@@ -871,7 +885,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case GREATER_EQUAL:
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
-             "not same type on SMALLER");
+             "not same type on GREATER_EQUAL");
       fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
