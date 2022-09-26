@@ -886,13 +886,10 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
             get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case DIV:
-    fprintf(codegen_output, "  cqo\n");
-    fprintf(codegen_output, "  idiv rdi\n");
+    div_reg(codegen_output, expr->type);
     break;
   case MOD:
-    fprintf(codegen_output, "  cqo\n");
-    fprintf(codegen_output, "  idiv rdi\n");
-    fprintf(codegen_output, "  mov rax,rdx\n");
+    mod_reg(codegen_output, expr->type);
     break;
   default:
     error("cannnot codegen binary_op");

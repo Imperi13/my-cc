@@ -6,10 +6,6 @@ typedef struct Register Register;
 
 #include "type.h"
 
-struct Register {
-  char *alias[4];
-};
-
 extern Register reg_rax;
 extern Register reg_rdi;
 extern Register reg_rsi;
@@ -26,3 +22,9 @@ void pop_reg(FILE *codegen_output, Register *reg, Type *type);
 void mov_reg(FILE *codegen_output, Register *dst, Register *src, Type *type);
 
 void mov_imm(FILE *codegen_output, Register *reg, Type *type, long imm_val);
+
+// arithmetic operator
+// lhs: rax, rhs:rdi
+// result save to rax
+void div_reg(FILE *codegen_output, Type *type);
+void mod_reg(FILE *codegen_output, Type *type);

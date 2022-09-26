@@ -5,6 +5,10 @@
 #include "error.h"
 #include "type.h"
 
+struct Register {
+  char *alias[4];
+};
+
 Register reg_rax = {.alias = {"%al", "%ax", "%eax", "%rax"}};
 Register reg_rdi = {.alias = {"%dil", "%di", "%edi", "%rdi"}};
 Register reg_rsi = {.alias = {"%sil", "%si", "%esi", "%rsi"}};
@@ -67,4 +71,28 @@ void mov_imm(FILE *codegen_output, Register *reg, Type *type, long imm_val) {
 
   fprintf(codegen_output, "  mov%c $%ld, %s\n", get_size_suffix(type), imm_val,
           get_reg_alias(reg, type));
+}
+
+void div_reg(FILE *codegen_output, Type *type) {
+  assert(is_arithmetic(type), "not arighmetic type");
+
+  if (is_integer(type)) {
+    if (type_size(type) == 4) {
+      fprintf(codegen_output, "  cltd\n");
+      fprintf(codegen_output, "  idivl %%edi\n");
+    } else
+      not_implemented(__func__);
+  } else
+    not_implemented(__func__);
+}
+
+void mod_reg(FILE *codegen_output, Type *type) {
+  assert(is_integer(type), "not integer type");
+
+  if (type_size(type) == 4) {
+    fprintf(codegen_output, "  cltd\n");
+    fprintf(codegen_output, "  idivl %%edi\n");
+    fprintf(codegen_output, "  movl %%edx, %%eax\n");
+  } else
+    not_implemented(__func__);
 }
