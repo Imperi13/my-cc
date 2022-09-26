@@ -18,6 +18,7 @@ extern Register reg_rcx;
 extern Register reg_r8;
 extern Register reg_r9;
 
+char get_size_prefix(Type *type);
 char *get_reg_alias(Register *reg, Type *type);
 
 void push_reg(FILE *codegen_output, Register *reg, Type *type);

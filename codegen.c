@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "codegen.h"
+#include "codegen_util.h"
 #include "constexpr.h"
 #include "error.h"
 #include "parse.h"
@@ -745,7 +746,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     load2rax_from_raxaddr(codegen_output, expr->type);
     return;
   case NUM:
-    fprintf(codegen_output, "  movq $%d, %%rax\n", expr->num);
+    // fprintf(codegen_output, "  movq $%d, %%rax\n", expr->num);
+    mov_imm(codegen_output, &reg_rax, expr->type, expr->num);
     return;
   case STR:
     fprintf(codegen_output, "  lea rax, [rip + .LC%d]\n",
