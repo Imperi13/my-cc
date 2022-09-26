@@ -1059,8 +1059,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rax, expr->lhs->type));
       fprintf(codegen_output, "  sete %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
-    } else
-      not_implemented(__func__);
+    } else {
+      fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
+      fprintf(codegen_output, "  sete %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    }
   } break;
   case NOT_EQUAL: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
@@ -1071,8 +1074,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rax, expr->lhs->type));
       fprintf(codegen_output, "  setne %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
-    } else
-      not_implemented(__func__);
+    } else {
+      fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
+      fprintf(codegen_output, "  setne %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    }
   } break;
   case SMALLER: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
