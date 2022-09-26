@@ -13,6 +13,7 @@ static void codegen_var_definition(FILE *codegen_output, Tree *var);
 static void codegen_function(FILE *codegen_output, Tree *func);
 static void codegen_stmt(FILE *codegen_output, Tree *stmt);
 static void codegen_expr(FILE *codegen_output, Tree *expr);
+static void codegen_binary_operator(FILE *codegen_output, Tree *expr);
 static void codegen_addr(FILE *codegen_output, Tree *stmt);
 
 static void store2rdiaddr_local_var_initialize(FILE *codegen_output,
@@ -759,11 +760,36 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
       return;
     load2rax_from_raxaddr(codegen_output, expr->type);
     return;
-  default:
-    break;
-  }
 
-  // binary_op
+    // binary_op
+
+  case BIT_AND:
+  case BIT_XOR:
+  case BIT_OR:
+  case EQUAL:
+  case NOT_EQUAL:
+  case SMALLER:
+  case SMALLER_EQUAL:
+  case GREATER:
+  case GREATER_EQUAL:
+  case LSHIFT:
+  case RSHIFT:
+  case ADD:
+  case SUB:
+  case MUL:
+  case DIV:
+  case MOD: {
+    codegen_binary_operator(codegen_output, expr);
+    return;
+  }
+  default:
+    error("not expr");
+  }
+}
+
+void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
+  assert(expr, "expr is NULL");
+  assert(expr->lhs && expr->rhs, "not binary operator");
 
   codegen_stmt(codegen_output, expr->lhs);
   fprintf(codegen_output, "  push rax\n");
