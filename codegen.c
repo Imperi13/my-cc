@@ -252,7 +252,6 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
 }
 
 void codegen_stmt(FILE *codegen_output, Tree *stmt) {
-  Tree *cur;
   switch (stmt->kind) {
   case DECLARATION: {
     for (Declarator *cur = stmt->declarator; cur; cur = cur->next) {
@@ -294,13 +293,14 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   case CONTINUE:
     fprintf(codegen_output, "  jmp .Lloopend%d\n", stmt->label_number);
     return;
-  case COMPOUND_STMT:
-    cur = stmt->stmts;
+  case COMPOUND_STMT: {
+    Tree *cur = stmt->stmts;
     while (cur) {
       codegen_stmt(codegen_output, cur);
       cur = cur->next;
     }
     return;
+  }
   case WHILE:
     fprintf(codegen_output, ".Lbegin%d:\n", stmt->label_number);
     codegen_stmt(codegen_output, stmt->cond);
