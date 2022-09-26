@@ -51,6 +51,10 @@ extern Type type_short;
 extern Type type_char;
 extern Type type_bool;
 
+Type *newtype_ptr(Type *type);
+Type *newtype_struct(StructDef *st_def);
+Type *newtype_union(UnionDef *union_def);
+
 void builtin_type_init(Analyze *state);
 
 Type *gettype_decl_spec(DeclSpec *decl_spec);
@@ -59,11 +63,9 @@ char *getname_declarator(Declarator *declarator);
 Tree *getargs_declarator(Declarator *declarator);
 ArrayDeclarator *get_arr_declarator(Declarator *declarator);
 
-Type *newtype_ptr(Type *type);
-Type *newtype_struct(StructDef *st_def);
-Type *newtype_union(UnionDef *union_def);
-
 int integer_rank(Type *type);
+Type *get_integer_promoted_type(Type *integer_type);
+Type *get_arithmetic_converted_type(Type *lhs_type, Type *rhs_type);
 
 int type_size(Type *type);
 int type_alignment(Type *type);
