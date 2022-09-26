@@ -946,7 +946,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     mov_imm(codegen_output, &reg_rax, expr->type, expr->num);
   } break;
   case STR: {
-    fprintf(codegen_output, "  lea rax, [rip + .LC%d]\n",
+    fprintf(codegen_output, "  leaq .LC%d(%%rip), %%rax\n",
             expr->str_literal->id);
   } break;
   case VAR: {
