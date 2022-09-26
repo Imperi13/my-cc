@@ -849,7 +849,9 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  sar rax, cl\n");
     break;
   case ADD: {
-    if (is_scalar(expr->lhs->type) && is_scalar(expr->rhs->type)) {
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on arithmetic add");
       fprintf(codegen_output, "  add%c %s, %s\n", get_size_prefix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
