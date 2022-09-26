@@ -873,12 +873,16 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       not_implemented(__func__);
     break;
   case LSHIFT:
-    fprintf(codegen_output, "  mov rcx, rdi\n");
-    fprintf(codegen_output, "  sal rax, cl\n");
+    mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
+    fprintf(codegen_output, "  sal%c %%cl, %s\n",
+            get_size_suffix(expr->lhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case RSHIFT:
-    fprintf(codegen_output, "  mov rcx, rdi\n");
-    fprintf(codegen_output, "  sar rax, cl\n");
+    mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
+    fprintf(codegen_output, "  sar%c %%cl, %s\n",
+            get_size_suffix(expr->lhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case ADD: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
