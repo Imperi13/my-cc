@@ -690,12 +690,16 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     for (long i = call_arg_size - 1; i >= 0; i--) {
       Tree *arg = get_vector(expr->call_args_vector, i);
       codegen_stmt(codegen_output, arg);
-      fprintf(codegen_output, "  push rax\n");
+      push_reg(codegen_output, &reg_rax, arg->type);
     }
 
     codegen_stmt(codegen_output, expr->lhs);
-    for (int i = 0; i < ((call_arg_size > 6) ? 6 : call_arg_size); i++)
-      fprintf(codegen_output, "  pop %s\n", call_register64[i]);
+
+    for (int i = 0; i < ((call_arg_size > 6) ? 6 : call_arg_size); i++) {
+      Tree *arg = get_vector(expr->call_args_vector, i);
+      pop_reg(codegen_output, call_register[i], arg->type);
+    }
+
     fprintf(codegen_output, "  call *%%rax\n");
 
     // clean stack_arg
