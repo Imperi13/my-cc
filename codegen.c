@@ -260,46 +260,44 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
                                            cur->init_expr);
       }
     }
-  }
-    return;
-  case LABEL:
+  } break;
+  case LABEL: {
     fprintf(codegen_output, ".Llabel.%s:\n", stmt->label_name);
     codegen_stmt(codegen_output, stmt->lhs);
-    return;
-  case GOTO:
+  } break;
+  case GOTO: {
     fprintf(codegen_output, "  jmp .Llabel.%s\n", stmt->label_name);
-    return;
-  case CASE:
+  } break;
+  case CASE: {
     fprintf(codegen_output, ".Lswitch%d_case%d:\n", stmt->label_number,
             stmt->case_num);
     codegen_stmt(codegen_output, stmt->lhs);
-    return;
-  case DEFAULT:
+  } break;
+  case DEFAULT: {
     fprintf(codegen_output, ".Lswitch%d_default:\n", stmt->label_number);
     codegen_stmt(codegen_output, stmt->lhs);
-    return;
-  case RETURN:
+  } break;
+  case RETURN: {
     if (stmt->lhs)
       codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, "  movq %%rbp, %%rsp\n");
     fprintf(codegen_output, "  popq %%rbp\n");
     fprintf(codegen_output, "  ret\n");
-    return;
-  case BREAK:
+  } break;
+  case BREAK: {
     fprintf(codegen_output, "  jmp .Lend%d\n", stmt->label_number);
-    return;
-  case CONTINUE:
+  } break;
+  case CONTINUE: {
     fprintf(codegen_output, "  jmp .Lloopend%d\n", stmt->label_number);
-    return;
+  } break;
   case COMPOUND_STMT: {
     Tree *cur = stmt->stmts;
     while (cur) {
       codegen_stmt(codegen_output, cur);
       cur = cur->next;
     }
-    return;
-  }
-  case WHILE:
+  } break;
+  case WHILE: {
     fprintf(codegen_output, ".Lbegin%d:\n", stmt->label_number);
     codegen_stmt(codegen_output, stmt->cond);
     fprintf(codegen_output, "  cmp rax,0\n");
@@ -308,8 +306,8 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, ".Lloopend%d:\n", stmt->label_number);
     fprintf(codegen_output, "  jmp .Lbegin%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
-    return;
-  case DO_WHILE:
+  } break;
+  case DO_WHILE: {
     fprintf(codegen_output, ".Lbegin%d:\n", stmt->label_number);
     codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, ".Lloopend%d:\n", stmt->label_number);
@@ -317,8 +315,8 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  jne .Lbegin%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
-    return;
-  case FOR:
+  } break;
+  case FOR: {
     if (stmt->for_init)
       codegen_stmt(codegen_output, stmt->for_init);
     fprintf(codegen_output, ".Lbegin%d:\n", stmt->label_number);
@@ -331,8 +329,8 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
       codegen_stmt(codegen_output, stmt->for_update);
     fprintf(codegen_output, "  jmp .Lbegin%d\n", stmt->label_number);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
-    return;
-  case IF:
+  } break;
+  case IF: {
     codegen_stmt(codegen_output, stmt->cond);
     fprintf(codegen_output, "  cmp rax,0\n");
     fprintf(codegen_output, "  je .Lelse%d\n", stmt->label_number);
@@ -342,8 +340,8 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     if (stmt->rhs)
       codegen_stmt(codegen_output, stmt->rhs);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
-    return;
-  case SWITCH:
+  } break;
+  case SWITCH: {
     codegen_stmt(codegen_output, stmt->cond);
     for (Case *cur = stmt->cases; cur; cur = cur->next) {
       fprintf(codegen_output, "  cmp rax, %d\n", cur->case_num);
@@ -355,7 +353,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  jmp .Lend%d\n", stmt->label_number);
     codegen_stmt(codegen_output, stmt->lhs);
     fprintf(codegen_output, ".Lend%d:\n", stmt->label_number);
-    return;
+  } break;
 
     // codegen builtin_function here
   case BUILTIN_VA_START: {
@@ -374,8 +372,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
             current_function->stack_size + 0x30);
     fprintf(codegen_output, "  mov [rbp - %d], rax\n",
             va_obj->rbp_offset - 0x10);
-  }
-    return;
+  } break;
   case BUILTIN_VA_END: {
     Obj *va_obj = stmt->lhs->var_obj;
     fprintf(codegen_output, "  mov rax, 0x0\n");
@@ -383,8 +380,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  mov [rbp - %d],rax\n", va_obj->rbp_offset - 0x8);
     fprintf(codegen_output, "  mov [rbp - %d],rax\n",
             va_obj->rbp_offset - 0x10);
-  }
-    return;
+  } break;
 
     // expr
 
@@ -437,8 +433,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   case STR:
   case VAR: {
     codegen_expr(codegen_output, stmt);
-    return;
-  }
+  } break;
 
   default:
     error("invalid ast kind");
@@ -449,7 +444,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   assert(expr, "expr is NULL");
 
   switch (expr->kind) {
-  case ASSIGN:
+  case ASSIGN: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on ASSIGN");
 
@@ -458,9 +453,9 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     codegen_stmt(codegen_output, expr->rhs);
     fprintf(codegen_output, "  popq %%rdi\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+  } break;
 
-    return;
-  case ADD_ASSIGN:
+  case ADD_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -480,8 +475,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     // store
     fprintf(codegen_output, "  mov rdi,rsi\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    return;
-  case SUB_ASSIGN:
+  } break;
+  case SUB_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -498,8 +493,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     // store
     fprintf(codegen_output, "  mov rdi,rsi\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    return;
-  case MUL_ASSIGN:
+  } break;
+  case MUL_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -508,8 +503,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
     fprintf(codegen_output, "  imul rax, rdi\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case DIV_ASSIGN:
+  } break;
+  case DIV_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -519,8 +514,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  cqo\n");
     fprintf(codegen_output, "  idiv rdi\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case MOD_ASSIGN:
+  } break;
+  case MOD_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -531,8 +526,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  idiv rdi\n");
     fprintf(codegen_output, "  mov rax,rdx\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case AND_ASSIGN:
+  } break;
+  case AND_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -541,8 +536,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
     fprintf(codegen_output, "  and rax, rdi\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case OR_ASSIGN:
+  } break;
+  case OR_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -551,8 +546,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
     fprintf(codegen_output, "  or rax, rdi\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case XOR_ASSIGN:
+  } break;
+  case XOR_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -561,8 +556,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movsxd rax,[rsi]\n");
     fprintf(codegen_output, "  xor rax, rdi\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case LSHIFT_ASSIGN:
+  } break;
+  case LSHIFT_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -572,8 +567,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  mov rcx, rdi\n");
     fprintf(codegen_output, "  sal rax, cl\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case RSHIFT_ASSIGN:
+  } break;
+  case RSHIFT_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  push rax\n");
     codegen_stmt(codegen_output, expr->rhs);
@@ -583,8 +578,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  mov rcx, rdi\n");
     fprintf(codegen_output, "  sar rax, cl\n");
     fprintf(codegen_output, "  mov [rsi], eax\n");
-    return;
-  case CONDITIONAL:
+  } break;
+  case CONDITIONAL: {
     codegen_stmt(codegen_output, expr->cond);
     fprintf(codegen_output, "  cmp%c $0, %s\n",
             get_size_suffix(expr->cond->type),
@@ -597,12 +592,12 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, ".Lfalse%d:\n", expr->label_number);
     codegen_stmt(codegen_output, expr->rhs);
     fprintf(codegen_output, ".Lend%d:\n", expr->label_number);
-    return;
-  case COMMA:
+  } break;
+  case COMMA: {
     codegen_stmt(codegen_output, expr->lhs);
     codegen_stmt(codegen_output, expr->rhs);
-    return;
-  case LOGICAL_OR:
+  } break;
+  case LOGICAL_OR: {
     codegen_stmt(codegen_output, expr->lhs);
     fprintf(codegen_output, "  cmp%c $0, %s\n",
             get_size_suffix(expr->lhs->type),
@@ -618,8 +613,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, ".Ltrue%d:\n", expr->label_number);
     mov_imm(codegen_output, &reg_rax, &type_int, 1);
     fprintf(codegen_output, ".Lend%d:\n", expr->label_number);
-    return;
-  case LOGICAL_AND:
+  } break;
+  case LOGICAL_AND: {
     codegen_stmt(codegen_output, expr->lhs);
     fprintf(codegen_output, "  cmp%c $0, %s\n",
             get_size_suffix(expr->lhs->type),
@@ -635,21 +630,21 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, ".Lfalse%d:\n", expr->label_number);
     mov_imm(codegen_output, &reg_rax, &type_int, 0);
     fprintf(codegen_output, ".Lend%d:\n", expr->label_number);
-    return;
-  case LOGICAL_NOT:
+  } break;
+  case LOGICAL_NOT: {
     codegen_stmt(codegen_output, expr->lhs);
     fprintf(codegen_output, "  cmp%c $0, %s\n",
             get_size_suffix(expr->lhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
     fprintf(codegen_output, "  sete %%al\n");
     fprintf(codegen_output, "  movzbl %%al, %%eax\n");
-    return;
-  case BIT_NOT:
+  } break;
+  case BIT_NOT: {
     codegen_stmt(codegen_output, expr->lhs);
     fprintf(codegen_output, "  not%c %s\n", get_size_suffix(expr->lhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    return;
-  case CAST:
+  } break;
+  case CAST: {
     if (expr->type->kind == BOOL) {
       codegen_stmt(codegen_output, expr->lhs);
       fprintf(codegen_output, "  cmp rax,0\n");
@@ -657,25 +652,25 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     } else {
       codegen_stmt(codegen_output, expr->lhs);
     }
-    return;
-  case PLUS:
+  } break;
+  case PLUS: {
     codegen_stmt(codegen_output, expr->lhs);
-    return;
-  case MINUS:
+  } break;
+  case MINUS: {
     codegen_stmt(codegen_output, expr->lhs);
     fprintf(codegen_output, "  neg%c %s\n", get_size_suffix(expr->lhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    return;
-  case ADDR:
+  } break;
+  case ADDR: {
     codegen_addr(codegen_output, expr->lhs);
-    return;
-  case DEREF:
+  } break;
+  case DEREF: {
     codegen_stmt(codegen_output, expr->lhs);
     if (expr->type->kind == ARRAY || expr->type->kind == STRUCT ||
         expr->type->kind == UNION || expr->type->kind == FUNC)
-      return;
+      break;
     load2rax_from_raxaddr(codegen_output, expr->type);
-    return;
+  } break;
   case FUNC_CALL: {
     fprintf(codegen_output, "  movq %%rsp, %%r10\n");
     fprintf(codegen_output, "  andq $0xfffffffffffffff0, %%rsp\n");
@@ -712,9 +707,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
 
     fprintf(codegen_output, "  popq %%r10\n");
     fprintf(codegen_output, "  popq %%rsp\n");
-  }
-    return;
-  case POST_INCREMENT:
+  } break;
+  case POST_INCREMENT: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
@@ -727,8 +721,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  add rax, rdx\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
     fprintf(codegen_output, "  pop rax\n");
-    return;
-  case POST_DECREMENT:
+  } break;
+  case POST_DECREMENT: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  mov rdi,rax\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
@@ -741,36 +735,36 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  sub rax, rdx\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
     fprintf(codegen_output, "  pop rax\n");
-    return;
-  case DOT:
+  } break;
+  case DOT: {
     codegen_addr(codegen_output, expr);
     if (expr->type->kind == ARRAY || expr->type->kind == STRUCT ||
         expr->type->kind == UNION)
-      return;
+      break;
     load2rax_from_raxaddr(codegen_output, expr->type);
-    return;
-  case ARROW:
+  } break;
+  case ARROW: {
     codegen_addr(codegen_output, expr);
     if (expr->type->kind == ARRAY || expr->type->kind == STRUCT ||
         expr->type->kind == UNION)
-      return;
+      break;
     load2rax_from_raxaddr(codegen_output, expr->type);
-    return;
-  case NUM:
+  } break;
+  case NUM: {
     // fprintf(codegen_output, "  movq $%d, %%rax\n", expr->num);
     mov_imm(codegen_output, &reg_rax, expr->type, expr->num);
-    return;
-  case STR:
+  } break;
+  case STR: {
     fprintf(codegen_output, "  lea rax, [rip + .LC%d]\n",
             expr->str_literal->id);
-    return;
-  case VAR:
+  } break;
+  case VAR: {
     codegen_addr(codegen_output, expr);
     if (expr->type->kind == FUNC || expr->type->kind == ARRAY ||
         expr->type->kind == STRUCT || expr->type->kind == UNION)
-      return;
+      break;
     load2rax_from_raxaddr(codegen_output, expr->type);
-    return;
+  } break;
 
     // binary_op
 
@@ -791,8 +785,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   case DIV:
   case MOD: {
     codegen_binary_operator(codegen_output, expr);
-    return;
-  }
+  } break;
+
   default:
     error("not expr");
   }
@@ -812,28 +806,28 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   pop_reg(codegen_output, &reg_rax, expr->lhs->type);
 
   switch (expr->kind) {
-  case BIT_AND:
+  case BIT_AND: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on BIT_AND");
     fprintf(codegen_output, "  and%c %s, %s\n", get_size_suffix(expr->type),
             get_reg_alias(&reg_rdi, expr->rhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    break;
-  case BIT_XOR:
+  } break;
+  case BIT_XOR: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on BIT_XOR");
     fprintf(codegen_output, "  xor%c %s, %s\n", get_size_suffix(expr->type),
             get_reg_alias(&reg_rdi, expr->rhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    break;
-  case BIT_OR:
+  } break;
+  case BIT_OR: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on BIT_OR");
     fprintf(codegen_output, "  or%c %s, %s\n", get_size_suffix(expr->type),
             get_reg_alias(&reg_rdi, expr->rhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    break;
-  case EQUAL:
+  } break;
+  case EQUAL: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on EQUAL");
@@ -844,8 +838,8 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else
       not_implemented(__func__);
-    break;
-  case NOT_EQUAL:
+  } break;
+  case NOT_EQUAL: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on NOT_EQUAL");
@@ -856,8 +850,8 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else
       not_implemented(__func__);
-    break;
-  case SMALLER:
+  } break;
+  case SMALLER: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on SMALLER");
@@ -868,8 +862,8 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else
       not_implemented(__func__);
-    break;
-  case SMALLER_EQUAL:
+  } break;
+  case SMALLER_EQUAL: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on SMALLER_EQUAL");
@@ -880,8 +874,8 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else
       not_implemented(__func__);
-    break;
-  case GREATER:
+  } break;
+  case GREATER: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on GREATER");
@@ -892,8 +886,8 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else
       not_implemented(__func__);
-    break;
-  case GREATER_EQUAL:
+  } break;
+  case GREATER_EQUAL: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on GREATER_EQUAL");
@@ -904,19 +898,19 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else
       not_implemented(__func__);
-    break;
-  case LSHIFT:
+  } break;
+  case LSHIFT: {
     mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
     fprintf(codegen_output, "  sal%c %%cl, %s\n",
             get_size_suffix(expr->lhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    break;
-  case RSHIFT:
+  } break;
+  case RSHIFT: {
     mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
     fprintf(codegen_output, "  sar%c %%cl, %s\n",
             get_size_suffix(expr->lhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    break;
+  } break;
   case ADD: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
@@ -931,7 +925,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     } else
       error("invalid type pair");
   } break;
-  case SUB:
+  case SUB: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on arithmetic SUB");
@@ -942,23 +936,23 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       not_implemented(__func__);
     } else
       error("invalid type pair");
-    break;
-  case MUL:
+  } break;
+  case MUL: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on MUL");
     fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(expr->type),
             get_reg_alias(&reg_rdi, expr->rhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
-    break;
-  case DIV:
+  } break;
+  case DIV: {
     div_reg(codegen_output, expr->type);
-    break;
-  case MOD:
+  } break;
+  case MOD: {
     mod_reg(codegen_output, expr->type);
-    break;
+  } break;
+
   default:
     error("cannnot codegen binary_op");
-    break;
   }
 }
 
