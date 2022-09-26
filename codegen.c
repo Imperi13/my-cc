@@ -879,17 +879,20 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   } break;
   case POST_INCREMENT: {
     codegen_addr(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  mov rdi,rax\n");
+    fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    fprintf(codegen_output, "  push rax\n");
+    push_reg(codegen_output, &reg_rax, expr->lhs->type);
     if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  mov rdx, %d\n",
-              type_size(expr->lhs->type->ptr_to));
+      fprintf(codegen_output, "  add%c $%d, %s\n",
+              get_size_suffix(expr->lhs->type),
+              type_size(expr->lhs->type->ptr_to),
+              get_reg_alias(&reg_rax, expr->lhs->type));
     else
-      fprintf(codegen_output, "  mov rdx, 1\n");
-    fprintf(codegen_output, "  add rax, rdx\n");
+      fprintf(codegen_output, "  add%c $1, %s\n",
+              get_size_suffix(expr->lhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    fprintf(codegen_output, "  pop rax\n");
+    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
   } break;
   case POST_DECREMENT: {
     codegen_addr(codegen_output, expr->lhs);
