@@ -43,18 +43,23 @@ char *get_reg_alias(Register *reg, Type *type) {
 
 void push_reg(FILE *codegen_output, Register *reg, Type *type) {
   if (is_scalar(type)) {
-    fprintf(codegen_output, "  push%c %s\n", get_size_prefix(type),
-            get_reg_alias(reg, type));
+    fprintf(codegen_output, "  pushq %s\n", reg->alias[3]);
   } else
     not_implemented(__func__);
 }
 
 void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
   if (is_scalar(type)) {
-    fprintf(codegen_output, "  pop%c %s\n", get_size_prefix(type),
-            get_reg_alias(reg, type));
+    fprintf(codegen_output, "  popq %s\n", reg->alias[3]);
   } else
     not_implemented(__func__);
+}
+
+void mov_reg(FILE *codegen_output, Register *dst, Register *src, Type *type) {
+  assert(is_scalar(type), "not scalar type");
+
+  fprintf(codegen_output, "  mov%c %s, %s\n", get_size_prefix(type),
+          get_reg_alias(src, type), get_reg_alias(dst, type));
 }
 
 void mov_imm(FILE *codegen_output, Register *reg, Type *type, long imm_val) {

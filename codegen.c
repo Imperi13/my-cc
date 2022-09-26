@@ -792,10 +792,13 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   assert(expr->lhs && expr->rhs, "not binary operator");
 
   codegen_stmt(codegen_output, expr->lhs);
-  fprintf(codegen_output, "  push rax\n");
+  // fprintf(codegen_output, "  push rax\n");
+  push_reg(codegen_output, &reg_rax, expr->lhs->type);
   codegen_stmt(codegen_output, expr->rhs);
-  fprintf(codegen_output, "  mov rdi,rax\n");
-  fprintf(codegen_output, "  pop rax\n");
+  // fprintf(codegen_output, "  mov rdi,rax\n");
+  mov_reg(codegen_output, &reg_rdi, &reg_rax, expr->rhs->type);
+  // fprintf(codegen_output, "  pop rax\n");
+  pop_reg(codegen_output, &reg_rax, expr->lhs->type);
 
   switch (expr->kind) {
   case BIT_AND:
@@ -845,15 +848,18 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  mov rcx, rdi\n");
     fprintf(codegen_output, "  sar rax, cl\n");
     break;
-  case ADD:
-    if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  imul rdi,%d\n",
-              type_size(expr->lhs->type->ptr_to));
-    else if (expr->rhs->type->kind == PTR)
-      fprintf(codegen_output, "  imul rax,%d\n",
-              type_size(expr->rhs->type->ptr_to));
-    fprintf(codegen_output, "  add rax,rdi\n");
-    break;
+  case ADD: {
+    if (is_scalar(expr->lhs->type) && is_scalar(expr->rhs->type)) {
+      fprintf(codegen_output, "  add%c %s, %s\n", get_size_prefix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+    } else if (expr->lhs->type->kind == PTR) {
+      not_implemented(__func__);
+    } else if (expr->rhs->type->kind == PTR) {
+      not_implemented(__func__);
+    } else
+      error("invalid type pair");
+  } break;
   case SUB:
     if (expr->lhs->type->kind == PTR && is_integer(expr->rhs->type))
       fprintf(codegen_output, "  imul rdi, %d\n",
