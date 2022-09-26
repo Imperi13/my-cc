@@ -660,7 +660,8 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     return;
   case MINUS:
     codegen_stmt(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  neg rax\n");
+    fprintf(codegen_output, "  neg%c %s\n", get_size_suffix(expr->lhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     return;
   case ADDR:
     codegen_addr(codegen_output, expr->lhs);
