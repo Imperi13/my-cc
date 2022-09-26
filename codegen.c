@@ -1083,8 +1083,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rax, expr->lhs->type));
       fprintf(codegen_output, "  setl %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
-    } else
-      not_implemented(__func__);
+    } else {
+      fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
+      fprintf(codegen_output, "  setl %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    }
   } break;
   case SMALLER_EQUAL: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
@@ -1095,8 +1098,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rax, expr->lhs->type));
       fprintf(codegen_output, "  setle %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
-    } else
-      not_implemented(__func__);
+    } else {
+      fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
+      fprintf(codegen_output, "  setle %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    }
   } break;
   case GREATER: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
@@ -1107,8 +1113,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rax, expr->lhs->type));
       fprintf(codegen_output, "  setg %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
-    } else
-      not_implemented(__func__);
+    } else {
+      fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
+      fprintf(codegen_output, "  setg %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    }
   } break;
   case GREATER_EQUAL: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
@@ -1119,8 +1128,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rax, expr->lhs->type));
       fprintf(codegen_output, "  setge %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
-    } else
-      not_implemented(__func__);
+    } else {
+      fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
+      fprintf(codegen_output, "  setge %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    }
   } break;
   case LSHIFT: {
     mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
