@@ -236,7 +236,7 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
       fprintf(codegen_output, "  leaq -%d(%%rbp), %%rax\n",
               stmt->var_obj->rbp_offset);
     else if (stmt->var_obj->is_defined)
-      fprintf(codegen_output, "  lea rax, [rip + %s]\n",
+      fprintf(codegen_output, "  leaq %s(%%rip), %%rax\n",
               stmt->var_obj->obj_name);
     else
       fprintf(codegen_output, "  movq %s@GOTPCREL(%%rip), %%rax\n",
