@@ -233,7 +233,7 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
 
   if (stmt->kind == VAR) {
     if (!stmt->var_obj->is_global)
-      fprintf(codegen_output, "  lea rax, [rbp - %d]\n",
+      fprintf(codegen_output, "  leaq -%d(%%rbp), %%rax\n",
               stmt->var_obj->rbp_offset);
     else if (stmt->var_obj->is_defined)
       fprintf(codegen_output, "  lea rax, [rip + %s]\n",
@@ -457,14 +457,14 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
 
   switch (expr->kind) {
   case ASSIGN:
-    codegen_addr(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(codegen_output, expr->rhs);
-    fprintf(codegen_output, "  pop rdi\n");
-    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on ASSIGN");
 
-    if (is_integer(expr->lhs->type))
-      size_extend_rax(codegen_output, expr->lhs->type);
+    codegen_addr(codegen_output, expr->lhs);
+    fprintf(codegen_output, "  pushq %%rax\n");
+    codegen_stmt(codegen_output, expr->rhs);
+    fprintf(codegen_output, "  popq %%rdi\n");
+    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
 
     return;
   case ADD_ASSIGN:
@@ -973,38 +973,22 @@ void size_extend_rax(FILE *codegen_output, Type *a) {
 
 // raxレジスタで指しているアドレスからtype型の値をraxにロードする
 void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
-  if (type_size(type) == 8)
-    fprintf(codegen_output, "  mov rax,[rax]\n");
-  else if (type_size(type) == 4)
-    fprintf(codegen_output, "  movsx rax, DWORD PTR [rax]\n");
-  else if (type_size(type) == 2)
-    fprintf(codegen_output, "movsx rax, WORD PTR [rax]\n");
-  else if (type_size(type) == 1)
-    fprintf(codegen_output, "movsx rax, BYTE PTR [rax]\n");
-  else
-    not_implemented(__func__);
+  assert(is_scalar(type), "not scalar type");
+
+  fprintf(codegen_output, "  mov%c (%%rax), %s\n", get_size_suffix(type),
+          get_reg_alias(&reg_rax, type));
 }
 
 // raxレジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
 void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
-  if (type->kind == STRUCT || type->kind == UNION) {
+  if (is_scalar(type)) {
+    fprintf(codegen_output, "  mov%c %s, (%%rdi)\n", get_size_suffix(type),
+            get_reg_alias(&reg_rax, type));
+  } else if (type->kind == STRUCT || type->kind == UNION) {
+    not_implemented(__func__);
     fprintf(codegen_output, "  mov rsi, rax\n");
     fprintf(codegen_output, "  mov rcx, %d\n", type_size(type));
     fprintf(codegen_output, "  rep movsb\n");
-  } else if (type->kind == BOOL) {
-    fprintf(codegen_output, "  cmp rax,0\n");
-    fprintf(codegen_output, "  setne al\n");
-    fprintf(codegen_output, "  mov [rdi],al\n");
-  } else {
-    if (type_size(type) == 8)
-      fprintf(codegen_output, "  mov [rdi],rax\n");
-    else if (type_size(type) == 4)
-      fprintf(codegen_output, "  mov [rdi],eax\n");
-    else if (type_size(type) == 2)
-      fprintf(codegen_output, "  mov [rdi],ax\n");
-    else if (type_size(type) == 1)
-      fprintf(codegen_output, "  mov [rdi],al\n");
-    else
-      error("%s", __func__);
-  }
+  } else
+    error("invalid type");
 }
