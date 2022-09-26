@@ -825,26 +825,52 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movzb rax,al\n");
     break;
   case SMALLER:
-    assert(is_same_type(expr->lhs->type, expr->rhs->type),
-           "not same type on SMALLER");
-    fprintf(codegen_output, "  cmp rax,rdi\n");
-    fprintf(codegen_output, "  setl al\n");
-    fprintf(codegen_output, "  movzb rax,al\n");
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on SMALLER");
+      fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+      fprintf(codegen_output, "  setl %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    } else
+      not_implemented(__func__);
     break;
   case SMALLER_EQUAL:
-    fprintf(codegen_output, "  cmp rax,rdi\n");
-    fprintf(codegen_output, "  setle al\n");
-    fprintf(codegen_output, "  movzb rax,al\n");
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on SMALLER");
+      fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+      fprintf(codegen_output, "  setle %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    } else
+      not_implemented(__func__);
     break;
   case GREATER:
-    fprintf(codegen_output, "  cmp rdi,rax\n");
-    fprintf(codegen_output, "  setl al\n");
-    fprintf(codegen_output, "  movzb rax,al\n");
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on SMALLER");
+      fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+      fprintf(codegen_output, "  setg %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    } else
+      not_implemented(__func__);
     break;
   case GREATER_EQUAL:
-    fprintf(codegen_output, "  cmp rdi,rax\n");
-    fprintf(codegen_output, "  setle al\n");
-    fprintf(codegen_output, "  movzb rax,al\n");
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on SMALLER");
+      fprintf(codegen_output, "  cmp%c %s, %s\n", get_size_suffix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+      fprintf(codegen_output, "  setge %%al\n");
+      fprintf(codegen_output, "  movzbl %%al, %%eax\n");
+    } else
+      not_implemented(__func__);
     break;
   case LSHIFT:
     fprintf(codegen_output, "  mov rcx, rdi\n");
