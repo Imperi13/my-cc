@@ -134,17 +134,10 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   while (cur) {
     Obj *cur_obj = cur->declarator->def_obj;
     if (count < 6) {
-      if (type_size(cur_obj->type) == 8)
-        fprintf(codegen_output, "  mov [rbp - %d], %s\n", cur_obj->rbp_offset,
-                call_register64[count]);
-      else if (type_size(cur_obj->type) == 4)
-        fprintf(codegen_output, "  mov [rbp - %d], %s\n", cur_obj->rbp_offset,
-                call_register32[count]);
-      else if (type_size(cur_obj->type) == 1)
-        fprintf(codegen_output, "  mov [rbp - %d], %s\n", cur_obj->rbp_offset,
-                call_register8[count]);
-      else
-        not_implemented(__func__);
+      fprintf(codegen_output, "  mov%c %s, -%d(%%rbp)\n",
+              get_size_suffix(cur_obj->type),
+              get_reg_alias(call_register[count], cur_obj->type),
+              cur_obj->rbp_offset);
     } else {
       if (type_size(cur_obj->type) == 8) {
         fprintf(codegen_output, "  mov rax, [rbp + %d]\n",
