@@ -517,7 +517,22 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   } break;
   case SUB_ASSIGN: {
     if (expr->lhs->type->kind == PTR) {
-      not_implemented(__func__);
+      codegen_addr(codegen_output, expr->lhs);
+      fprintf(codegen_output, "  pushq %%rax\n");
+      codegen_stmt(codegen_output, expr->rhs);
+      mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+      fprintf(codegen_output, "  popq %%rsi\n");
+      fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+      load2rax_from_raxaddr(codegen_output, expr->lhs->type);
+
+      // lhs value: rax , rhs value: rdi
+      reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, &type_long);
+      fprintf(codegen_output, "  imulq $%d, %%rdi\n",
+              type_size(expr->lhs->type->ptr_to));
+      fprintf(codegen_output, "  subq %%rdi, %%rax\n");
+
+      fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
     } else {
       // arithmetic SUB_ASSIGN
 
