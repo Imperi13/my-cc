@@ -25,6 +25,9 @@ void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type);
 
 void mov_imm(FILE *codegen_output, Register *reg, Type *type, long imm_val);
 
+void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
+                      Type *dst_type);
+
 // arithmetic operator
 // lhs: rax, rhs:rdi
 // result save to rax

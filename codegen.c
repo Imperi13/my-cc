@@ -20,8 +20,6 @@ static void codegen_addr(FILE *codegen_output, Tree *stmt);
 static void store2rdiaddr_local_var_initialize(FILE *codegen_output,
                                                Type *var_type, Tree *init_val);
 
-static void size_extend_rax(FILE *codegen_output, Type *a);
-
 static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
 static void store2rdiaddr_from_rax(FILE *codegen_output, Type *type);
 
@@ -456,25 +454,41 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   } break;
 
   case ADD_ASSIGN: {
-    codegen_addr(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  push rax\n");
-    codegen_stmt(codegen_output, expr->rhs);
-    fprintf(codegen_output, "  mov rdi,rax\n");
-    fprintf(codegen_output, "  pop rsi\n");
-    fprintf(codegen_output, "  mov rax,rsi\n");
-    load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    // lhs:rax, rhs:rdi
-    if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  imul rdi,%d\n",
-              type_size(expr->lhs->type->ptr_to));
-    else if (expr->rhs->type->kind == PTR)
-      fprintf(codegen_output, "  imul rax,%d\n",
-              type_size(expr->rhs->type->ptr_to));
-    fprintf(codegen_output, "  add rax,rdi\n");
 
-    // store
-    fprintf(codegen_output, "  mov rdi,rsi\n");
-    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+    if (expr->lhs->type->kind == PTR) {
+      not_implemented(__func__);
+    } else {
+      // arithmetic ADD_ASSIGN
+
+      Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
+      Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
+      Type *result_type =
+          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+
+      codegen_addr(codegen_output, expr->lhs);
+      fprintf(codegen_output, "  pushq %%rax\n");
+      codegen_stmt(codegen_output, expr->rhs);
+      mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+      fprintf(codegen_output, "  popq %%rsi\n");
+      fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+      load2rax_from_raxaddr(codegen_output, expr->lhs->type);
+
+      // lhs value: rax , rhs value: rdi
+      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type,
+                       promoted_ltype);
+      reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type,
+                       promoted_rtype);
+      reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
+      reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+
+      fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(result_type),
+              get_reg_alias(&reg_rdi, result_type),
+              get_reg_alias(&reg_rax, result_type));
+
+      reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+      fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+    }
   } break;
   case SUB_ASSIGN: {
     codegen_addr(codegen_output, expr->lhs);
@@ -954,22 +968,6 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   default:
     error("cannnot codegen binary_op");
   }
-}
-
-void size_extend_rax(FILE *codegen_output, Type *a) {
-  if (!is_integer(a))
-    error("cannot size-extend");
-
-  if (type_size(a) == 8)
-    return;
-  else if (type_size(a) == 4)
-    fprintf(codegen_output, "  movsx rax, eax\n");
-  else if (type_size(a) == 2)
-    fprintf(codegen_output, "  movsx rax, ax\n");
-  else if (type_size(a) == 1)
-    fprintf(codegen_output, "  movsx rax, al\n");
-  else
-    error("invalid size");
 }
 
 // raxレジスタで指しているアドレスからtype型の値をraxにロードする

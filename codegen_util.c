@@ -76,6 +76,18 @@ void mov_imm(FILE *codegen_output, Register *reg, Type *type, long imm_val) {
           get_reg_alias(reg, type));
 }
 
+void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
+                      Type *dst_type) {
+  assert(is_integer(src_type) && is_integer(dst_type), "not integer type");
+
+  if (type_size(dst_type) <= type_size(src_type))
+    return;
+
+  fprintf(codegen_output, "  movs%c%c %s, %s\n", get_size_suffix(src_type),
+          get_size_suffix(dst_type), get_reg_alias(reg, src_type),
+          get_reg_alias(reg, dst_type));
+}
+
 void div_reg(FILE *codegen_output, Type *type) {
   assert(is_arithmetic(type), "not arighmetic type");
 
