@@ -172,9 +172,9 @@ void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
       init_val->kind == STR) {
     not_implemented(__func__);
   } else if (init_val->kind != INITIALIZE_LIST) {
-    fprintf(codegen_output, "  push rdi\n");
+    fprintf(codegen_output, "  pushq %%rdi\n");
     codegen_stmt(codegen_output, init_val);
-    fprintf(codegen_output, "  pop rdi\n");
+    fprintf(codegen_output, "  popq %%rdi\n");
     store2rdiaddr_from_rax(codegen_output, var_type);
   } else if (var_type->kind == ARRAY) {
     int cnt = 0;
@@ -252,7 +252,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   case DECLARATION: {
     for (Declarator *cur = stmt->declarator; cur; cur = cur->next) {
       if (cur && cur->init_expr) {
-        fprintf(codegen_output, "  lea rdi, [rbp - %d]\n",
+        fprintf(codegen_output, "  leaq -%d(%%rbp), %%rdi\n",
                 cur->def_obj->rbp_offset);
         store2rdiaddr_local_var_initialize(codegen_output, cur->def_obj->type,
                                            cur->init_expr);
