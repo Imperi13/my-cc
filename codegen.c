@@ -1127,10 +1127,16 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-    } else if (expr->lhs->type->kind == PTR) {
+    } else if (expr->lhs->type->kind == PTR && is_integer(expr->rhs->type)) {
       fprintf(codegen_output, "  imulq $%d, %%rdi\n",
               type_size(expr->lhs->type->ptr_to));
       fprintf(codegen_output, "  subq %%rdi, %%rax\n");
+    } else if (expr->lhs->type->kind == PTR && expr->rhs->type->kind == PTR) {
+      fprintf(codegen_output, "  subq %%rdi, %%rax\n");
+      fprintf(codegen_output, "  movq $%d, %%rdi\n",
+              type_size(expr->lhs->type->ptr_to));
+      fprintf(codegen_output, "  cqto\n");
+      fprintf(codegen_output, "  idivq %%rdi\n");
     } else
       error("invalid type pair");
   } break;
