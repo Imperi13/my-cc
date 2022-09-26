@@ -1093,9 +1093,13 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
     } else if (expr->lhs->type->kind == PTR) {
-      not_implemented(__func__);
+      fprintf(codegen_output, "  imulq $%d, %%rdi\n",
+              type_size(expr->lhs->type->ptr_to));
+      fprintf(codegen_output, "  addq %%rdi, %%rax\n");
     } else if (expr->rhs->type->kind == PTR) {
-      not_implemented(__func__);
+      fprintf(codegen_output, "  imulq $%d, %%rax\n",
+              type_size(expr->rhs->type->ptr_to));
+      fprintf(codegen_output, "  addq %%rdi, %%rax\n");
     } else
       error("invalid type pair");
   } break;
