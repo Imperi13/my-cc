@@ -14,6 +14,8 @@ extern Register reg_rcx;
 extern Register reg_r8;
 extern Register reg_r9;
 
+extern Register *call_register[6];
+
 char get_size_suffix(Type *type);
 char *get_reg_alias(Register *reg, Type *type);
 
