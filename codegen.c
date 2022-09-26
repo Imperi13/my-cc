@@ -802,10 +802,18 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
 
   switch (expr->kind) {
   case BIT_AND:
-    fprintf(codegen_output, "  and rax, rdi\n");
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on BIT_AND");
+    fprintf(codegen_output, "  and%c %s, %s\n", get_size_suffix(expr->type),
+            get_reg_alias(&reg_rdi, expr->rhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case BIT_XOR:
-    fprintf(codegen_output, "  xor rax, rdi\n");
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on BIT_XOR");
+    fprintf(codegen_output, "  xor%c %s, %s\n", get_size_suffix(expr->type),
+            get_reg_alias(&reg_rdi, expr->rhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case BIT_OR:
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
