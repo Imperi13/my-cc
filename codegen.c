@@ -808,7 +808,11 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  xor rax, rdi\n");
     break;
   case BIT_OR:
-    fprintf(codegen_output, "  or rax, rdi\n");
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on bit or");
+    fprintf(codegen_output, "  or%c %s, %s\n", get_size_suffix(expr->type),
+            get_reg_alias(&reg_rdi, expr->rhs->type),
+            get_reg_alias(&reg_rax, expr->lhs->type));
     break;
   case EQUAL:
     fprintf(codegen_output, "  cmp rax,rdi\n");
@@ -852,7 +856,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on arithmetic add");
-      fprintf(codegen_output, "  add%c %s, %s\n", get_size_prefix(expr->type),
+      fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
     } else if (expr->lhs->type->kind == PTR) {
@@ -866,7 +870,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on arithmetic sub");
-      fprintf(codegen_output, "  sub%c %s, %s\n", get_size_prefix(expr->type),
+      fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(expr->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
     } else if (expr->lhs->type->kind == PTR) {
@@ -877,7 +881,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case MUL:
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on mul");
-    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_prefix(expr->type),
+    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(expr->type),
             get_reg_alias(&reg_rdi, expr->rhs->type),
             get_reg_alias(&reg_rax, expr->lhs->type));
     break;
