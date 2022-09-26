@@ -863,16 +863,16 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
       error("invalid type pair");
   } break;
   case SUB:
-    if (expr->lhs->type->kind == PTR && is_integer(expr->rhs->type))
-      fprintf(codegen_output, "  imul rdi, %d\n",
-              type_size(expr->lhs->type->ptr_to));
-    fprintf(codegen_output, "  sub rax,rdi\n");
-    if (expr->lhs->type->kind == PTR && expr->rhs->type->kind == PTR) {
-      fprintf(codegen_output, "  mov rdi, %d\n",
-              type_size(expr->lhs->type->ptr_to));
-      fprintf(codegen_output, "  cqo\n");
-      fprintf(codegen_output, "  idiv rdi\n");
-    }
+    if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
+      assert(is_same_type(expr->lhs->type, expr->rhs->type),
+             "not same type on arithmetic sub");
+      fprintf(codegen_output, "  sub%c %s, %s\n", get_size_prefix(expr->type),
+              get_reg_alias(&reg_rdi, expr->rhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+    } else if (expr->lhs->type->kind == PTR) {
+      not_implemented(__func__);
+    } else
+      error("invalid type pair");
     break;
   case MUL:
     fprintf(codegen_output, "  imul rax,rdi\n");
