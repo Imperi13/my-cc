@@ -239,7 +239,7 @@ void codegen_addr(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  addq $%d, %%rax\n", stmt->member->offset);
   } else if (stmt->kind == ARROW) {
     codegen_stmt(codegen_output, stmt->lhs);
-    fprintf(codegen_output, "  add rax, %d\n", stmt->member->offset);
+    fprintf(codegen_output, "  addq $%d, %%rax\n", stmt->member->offset);
   } else {
     not_implemented(__func__);
   }
