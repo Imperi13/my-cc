@@ -32,8 +32,6 @@ Obj *current_function = NULL;
 
 void codegen_translation_unit(FILE *codegen_output, Tree *head) {
 
-  fprintf(codegen_output, ".intel_syntax noprefix\n");
-
   for (StrLiteral *now = str_literals; now; now = now->next) {
     codegen_str_literal(codegen_output, now);
   }
@@ -120,9 +118,9 @@ void codegen_function(FILE *codegen_output, Tree *func) {
     fprintf(codegen_output, ".globl %s\n", current_function->obj_name);
   fprintf(codegen_output, "%s:\n", current_function->obj_name);
 
-  fprintf(codegen_output, "  push rbp\n");
-  fprintf(codegen_output, "  mov rbp, rsp\n");
-  fprintf(codegen_output, "  sub rsp, %d\n", current_function->stack_size);
+  fprintf(codegen_output, "  pushq %%rbp\n");
+  fprintf(codegen_output, "  movq %%rsp, %%rbp\n");
+  fprintf(codegen_output, "  subq $%d, %%rsp\n", current_function->stack_size);
 
   if (func->declarator->has_variable_arg) {
     for (int i = 5; i >= 0; i--) {
@@ -168,8 +166,8 @@ void codegen_function(FILE *codegen_output, Tree *func) {
 
   codegen_stmt(codegen_output, func->func_body);
 
-  fprintf(codegen_output, "  mov rsp, rbp\n");
-  fprintf(codegen_output, "  pop rbp\n");
+  fprintf(codegen_output, "  movq %%rbp, %%rsp\n");
+  fprintf(codegen_output, "  popq %%rbp\n");
   fprintf(codegen_output, "  ret\n");
 
   current_function = NULL;
@@ -289,8 +287,8 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   case RETURN:
     if (stmt->lhs)
       codegen_stmt(codegen_output, stmt->lhs);
-    fprintf(codegen_output, "  mov rsp, rbp\n");
-    fprintf(codegen_output, "  pop rbp\n");
+    fprintf(codegen_output, "  movq %%rbp, %%rsp\n");
+    fprintf(codegen_output, "  popq %%rbp\n");
     fprintf(codegen_output, "  ret\n");
     return;
   case BREAK:
@@ -747,7 +745,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     load2rax_from_raxaddr(codegen_output, expr->type);
     return;
   case NUM:
-    fprintf(codegen_output, "  mov rax, %d\n", expr->num);
+    fprintf(codegen_output, "  movq $%d, %%rax\n", expr->num);
     return;
   case STR:
     fprintf(codegen_output, "  lea rax, [rip + .LC%d]\n",
