@@ -696,6 +696,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (!is_integer(ast->cond->type))
       error_token(ast->cond->error_token,
                   "controlling expr is not integer type");
+    add_implicit_integer_promotion(ast->cond);
 
     push_label(&state->break_labels, ast->label_number);
     push_switch(&state->switch_stmts, ast);

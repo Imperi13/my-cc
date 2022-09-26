@@ -350,7 +350,9 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
   case SWITCH: {
     codegen_stmt(codegen_output, stmt->cond);
     for (Case *cur = stmt->cases; cur; cur = cur->next) {
-      fprintf(codegen_output, "  cmp rax, %d\n", cur->case_num);
+      fprintf(codegen_output, "  cmp%c $%d, %s\n",
+              get_size_suffix(stmt->cond->type), cur->case_num,
+              get_reg_alias(&reg_rax, stmt->cond->type));
       fprintf(codegen_output, "  je .Lswitch%d_case%d\n", stmt->label_number,
               cur->case_num);
     }
