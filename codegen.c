@@ -796,7 +796,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   push_reg(codegen_output, &reg_rax, expr->lhs->type);
   codegen_stmt(codegen_output, expr->rhs);
   // fprintf(codegen_output, "  mov rdi,rax\n");
-  mov_reg(codegen_output, &reg_rdi, &reg_rax, expr->rhs->type);
+  mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
   // fprintf(codegen_output, "  pop rax\n");
   pop_reg(codegen_output, &reg_rax, expr->lhs->type);
 

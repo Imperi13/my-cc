@@ -59,7 +59,7 @@ void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
     not_implemented(__func__);
 }
 
-void mov_reg(FILE *codegen_output, Register *dst, Register *src, Type *type) {
+void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type) {
   assert(is_scalar(type), "not scalar type");
 
   fprintf(codegen_output, "  mov%c %s, %s\n", get_size_suffix(type),
