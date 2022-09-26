@@ -593,7 +593,9 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     return;
   case CONDITIONAL:
     codegen_stmt(codegen_output, expr->cond);
-    fprintf(codegen_output, "  cmp rax,0\n");
+    fprintf(codegen_output, "  cmp%c $0, %s\n",
+            get_size_suffix(expr->cond->type),
+            get_reg_alias(&reg_rax, expr->cond->type));
     fprintf(codegen_output, "  jne .Ltrue%d\n", expr->label_number);
     fprintf(codegen_output, "  jmp .Lfalse%d\n", expr->label_number);
     fprintf(codegen_output, ".Ltrue%d:\n", expr->label_number);
