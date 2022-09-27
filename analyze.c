@@ -696,6 +696,7 @@ void analyze_stmt(Tree *ast, Analyze *state) {
     if (!is_integer(ast->cond->type))
       error_token(ast->cond->error_token,
                   "controlling expr is not integer type");
+    add_implicit_integer_promotion(ast->cond);
 
     push_label(&state->break_labels, ast->label_number);
     push_switch(&state->switch_stmts, ast);
@@ -1505,20 +1506,11 @@ void push_lvar_scope(Analyze *state) {
 }
 
 void add_implicit_integer_promotion(Tree *ast) {
-  Type *integer_type = ast->type;
-  if (!is_integer(integer_type))
+  if (!is_integer(ast->type))
     return;
 
-  if (integer_type->kind == LONG || integer_type->kind == LONGLONG)
-    return;
-
-  Tree *new_node = calloc(1, sizeof(Tree));
-  memcpy(new_node, ast, sizeof(Tree));
-
-  ast->kind = CAST;
-  ast->is_implicit = true;
-  ast->lhs = new_node;
-  ast->type = &type_int;
+  Type *promoted_type = get_integer_promoted_type(ast->type);
+  add_cast_stmt(ast, promoted_type);
 }
 
 void add_cast_stmt(Tree *ast, Type *cast_type) {
@@ -1538,27 +1530,9 @@ void add_cast_stmt(Tree *ast, Type *cast_type) {
 }
 
 void add_arithmetic_conversions(Tree *lhs, Tree *rhs) {
-  Type *ltype = lhs->type;
-  Type *rtype = rhs->type;
-
-  if (!is_integer(ltype) || !is_integer(rtype))
-    error("not integer");
-
-  if (integer_rank(ltype) >= integer_rank(rtype)) {
-    Tree *new_node = calloc(1, sizeof(Tree));
-    memcpy(new_node, rhs, sizeof(Tree));
-    rhs->kind = CAST;
-    rhs->is_implicit = true;
-    rhs->lhs = new_node;
-    rhs->type = ltype;
-  } else {
-    Tree *new_node = calloc(1, sizeof(Tree));
-    memcpy(new_node, lhs, sizeof(Tree));
-    lhs->kind = CAST;
-    lhs->is_implicit = true;
-    lhs->lhs = new_node;
-    lhs->type = rtype;
-  }
+  Type *promoted_type = get_arithmetic_converted_type(lhs->type, rhs->type);
+  add_cast_stmt(lhs, promoted_type);
+  add_cast_stmt(rhs, promoted_type);
 }
 
 void pop_lvar_scope(Analyze *state) { state->locals = state->locals->next; }

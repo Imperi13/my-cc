@@ -169,6 +169,46 @@ ArrayDeclarator *get_arr_declarator(Declarator *declarator) {
   return declarator->arr_decl;
 }
 
+int integer_rank(Type *type) {
+  if (!is_integer(type))
+    error("not integer");
+
+  if (type->kind == BOOL)
+    return 0;
+  else if (type->kind == CHAR)
+    return 1;
+  else if (type->kind == SHORT)
+    return 2;
+  else if (type->kind == INT)
+    return 3;
+  else if (type->kind == LONG)
+    return 4;
+  else if (type->kind == LONGLONG)
+    return 5;
+
+  error("unreachable");
+}
+
+Type *get_integer_promoted_type(Type *integer_type) {
+  assert(is_integer(integer_type), "not integer type");
+
+  if (integer_type->kind == INT || integer_type->kind == LONG ||
+      integer_type->kind == LONGLONG)
+    return integer_type;
+
+  return &type_int;
+}
+
+Type *get_arithmetic_converted_type(Type *lhs_type, Type *rhs_type) {
+  assert(is_arithmetic(lhs_type) && is_arithmetic(rhs_type),
+         "not arithmetic type");
+
+  if (integer_rank(lhs_type) >= integer_rank(rhs_type))
+    return lhs_type;
+  else
+    return rhs_type;
+}
+
 Type *newtype_ptr(Type *type) {
   Type *nt = calloc(1, sizeof(Type));
   nt->kind = PTR;
@@ -188,26 +228,6 @@ Type *newtype_union(UnionDef *union_def) {
   nt->kind = UNION;
   nt->union_def = union_def;
   return nt;
-}
-
-int integer_rank(Type *type) {
-  if (!is_integer(type))
-    error("not integer");
-
-  if (type->kind == BOOL)
-    return 0;
-  else if (type->kind == CHAR)
-    return 1;
-  else if (type->kind == SHORT)
-    return 2;
-  else if (type->kind == INT)
-    return 3;
-  else if (type->kind == LONG)
-    return 4;
-  else if (type->kind == LONGLONG)
-    return 5;
-
-  error("unreachable");
 }
 
 int type_size(Type *type) {
@@ -313,9 +333,9 @@ bool is_same_type(Type *a, Type *b) {
 bool is_compatible(Type *a, Tree *b) {
   if (is_same_type(a, b->type))
     return true;
-  else if (is_integer(a) && is_integer(b->type))
-    return true;
   else if (a->kind == BOOL && is_scalar(b->type))
+    return true;
+  else if (is_integer(a) && is_integer(b->type))
     return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
