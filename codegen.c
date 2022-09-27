@@ -23,10 +23,6 @@ static void store2rdiaddr_local_var_initialize(FILE *codegen_output,
 static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
 static void store2rdiaddr_from_rax(FILE *codegen_output, Type *type);
 
-const char *call_register64[6] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-const char *call_register32[6] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
-const char *call_register8[6] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
-
 Obj *current_function = NULL;
 
 void codegen_translation_unit(FILE *codegen_output, Tree *head) {
@@ -941,17 +937,20 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   } break;
   case POST_DECREMENT: {
     codegen_addr(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  mov rdi,rax\n");
+    fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    fprintf(codegen_output, "  push rax\n");
+    push_reg(codegen_output, &reg_rax, expr->lhs->type);
     if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  mov rdx, %d\n",
-              type_size(expr->lhs->type->ptr_to));
+      fprintf(codegen_output, "  sub%c $%d, %s\n",
+              get_size_suffix(expr->lhs->type),
+              type_size(expr->lhs->type->ptr_to),
+              get_reg_alias(&reg_rax, expr->lhs->type));
     else
-      fprintf(codegen_output, "  mov rdx, 1\n");
-    fprintf(codegen_output, "  sub rax, rdx\n");
+      fprintf(codegen_output, "  sub%c $1, %s\n",
+              get_size_suffix(expr->lhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    fprintf(codegen_output, "  pop rax\n");
+    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
   } break;
   case DOT: {
     codegen_addr(codegen_output, expr);
