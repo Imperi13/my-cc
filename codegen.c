@@ -185,7 +185,7 @@ void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
     fprintf(codegen_output, "  popq %%rdi\n");
 
   } else if (var_type->kind == STRUCT) {
-    fprintf(codegen_output, "  push rdi\n");
+    fprintf(codegen_output, "  pushq %%rdi\n");
 
     Member *mem_cur = var_type->st_def->members;
 
@@ -194,15 +194,15 @@ void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
         while (strcmp(cur->member_name, mem_cur->member_name) != 0)
           mem_cur = mem_cur->next;
       }
-      fprintf(codegen_output, "  pop rdi\n");
-      fprintf(codegen_output, "  push rdi\n");
-      fprintf(codegen_output, "  add rdi, %d\n", mem_cur->offset);
+      fprintf(codegen_output, "  popq %%rdi\n");
+      fprintf(codegen_output, "  pushq %%rdi\n");
+      fprintf(codegen_output, "  addq $%d, %%rdi\n", mem_cur->offset);
       store2rdiaddr_local_var_initialize(codegen_output, mem_cur->type,
                                          cur->init_val);
       mem_cur = mem_cur->next;
     }
 
-    fprintf(codegen_output, "  pop rdi\n");
+    fprintf(codegen_output, "  popq %%rdi\n");
 
   } else if (var_type->kind == UNION) {
     not_implemented(__func__);
