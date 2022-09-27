@@ -51,15 +51,17 @@ char *get_reg_alias(Register *reg, Type *type) {
 void push_reg(FILE *codegen_output, Register *reg, Type *type) {
   if (is_scalar(type)) {
     fprintf(codegen_output, "  pushq %s\n", reg->alias[3]);
-  } else
-    not_implemented(__func__);
+  } else {
+    fprintf(codegen_output, "  pushq %s\n", reg->alias[3]);
+  }
 }
 
 void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
   if (is_scalar(type)) {
     fprintf(codegen_output, "  popq %s\n", reg->alias[3]);
-  } else
-    not_implemented(__func__);
+  } else {
+    fprintf(codegen_output, "  popq %s\n", reg->alias[3]);
+  }
 }
 
 void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type) {
