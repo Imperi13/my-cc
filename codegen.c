@@ -123,7 +123,7 @@ void codegen_function(FILE *codegen_output, Tree *func) {
 
   if (func->declarator->has_variable_arg) {
     for (int i = 5; i >= 0; i--) {
-      fprintf(codegen_output, "  push %s\n", call_register64[i]);
+      push_reg(codegen_output, call_register[i], &type_long);
     }
   }
 
@@ -368,25 +368,27 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     Obj *va_obj = stmt->lhs->var_obj;
     Obj *last_para = stmt->rhs->var_obj;
 
-    fprintf(codegen_output, "  mov eax,%d\n", last_para->nth_arg * 0x8);
-    fprintf(codegen_output, "  mov [rbp - %d], eax\n", va_obj->rbp_offset);
-    fprintf(codegen_output, "  mov eax,0x30\n");
-    fprintf(codegen_output, "  mov [rbp - %d], eax\n",
+    fprintf(codegen_output, "  movl $%d, %%eax\n", last_para->nth_arg * 0x8);
+    fprintf(codegen_output, "  movl %%eax, -%d(%%rbp)\n", va_obj->rbp_offset);
+    // not use float,so fix 0x30
+    fprintf(codegen_output, "  movl $0x30, %%eax\n");
+    fprintf(codegen_output, "  movl %%eax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x4);
-    fprintf(codegen_output, "  lea rax,[rbp + 0x10]\n");
-    fprintf(codegen_output, "  mov [rbp - %d], rax\n",
+    fprintf(codegen_output, "  leaq 0x10(%%rbp), %%rax\n");
+    fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x8);
-    fprintf(codegen_output, "  lea rax,[rbp - %d]\n",
+    fprintf(codegen_output, "  leaq -%d(%%rbp), %%rax\n",
             current_function->stack_size + 0x30);
-    fprintf(codegen_output, "  mov [rbp - %d], rax\n",
+    fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x10);
   } break;
   case BUILTIN_VA_END: {
     Obj *va_obj = stmt->lhs->var_obj;
-    fprintf(codegen_output, "  mov rax, 0x0\n");
-    fprintf(codegen_output, "  mov [rbp - %d],rax\n", va_obj->rbp_offset);
-    fprintf(codegen_output, "  mov [rbp - %d],rax\n", va_obj->rbp_offset - 0x8);
-    fprintf(codegen_output, "  mov [rbp - %d],rax\n",
+    fprintf(codegen_output, "  movq $0x0, %%rax\n");
+    fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n", va_obj->rbp_offset);
+    fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
+            va_obj->rbp_offset - 0x8);
+    fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x10);
   } break;
 
