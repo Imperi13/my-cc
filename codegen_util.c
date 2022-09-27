@@ -104,6 +104,9 @@ void div_reg(FILE *codegen_output, Type *type) {
     if (type_size(type) == 4) {
       fprintf(codegen_output, "  cltd\n");
       fprintf(codegen_output, "  idivl %%edi\n");
+    } else if (type_size(type) == 8) {
+      fprintf(codegen_output, "  cqto\n");
+      fprintf(codegen_output, "  idivq %%rdi\n");
     } else
       not_implemented(__func__);
   } else
@@ -117,6 +120,10 @@ void mod_reg(FILE *codegen_output, Type *type) {
     fprintf(codegen_output, "  cltd\n");
     fprintf(codegen_output, "  idivl %%edi\n");
     fprintf(codegen_output, "  movl %%edx, %%eax\n");
+  } else if (type_size(type) == 8) {
+    fprintf(codegen_output, "  cqto\n");
+    fprintf(codegen_output, "  idivq %%rdi\n");
+    fprintf(codegen_output, "  movl %%rdx, %%rax\n");
   } else
     not_implemented(__func__);
 }
