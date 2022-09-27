@@ -170,19 +170,19 @@ void store2rdiaddr_local_var_initialize(FILE *codegen_output, Type *var_type,
     store2rdiaddr_from_rax(codegen_output, var_type);
   } else if (var_type->kind == ARRAY) {
     int cnt = 0;
-    fprintf(codegen_output, "  push rdi\n");
+    fprintf(codegen_output, "  pushq %%rdi\n");
 
     for (InitializeList *cur = init_val->init_list; cur; cur = cur->next) {
-      fprintf(codegen_output, "  pop rdi\n");
-      fprintf(codegen_output, "  push rdi\n");
-      fprintf(codegen_output, "  add rdi, %d\n",
+      fprintf(codegen_output, "  popq %%rdi\n");
+      fprintf(codegen_output, "  pushq %%rdi\n");
+      fprintf(codegen_output, "  addq $%d, %%rdi\n",
               cnt * type_size(var_type->ptr_to));
       store2rdiaddr_local_var_initialize(codegen_output, var_type->ptr_to,
                                          cur->init_val);
       cnt++;
     }
 
-    fprintf(codegen_output, "  pop rdi\n");
+    fprintf(codegen_output, "  popq %%rdi\n");
 
   } else if (var_type->kind == STRUCT) {
     fprintf(codegen_output, "  push rdi\n");
