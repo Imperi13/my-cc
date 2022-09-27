@@ -137,20 +137,12 @@ void codegen_function(FILE *codegen_output, Tree *func) {
               get_reg_alias(call_register[count], cur_obj->type),
               cur_obj->rbp_offset);
     } else {
-      if (type_size(cur_obj->type) == 8) {
-        fprintf(codegen_output, "  mov rax, [rbp + %d]\n",
-                0x10 + 0x8 * (count - 6));
-        fprintf(codegen_output, "  mov [rbp - %d], rax\n", cur_obj->rbp_offset);
-      } else if (type_size(cur_obj->type) == 4) {
-        fprintf(codegen_output, "  mov eax, [rbp + %d]\n",
-                0x10 + 0x8 * (count - 6));
-        fprintf(codegen_output, "  mov [rbp - %d], eax\n", cur_obj->rbp_offset);
-      } else if (type_size(cur_obj->type) == 1) {
-        fprintf(codegen_output, "  mov al, [rbp + %d]\n",
-                0x10 + 0x8 * (count - 6));
-        fprintf(codegen_output, "  mov [rbp - %d], al\n", cur_obj->rbp_offset);
-      } else
-        not_implemented(__func__);
+      fprintf(codegen_output, "  mov%c %d(%%rbp), %s\n",
+              get_size_suffix(cur_obj->type), 0x10 + 0x8 * (count - 6),
+              get_reg_alias(&reg_rax, cur_obj->type));
+      fprintf(codegen_output, "  mov%c %s, -%d(%%rbp)\n",
+              get_size_suffix(cur_obj->type),
+              get_reg_alias(&reg_rax, cur_obj->type), cur_obj->rbp_offset);
     }
     count++;
     cur = cur->next;
@@ -903,7 +895,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
 
     bool need_padding = (call_arg_size > 6) && (call_arg_size % 2 == 1);
     if (need_padding)
-      fprintf(codegen_output, "  push 0\n");
+      fprintf(codegen_output, "  pushq $0\n");
 
     for (long i = call_arg_size - 1; i >= 0; i--) {
       Tree *arg = get_vector(expr->call_args_vector, i);
@@ -922,10 +914,10 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
 
     // clean stack_arg
     for (int i = 0; i < ((call_arg_size > 6) ? call_arg_size - 6 : 0); i++)
-      fprintf(codegen_output, " pop r10\n");
+      fprintf(codegen_output, " popq %%r10\n");
 
     if (need_padding)
-      fprintf(codegen_output, "  pop r10\n");
+      fprintf(codegen_output, "  popq %%r10\n");
 
     fprintf(codegen_output, "  popq %%r10\n");
     fprintf(codegen_output, "  popq %%rsp\n");
