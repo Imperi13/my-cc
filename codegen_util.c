@@ -123,7 +123,7 @@ void mod_reg(FILE *codegen_output, Type *type) {
   } else if (type_size(type) == 8) {
     fprintf(codegen_output, "  cqto\n");
     fprintf(codegen_output, "  idivq %%rdi\n");
-    fprintf(codegen_output, "  movl %%rdx, %%rax\n");
+    fprintf(codegen_output, "  movq %%rdx, %%rax\n");
   } else
     not_implemented(__func__);
 }
