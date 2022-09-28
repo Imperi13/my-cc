@@ -331,7 +331,36 @@ StructDef *analyze_struct_spec(StructSpec *st_spec, Analyze *state,
 
       } else {
         // anonymous struct
-        not_implemented(__func__);
+        int append_size, append_align;
+        Member *append_members;
+
+        if (decl_cur->decl_specs->type_spec_kind == TypeSpec_STRUCT) {
+          append_size = decl_cur->decl_specs->st_def->size;
+          append_align = decl_cur->decl_specs->st_def->alignment;
+          append_members = decl_cur->decl_specs->st_def->members;
+        } else if (decl_cur->decl_specs->type_spec_kind == TypeSpec_UNION) {
+          append_size = decl_cur->decl_specs->union_def->size;
+          append_align = decl_cur->decl_specs->union_def->alignment;
+          append_members = decl_cur->decl_specs->union_def->members;
+        } else
+          error("must be struct or union");
+
+        int start_size =
+            (st_defs->size % append_align == 0)
+                ? st_defs->size
+                : st_defs->size + append_align - st_defs->size % append_align;
+
+        for (Member *append_cur = append_members; append_cur;
+             append_cur = append_cur->next)
+          append_cur->offset += start_size;
+
+        st_defs->size = start_size + append_size;
+        if (append_align > st_defs->alignment)
+          st_defs->alignment = append_align;
+
+        mem_cur->next = append_members;
+        while (mem_cur->next)
+          mem_cur = mem_cur->next;
       }
 
       decl_cur = decl_cur->next;
