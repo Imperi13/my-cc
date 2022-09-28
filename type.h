@@ -24,6 +24,9 @@ typedef struct Type Type;
 struct Type {
   TypeKind kind;
 
+  // for integer type
+  bool is_unsigned;
+
   // for FUNC
   Type *return_type;
   bool has_arg;
@@ -44,12 +47,18 @@ struct Type {
 };
 
 extern Type type_void;
-extern Type type_longlong;
-extern Type type_long;
-extern Type type_int;
-extern Type type_short;
-extern Type type_char;
 extern Type type_bool;
+
+extern Type type_longlong;
+extern Type type_ulonglong;
+extern Type type_long;
+extern Type type_ulong;
+extern Type type_int;
+extern Type type_uint;
+extern Type type_short;
+extern Type type_ushort;
+extern Type type_char;
+extern Type type_uchar;
 
 // type alias
 #define type_ptrdiff type_long
