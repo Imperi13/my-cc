@@ -302,29 +302,36 @@ StructDef *analyze_struct_spec(StructSpec *st_spec, Analyze *state,
       analyze_decl_spec(decl_cur->decl_specs, state, is_global);
       Type *base_type = gettype_decl_spec(decl_cur->decl_specs);
 
-      for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
-        push_lvar_scope(state);
-        analyze_declarator(cur, state);
-        pop_lvar_scope(state);
+      if (decl_cur->declarator) {
 
-        Type *obj_type = gettype_declarator(cur, base_type);
-        char *obj_name = getname_declarator(cur);
+        for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
+          push_lvar_scope(state);
+          analyze_declarator(cur, state);
+          pop_lvar_scope(state);
 
-        Member *mem = calloc(1, sizeof(Member));
+          Type *obj_type = gettype_declarator(cur, base_type);
+          char *obj_name = getname_declarator(cur);
 
-        mem->member_name = obj_name;
-        mem->type = obj_type;
-        mem->offset = (st_defs->size % type_alignment(obj_type) == 0)
-                          ? st_defs->size
-                          : st_defs->size + type_alignment(obj_type) -
-                                st_defs->size % type_alignment(obj_type);
+          Member *mem = calloc(1, sizeof(Member));
 
-        st_defs->size = mem->offset + type_size(obj_type);
-        if (type_alignment(obj_type) > st_defs->alignment)
-          st_defs->alignment = type_alignment(obj_type);
+          mem->member_name = obj_name;
+          mem->type = obj_type;
+          mem->offset = (st_defs->size % type_alignment(obj_type) == 0)
+                            ? st_defs->size
+                            : st_defs->size + type_alignment(obj_type) -
+                                  st_defs->size % type_alignment(obj_type);
 
-        mem_cur->next = mem;
-        mem_cur = mem;
+          st_defs->size = mem->offset + type_size(obj_type);
+          if (type_alignment(obj_type) > st_defs->alignment)
+            st_defs->alignment = type_alignment(obj_type);
+
+          mem_cur->next = mem;
+          mem_cur = mem;
+        }
+
+      } else {
+        // anonymous struct
+        not_implemented(__func__);
       }
 
       decl_cur = decl_cur->next;
@@ -379,30 +386,33 @@ UnionDef *analyze_union_spec(UnionSpec *union_spec, Analyze *state,
       analyze_decl_spec(decl_cur->decl_specs, state, is_global);
       Type *obj_type = gettype_decl_spec(decl_cur->decl_specs);
 
-      if (decl_cur->declarator->next)
+      if (decl_cur->declarator) {
+
+        push_lvar_scope(state);
+        analyze_declarator(decl_cur->declarator, state);
+        pop_lvar_scope(state);
+
+        obj_type = gettype_declarator(decl_cur->declarator, obj_type);
+        char *obj_name = getname_declarator(decl_cur->declarator);
+
+        Member *mem = calloc(1, sizeof(Member));
+
+        mem->member_name = obj_name;
+        mem->type = obj_type;
+        mem->offset = 0;
+
+        union_def->size =
+            (type_size(obj_type) > union_def->size ? type_size(obj_type)
+                                                   : union_def->size);
+        union_def->alignment = (type_alignment(obj_type) > union_def->alignment
+                                    ? type_alignment(obj_type)
+                                    : union_def->alignment);
+        mem_cur->next = mem;
+        mem_cur = mem;
+      } else {
+        // anonymous struct
         not_implemented(__func__);
-
-      push_lvar_scope(state);
-      analyze_declarator(decl_cur->declarator, state);
-      pop_lvar_scope(state);
-
-      obj_type = gettype_declarator(decl_cur->declarator, obj_type);
-      char *obj_name = getname_declarator(decl_cur->declarator);
-
-      Member *mem = calloc(1, sizeof(Member));
-
-      mem->member_name = obj_name;
-      mem->type = obj_type;
-      mem->offset = 0;
-
-      union_def->size =
-          (type_size(obj_type) > union_def->size ? type_size(obj_type)
-                                                 : union_def->size);
-      union_def->alignment = (type_alignment(obj_type) > union_def->alignment
-                                  ? type_alignment(obj_type)
-                                  : union_def->alignment);
-      mem_cur->next = mem;
-      mem_cur = mem;
+      }
 
       decl_cur = decl_cur->next;
     }

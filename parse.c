@@ -380,8 +380,11 @@ Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
   st_decl->error_token = tok;
   st_decl->decl_specs = parse_decl_specs(&tok, tok, state);
 
-  if (equal(tok, ";"))
-    not_implemented_token(tok);
+  if (equal(tok, ";")) {
+    consume(&tok, tok, ";");
+    *rest = tok;
+    return st_decl;
+  }
 
   if (equal(tok, ":")) {
     st_decl->declarator = calloc(1, sizeof(Declarator));
