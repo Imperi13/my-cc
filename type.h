@@ -51,6 +51,9 @@ extern Type type_short;
 extern Type type_char;
 extern Type type_bool;
 
+// type alias
+#define type_ptrdiff type_long
+
 Type *newtype_ptr(Type *type);
 Type *newtype_struct(StructDef *st_def);
 Type *newtype_union(UnionDef *union_def);
