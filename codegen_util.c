@@ -106,14 +106,25 @@ void div_reg(FILE *codegen_output, Type *type) {
   assert(is_arithmetic(type), "not arighmetic type");
 
   if (is_integer(type)) {
-    if (type_size(type) == 4) {
-      fprintf(codegen_output, "  cltd\n");
-      fprintf(codegen_output, "  idivl %%edi\n");
-    } else if (type_size(type) == 8) {
-      fprintf(codegen_output, "  cqto\n");
-      fprintf(codegen_output, "  idivq %%rdi\n");
-    } else
-      not_implemented(__func__);
+    if (type->is_unsigned) {
+      if (type_size(type) == 4) {
+        fprintf(codegen_output, "  movl $0, %%edx\n");
+        fprintf(codegen_output, "  divl %%edi\n");
+      } else if (type_size(type) == 8) {
+        fprintf(codegen_output, "  movq $0, %%rdx\n");
+        fprintf(codegen_output, "  divq %%rdi\n");
+      } else
+        not_implemented(__func__);
+    } else {
+      if (type_size(type) == 4) {
+        fprintf(codegen_output, "  cltd\n");
+        fprintf(codegen_output, "  idivl %%edi\n");
+      } else if (type_size(type) == 8) {
+        fprintf(codegen_output, "  cqto\n");
+        fprintf(codegen_output, "  idivq %%rdi\n");
+      } else
+        not_implemented(__func__);
+    }
   } else
     not_implemented(__func__);
 }
@@ -121,14 +132,27 @@ void div_reg(FILE *codegen_output, Type *type) {
 void mod_reg(FILE *codegen_output, Type *type) {
   assert(is_integer(type), "not integer type");
 
-  if (type_size(type) == 4) {
-    fprintf(codegen_output, "  cltd\n");
-    fprintf(codegen_output, "  idivl %%edi\n");
-    fprintf(codegen_output, "  movl %%edx, %%eax\n");
-  } else if (type_size(type) == 8) {
-    fprintf(codegen_output, "  cqto\n");
-    fprintf(codegen_output, "  idivq %%rdi\n");
-    fprintf(codegen_output, "  movq %%rdx, %%rax\n");
-  } else
-    not_implemented(__func__);
+  if (type->is_unsigned) {
+    if (type_size(type) == 4) {
+      fprintf(codegen_output, "  movl $0, %%edx\n");
+      fprintf(codegen_output, "  divl %%edi\n");
+      fprintf(codegen_output, "  movl %%edx, %%eax\n");
+    } else if (type_size(type) == 8) {
+      fprintf(codegen_output, "  movq $0, %%rdx\n");
+      fprintf(codegen_output, "  divq %%rdi\n");
+      fprintf(codegen_output, "  movq %%rdx, %%rax\n");
+    } else
+      not_implemented(__func__);
+  } else {
+    if (type_size(type) == 4) {
+      fprintf(codegen_output, "  cltd\n");
+      fprintf(codegen_output, "  idivl %%edi\n");
+      fprintf(codegen_output, "  movl %%edx, %%eax\n");
+    } else if (type_size(type) == 8) {
+      fprintf(codegen_output, "  cqto\n");
+      fprintf(codegen_output, "  idivq %%rdi\n");
+      fprintf(codegen_output, "  movq %%rdx, %%rax\n");
+    } else
+      not_implemented(__func__);
+  }
 }
