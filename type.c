@@ -203,24 +203,49 @@ int integer_rank(Type *type) {
   error("unreachable");
 }
 
+// bool,(u)char,(u)short convert to int
 Type *get_integer_promoted_type(Type *integer_type) {
   assert(is_integer(integer_type), "not integer type");
 
-  if (integer_type->kind == INT || integer_type->kind == LONG ||
-      integer_type->kind == LONGLONG)
-    return integer_type;
+  if (integer_rank(integer_type) < integer_rank(&type_int))
+    return &type_int;
 
-  return &type_int;
+  return integer_type;
 }
 
 Type *get_arithmetic_converted_type(Type *lhs_type, Type *rhs_type) {
   assert(is_arithmetic(lhs_type) && is_arithmetic(rhs_type),
          "not arithmetic type");
 
-  if (integer_rank(lhs_type) >= integer_rank(rhs_type))
+  if (is_same_type(lhs_type, rhs_type))
     return lhs_type;
-  else
+
+  if (lhs_type->is_unsigned == rhs_type->is_unsigned) {
+    if (integer_rank(lhs_type) >= integer_rank(rhs_type))
+      return lhs_type;
+    else
+      return rhs_type;
+  }
+
+  // one is signed, the other unsigned
+  // swap so that lhs_type is signed
+  if (lhs_type->is_unsigned) {
+    Type *tmp = rhs_type;
+    rhs_type = lhs_type;
+    lhs_type = tmp;
+  }
+
+  if (integer_rank(lhs_type) <= integer_rank(rhs_type))
     return rhs_type;
+
+  if (type_size(lhs_type) > type_size(rhs_type))
+    return lhs_type;
+
+  Type *result_type = calloc(1, sizeof(Type));
+  result_type->kind = lhs_type->kind;
+  result_type->is_unsigned = true;
+
+  return result_type;
 }
 
 Type *newtype_ptr(Type *type) {
