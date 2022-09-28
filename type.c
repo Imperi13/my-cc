@@ -11,12 +11,18 @@
 #include "vector.h"
 
 Type type_void = {.kind = VOID};
-Type type_longlong = {.kind = LONGLONG};
-Type type_long = {.kind = LONG};
-Type type_int = {.kind = INT};
-Type type_short = {.kind = SHORT};
-Type type_char = {.kind = CHAR};
 Type type_bool = {.kind = BOOL};
+
+Type type_longlong = {.kind = LONGLONG};
+Type type_ulonglong = {.kind = LONGLONG, .is_unsigned = true};
+Type type_long = {.kind = LONG};
+Type type_ulong = {.kind = LONG, .is_unsigned = true};
+Type type_int = {.kind = INT};
+Type type_uint = {.kind = INT, .is_unsigned = true};
+Type type_short = {.kind = SHORT};
+Type type_ushort = {.kind = SHORT, .is_unsigned = true};
+Type type_char = {.kind = CHAR};
+Type type_uchar = {.kind = CHAR, .is_unsigned = true};
 
 void builtin_type_init(Analyze *state) {
 
@@ -68,14 +74,24 @@ void builtin_type_init(Analyze *state) {
 Type *gettype_decl_spec(DeclSpec *decl_spec) {
   if (decl_spec->type_spec_kind == TypeSpec_LONGLONG) {
     return &type_longlong;
+  } else if (decl_spec->type_spec_kind == TypeSpec_ULONGLONG) {
+    return &type_ulonglong;
   } else if (decl_spec->type_spec_kind == TypeSpec_LONG) {
     return &type_long;
+  } else if (decl_spec->type_spec_kind == TypeSpec_ULONG) {
+    return &type_ulong;
   } else if (decl_spec->type_spec_kind == TypeSpec_INT) {
     return &type_int;
+  } else if (decl_spec->type_spec_kind == TypeSpec_UINT) {
+    return &type_uint;
   } else if (decl_spec->type_spec_kind == TypeSpec_SHORT) {
     return &type_short;
+  } else if (decl_spec->type_spec_kind == TypeSpec_USHORT) {
+    return &type_ushort;
   } else if (decl_spec->type_spec_kind == TypeSpec_CHAR) {
     return &type_char;
+  } else if (decl_spec->type_spec_kind == TypeSpec_UCHAR) {
+    return &type_uchar;
   } else if (decl_spec->type_spec_kind == TypeSpec_VOID) {
     return &type_void;
   } else if (decl_spec->type_spec_kind == TypeSpec_BOOL) {
@@ -87,9 +103,7 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
   } else if (decl_spec->en_def) {
     return &type_int;
   } else if (decl_spec->defined_type) {
-    Type *ty = calloc(1, sizeof(Type));
-    memcpy(ty, decl_spec->defined_type->type, sizeof(Type));
-    return ty;
+    return decl_spec->defined_type->type;
   } else
     error("empty type");
   return NULL;
@@ -189,24 +203,49 @@ int integer_rank(Type *type) {
   error("unreachable");
 }
 
+// bool,(u)char,(u)short convert to int
 Type *get_integer_promoted_type(Type *integer_type) {
   assert(is_integer(integer_type), "not integer type");
 
-  if (integer_type->kind == INT || integer_type->kind == LONG ||
-      integer_type->kind == LONGLONG)
-    return integer_type;
+  if (integer_rank(integer_type) < integer_rank(&type_int))
+    return &type_int;
 
-  return &type_int;
+  return integer_type;
 }
 
 Type *get_arithmetic_converted_type(Type *lhs_type, Type *rhs_type) {
   assert(is_arithmetic(lhs_type) && is_arithmetic(rhs_type),
          "not arithmetic type");
 
-  if (integer_rank(lhs_type) >= integer_rank(rhs_type))
+  if (is_same_type(lhs_type, rhs_type))
     return lhs_type;
-  else
+
+  if (lhs_type->is_unsigned == rhs_type->is_unsigned) {
+    if (integer_rank(lhs_type) >= integer_rank(rhs_type))
+      return lhs_type;
+    else
+      return rhs_type;
+  }
+
+  // one is signed, the other unsigned
+  // swap so that lhs_type is signed
+  if (lhs_type->is_unsigned) {
+    Type *tmp = rhs_type;
+    rhs_type = lhs_type;
+    lhs_type = tmp;
+  }
+
+  if (integer_rank(lhs_type) <= integer_rank(rhs_type))
     return rhs_type;
+
+  if (type_size(lhs_type) > type_size(rhs_type))
+    return lhs_type;
+
+  Type *result_type = calloc(1, sizeof(Type));
+  result_type->kind = lhs_type->kind;
+  result_type->is_unsigned = true;
+
+  return result_type;
 }
 
 Type *newtype_ptr(Type *type) {
@@ -314,6 +353,8 @@ bool is_primitive_type(Type *type) {
 bool is_same_type(Type *a, Type *b) {
   if (a->kind != b->kind)
     return false;
+  else if (is_integer(a))
+    return a->is_unsigned == b->is_unsigned;
   else if (is_primitive_type(a))
     return true;
   else if (a->kind == PTR)

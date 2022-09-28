@@ -576,9 +576,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
     reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
 
-    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(result_type),
-            get_reg_alias(&reg_rdi, result_type),
-            get_reg_alias(&reg_rax, result_type));
+    mul_reg(codegen_output, result_type);
 
     reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
@@ -736,11 +734,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
     reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
 
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, promoted_rtype);
-
-    fprintf(codegen_output, "  sal%c %%cl, %s\n",
-            get_size_suffix(promoted_ltype),
-            get_reg_alias(&reg_rax, promoted_ltype));
+    lshift_reg(codegen_output, promoted_ltype, promoted_rtype);
 
     reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
@@ -762,11 +756,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
     reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
 
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, promoted_rtype);
-
-    fprintf(codegen_output, "  sar%c %%cl, %s\n",
-            get_size_suffix(promoted_ltype),
-            get_reg_alias(&reg_rax, promoted_ltype));
+    rshift_reg(codegen_output, promoted_ltype, promoted_rtype);
 
     reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
@@ -1083,7 +1073,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setl %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  setb %%al\n");
+      else
+        fprintf(codegen_output, "  setl %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
@@ -1099,7 +1094,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setle %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  setna %%al\n");
+      else
+        fprintf(codegen_output, "  setle %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
@@ -1115,7 +1115,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setg %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  seta %%al\n");
+      else
+        fprintf(codegen_output, "  setg %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
@@ -1131,7 +1136,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setge %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  setnb %%al\n");
+      else
+        fprintf(codegen_output, "  setge %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
@@ -1140,16 +1150,10 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     }
   } break;
   case LSHIFT: {
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
-    fprintf(codegen_output, "  sal%c %%cl, %s\n",
-            get_size_suffix(expr->lhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    lshift_reg(codegen_output, expr->lhs->type, expr->rhs->type);
   } break;
   case RSHIFT: {
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
-    fprintf(codegen_output, "  sar%c %%cl, %s\n",
-            get_size_suffix(expr->lhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    rshift_reg(codegen_output, expr->lhs->type, expr->rhs->type);
   } break;
   case ADD: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
@@ -1192,9 +1196,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case MUL: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on MUL");
-    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(expr->type),
-            get_reg_alias(&reg_rdi, expr->rhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    mul_reg(codegen_output, expr->lhs->type);
   } break;
   case DIV: {
     div_reg(codegen_output, expr->type);

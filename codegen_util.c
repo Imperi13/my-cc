@@ -92,23 +92,49 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
   if (type_size(dst_type) <= type_size(src_type))
     return;
 
-  fprintf(codegen_output, "  movs%c%c %s, %s\n", get_size_suffix(src_type),
-          get_size_suffix(dst_type), get_reg_alias(reg, src_type),
-          get_reg_alias(reg, dst_type));
+  if (src_type->is_unsigned)
+    fprintf(codegen_output, "  movz%c%c %s, %s\n", get_size_suffix(src_type),
+            get_size_suffix(dst_type), get_reg_alias(reg, src_type),
+            get_reg_alias(reg, dst_type));
+  else
+    fprintf(codegen_output, "  movs%c%c %s, %s\n", get_size_suffix(src_type),
+            get_size_suffix(dst_type), get_reg_alias(reg, src_type),
+            get_reg_alias(reg, dst_type));
+}
+
+void mul_reg(FILE *codegen_output, Type *type) {
+  if (type->is_unsigned) {
+    fprintf(codegen_output, "  mul%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
+  } else {
+    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
+  }
 }
 
 void div_reg(FILE *codegen_output, Type *type) {
   assert(is_arithmetic(type), "not arighmetic type");
 
   if (is_integer(type)) {
-    if (type_size(type) == 4) {
-      fprintf(codegen_output, "  cltd\n");
-      fprintf(codegen_output, "  idivl %%edi\n");
-    } else if (type_size(type) == 8) {
-      fprintf(codegen_output, "  cqto\n");
-      fprintf(codegen_output, "  idivq %%rdi\n");
-    } else
-      not_implemented(__func__);
+    if (type->is_unsigned) {
+      if (type_size(type) == 4) {
+        fprintf(codegen_output, "  movl $0, %%edx\n");
+        fprintf(codegen_output, "  divl %%edi\n");
+      } else if (type_size(type) == 8) {
+        fprintf(codegen_output, "  movq $0, %%rdx\n");
+        fprintf(codegen_output, "  divq %%rdi\n");
+      } else
+        not_implemented(__func__);
+    } else {
+      if (type_size(type) == 4) {
+        fprintf(codegen_output, "  cltd\n");
+        fprintf(codegen_output, "  idivl %%edi\n");
+      } else if (type_size(type) == 8) {
+        fprintf(codegen_output, "  cqto\n");
+        fprintf(codegen_output, "  idivq %%rdi\n");
+      } else
+        not_implemented(__func__);
+    }
   } else
     not_implemented(__func__);
 }
@@ -116,14 +142,49 @@ void div_reg(FILE *codegen_output, Type *type) {
 void mod_reg(FILE *codegen_output, Type *type) {
   assert(is_integer(type), "not integer type");
 
-  if (type_size(type) == 4) {
-    fprintf(codegen_output, "  cltd\n");
-    fprintf(codegen_output, "  idivl %%edi\n");
-    fprintf(codegen_output, "  movl %%edx, %%eax\n");
-  } else if (type_size(type) == 8) {
-    fprintf(codegen_output, "  cqto\n");
-    fprintf(codegen_output, "  idivq %%rdi\n");
-    fprintf(codegen_output, "  movq %%rdx, %%rax\n");
-  } else
-    not_implemented(__func__);
+  if (type->is_unsigned) {
+    if (type_size(type) == 4) {
+      fprintf(codegen_output, "  movl $0, %%edx\n");
+      fprintf(codegen_output, "  divl %%edi\n");
+      fprintf(codegen_output, "  movl %%edx, %%eax\n");
+    } else if (type_size(type) == 8) {
+      fprintf(codegen_output, "  movq $0, %%rdx\n");
+      fprintf(codegen_output, "  divq %%rdi\n");
+      fprintf(codegen_output, "  movq %%rdx, %%rax\n");
+    } else
+      not_implemented(__func__);
+  } else {
+    if (type_size(type) == 4) {
+      fprintf(codegen_output, "  cltd\n");
+      fprintf(codegen_output, "  idivl %%edi\n");
+      fprintf(codegen_output, "  movl %%edx, %%eax\n");
+    } else if (type_size(type) == 8) {
+      fprintf(codegen_output, "  cqto\n");
+      fprintf(codegen_output, "  idivq %%rdi\n");
+      fprintf(codegen_output, "  movq %%rdx, %%rax\n");
+    } else
+      not_implemented(__func__);
+  }
+}
+
+void lshift_reg(FILE *codegen_output, Type *lhs_type, Type *rhs_type) {
+  mov_reg(codegen_output, &reg_rdi, &reg_rcx, rhs_type);
+
+  if (lhs_type->is_unsigned)
+    fprintf(codegen_output, "  shl%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
+  else
+    fprintf(codegen_output, "  sal%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
+}
+
+void rshift_reg(FILE *codegen_output, Type *lhs_type, Type *rhs_type) {
+  mov_reg(codegen_output, &reg_rdi, &reg_rcx, rhs_type);
+
+  if (lhs_type->is_unsigned)
+    fprintf(codegen_output, "  shr%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
+  else
+    fprintf(codegen_output, "  sar%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
 }

@@ -73,13 +73,18 @@ typedef enum TreeKind {
 typedef enum TypeSpecKind {
   // INT = 0 ,this makes the default type of no type-spec obj INT
   TypeSpec_INT,
+  TypeSpec_UINT,
 
   TypeSpec_VOID,
   TypeSpec_BOOL,
   TypeSpec_CHAR,
+  TypeSpec_UCHAR,
   TypeSpec_SHORT,
+  TypeSpec_USHORT,
   TypeSpec_LONG,
+  TypeSpec_ULONG,
   TypeSpec_LONGLONG,
+  TypeSpec_ULONGLONG,
   TypeSpec_TYPEDEF_NAME,
   TypeSpec_STRUCT,
   TypeSpec_UNION,
