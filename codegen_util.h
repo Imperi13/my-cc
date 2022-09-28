@@ -23,7 +23,8 @@ void push_reg(FILE *codegen_output, Register *reg, Type *type);
 void pop_reg(FILE *codegen_output, Register *reg, Type *type);
 void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type);
 
-void mov_imm(FILE *codegen_output, Register *reg, Type *type, long imm_val);
+void mov_imm(FILE *codegen_output, Register *reg, Type *type,
+             unsigned long long imm_val);
 
 void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
                       Type *dst_type);

@@ -1064,10 +1064,23 @@ void analyze_expr(Tree *ast, Analyze *state) {
 
     // primary
   case NUM: {
-    if (ast->is_long)
-      ast->type = &type_long;
-    else
-      ast->type = &type_int;
+    if (ast->is_unsigned) {
+      if (ast->is_long) {
+        ast->type = &type_ulong;
+      } else if (ast->is_longlong) {
+        ast->type = &type_ulonglong;
+      } else {
+        ast->type = &type_uint;
+      }
+    } else {
+      if (ast->is_long) {
+        ast->type = &type_long;
+      } else if (ast->is_longlong) {
+        ast->type = &type_longlong;
+      } else {
+        ast->type = &type_int;
+      }
+    }
   } break;
   case STR: {
     Type *array_char = calloc(1, sizeof(Type));

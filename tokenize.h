@@ -68,7 +68,7 @@ struct Token {
   int nth_arg; // for func-like macro
 
   // for TK_NUM
-  long val;
+  unsigned long long val;
   bool is_unsigned;
   bool is_long;
   bool is_longlong;

@@ -71,10 +71,11 @@ void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type) {
           get_reg_alias(src, type), get_reg_alias(dst, type));
 }
 
-void mov_imm(FILE *codegen_output, Register *reg, Type *type, long imm_val) {
+void mov_imm(FILE *codegen_output, Register *reg, Type *type,
+             unsigned long long imm_val) {
   assert(is_scalar(type), "not scalar type");
 
-  fprintf(codegen_output, "  mov%c $%ld, %s\n", get_size_suffix(type), imm_val,
+  fprintf(codegen_output, "  mov%c $%llu, %s\n", get_size_suffix(type), imm_val,
           get_reg_alias(reg, type));
 }
 

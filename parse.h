@@ -169,8 +169,10 @@ struct Tree {
   Vector *call_args_vector;
 
   // for const-val
-  int num;
+  unsigned long long num;
+  bool is_unsigned;
   bool is_long;
+  bool is_longlong;
   StrLiteral *str_literal;
 
   // for member

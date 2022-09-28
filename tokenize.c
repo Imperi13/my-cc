@@ -184,7 +184,7 @@ int digit_base(char t, int base) {
   return -1;
 }
 
-long num_literal(char *p, char **rest) {
+unsigned long long num_literal(char *p, char **rest) {
   int base;
   char *start;
 
@@ -202,7 +202,7 @@ long num_literal(char *p, char **rest) {
     start = p + 1;
   }
 
-  long num = 0;
+  unsigned long long num = 0;
   while (digit_base(*start, base) >= 0) {
     num *= base;
     num += digit_base(*start, base);
