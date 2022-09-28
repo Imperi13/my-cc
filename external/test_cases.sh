@@ -584,11 +584,11 @@ run_test cast_2 'int main(){int *p = (void *) 0; _Bool t = p; if(t)return 164;el
 
 run_test unsigned_1 'int main(){unsigned char n = 0xff; if(n==0xff)return 174;else return 160;}' 174
 run_test unsigned_2 'int main(){unsigned char n = 0xff; unsigned char m = 0x10; if(m - n < 0)return 174;else return 160;}' 174
-run_test unsigned_3 'int main(){unsigned int n = 0x7fffffff; unsigned int m = 0x80000000; if(n < m)return 174;else return 160;}' 174
-run_test unsigned_4 'int main(){unsigned int n = 0x7fffffff; unsigned int m = 0x80000000; if(n <= m)return 174;else return 160;}' 174
-run_test unsigned_5 'int main(){unsigned int n = 0x80000000; unsigned int m = 0x80000000; if(n <= m)return 174;else return 160;}' 174
-run_test unsigned_6 'int main(){unsigned int n = 0x80000000; unsigned int m = 0x400000; if(n/m == 0x200)return 174;else return 160;}' 174
-run_test unsigned_7 'int main(){unsigned int n = 0x80000000; if(n >> 28 == 0x8)return 174;else return 160;}' 174
+run_test unsigned_3 'int main(){unsigned int n = 0x7fffffffU; unsigned int m = 0x80000000U; if(n < m)return 174;else return 160;}' 174
+run_test unsigned_4 'int main(){unsigned int n = 0x7fffffffU; unsigned int m = 0x80000000U; if(n <= m)return 174;else return 160;}' 174
+run_test unsigned_5 'int main(){unsigned int n = 0x80000000U; unsigned int m = 0x80000000U; if(n <= m)return 174;else return 160;}' 174
+run_test unsigned_6 'int main(){unsigned int n = 0x80000000U; unsigned int m = 0x400000U; if(n/m == 0x200)return 174;else return 160;}' 174
+run_test unsigned_7 'int main(){unsigned int n = 0x80000000U; if(n >> 28 == 0x8)return 174;else return 160;}' 174
 run_test unsigned_8 'int main(){unsigned int n = 2; unsigned int m = 5; if(n * m == 10)return 174;else return 160;}' 174
-run_test unsigned_9 'int main(){unsigned long long n = 0xffffffffffffffff; if(n >> 60 == 0xf)return 174;else return 160;}' 174
-run_test unsigned_9 'int main(){unsigned long long n = 0x8000000000000000; if(n >> 60 == 0x8)return 174;else return 160;}' 174
+run_test unsigned_9 'int main(){unsigned long long n = 0xffffffffffffffffULL; if(n >> 60 == 0xf)return 174;else return 160;}' 174
+run_test unsigned_9 'int main(){unsigned long long n = 0x8000000000000000ULL; if(n >> 60 == 0x8)return 174;else return 160;}' 174
