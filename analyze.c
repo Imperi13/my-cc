@@ -236,7 +236,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       Member head = {.next = NULL};
       Member *mem_cur = &head;
       while (decl_cur) {
-        analyze_decl_spec(decl_cur->decl_specs, state, false);
+        // new type decl_spec in struct is on same scope
+        analyze_decl_spec(decl_cur->decl_specs, state, is_global);
         Type *base_type = gettype_decl_spec(decl_cur->decl_specs);
 
         for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
@@ -309,7 +310,8 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
       Member *mem_cur = &head;
 
       while (decl_cur) {
-        analyze_decl_spec(decl_cur->decl_specs, state, false);
+        // new type decl_spec in union is on same scope
+        analyze_decl_spec(decl_cur->decl_specs, state, is_global);
         Type *obj_type = gettype_decl_spec(decl_cur->decl_specs);
 
         if (decl_cur->declarator->next)
