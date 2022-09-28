@@ -29,6 +29,8 @@ static Tree *parse_initialize_list(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state);
 static DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state);
 
+static bool is_anonymous_struct(DeclSpec *decl_spec);
+
 static void parse_primitive_type_spec(Token **rest, Token *tok,
                                       PrimitiveTypeToken *primitive_type_token);
 static StructSpec *parse_struct_spec(Token **rest, Token *tok, Analyze *state);
@@ -57,6 +59,12 @@ static Tree *parse_jump_stmt(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_iteration_stmt(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_selection_stmt(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_expr_stmt(Token **rest, Token *tok, Analyze *state);
+
+static bool is_label_stmt(Token *tok);
+static bool is_selection_stmt(Token *tok);
+static bool is_iteration_stmt(Token *tok);
+static bool is_jump_stmt(Token *tok);
+
 static Tree *parse_expr(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_assign(Token **rest, Token *tok, Analyze *state);
 
@@ -78,11 +86,6 @@ static Tree *parse_postfix(Token **rest, Token *tok, Analyze *state);
 static Tree *parse_primary(Token **rest, Token *tok, Analyze *state);
 
 static Tree *parse_builtin(Token **rest, Token *tok, Analyze *state);
-
-static bool is_label_stmt(Token *tok);
-static bool is_selection_stmt(Token *tok);
-static bool is_iteration_stmt(Token *tok);
-static bool is_jump_stmt(Token *tok);
 
 Tree *new_binary_node(TreeKind kind, Tree *lhs, Tree *rhs, Token *error_token) {
   Tree *node = calloc(1, sizeof(Tree));
@@ -335,6 +338,15 @@ DeclSpec *parse_decl_specs(Token **rest, Token *tok, Analyze *state) {
   return decl_spec;
 }
 
+bool is_anonymous_struct(DeclSpec *decl_spec) {
+  if (decl_spec->type_spec_kind == TypeSpec_STRUCT) {
+    return !decl_spec->st_spec->st_name;
+  } else if (decl_spec->type_spec_kind == TypeSpec_UNION) {
+    return !decl_spec->union_spec->union_name;
+  } else
+    return false;
+}
+
 void parse_primitive_type_spec(Token **rest, Token *tok,
                                PrimitiveTypeToken *primitive_type_token) {
   if (equal_kind(tok, TK_VOID)) {
@@ -381,6 +393,9 @@ Tree *parse_struct_declaration(Token **rest, Token *tok, Analyze *state) {
   st_decl->decl_specs = parse_decl_specs(&tok, tok, state);
 
   if (equal(tok, ";")) {
+    if (!is_anonymous_struct(st_decl->decl_specs))
+      error("must contain struct-declarator expect anonymous struct");
+
     consume(&tok, tok, ";");
     *rest = tok;
     return st_decl;
