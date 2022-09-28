@@ -11,6 +11,10 @@
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
                               bool is_global);
+static StructDef *analyze_struct_spec(StructSpec *st_spec, Analyze *state,
+                                      bool is_global);
+static UnionDef *analyze_union_spec(UnionSpec *union_spec, Analyze *state,
+                                    bool is_global);
 static void analyze_declarator(Declarator *declarator, Analyze *state);
 
 static void analyze_expr(Tree *ast, Analyze *state);
@@ -205,150 +209,13 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
 void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
   if (decl_spec->type_spec_kind == TypeSpec_STRUCT) {
-    StructDef *st_defs = NULL;
+    decl_spec->st_def =
+        analyze_struct_spec(decl_spec->st_spec, state, is_global);
 
-    if (decl_spec->st_spec->st_name)
-      st_defs = find_struct(state, decl_spec->st_spec->st_name);
-
-    if (!st_defs) {
-      st_defs = calloc(1, sizeof(StructDef));
-
-      if (decl_spec->st_spec->st_name) {
-        st_defs->st_name = decl_spec->st_spec->st_name;
-
-        if (is_global)
-          add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
-        else
-          add_str_dict(state->locals->local_struct_def_dict, st_defs->st_name,
-                       st_defs);
-      }
-    }
-
-    if (st_defs->is_defined && decl_spec->st_spec->has_decl)
-      error("redifine struct");
-
-    if (decl_spec->st_spec->has_decl) {
-      st_defs->is_defined = true;
-      st_defs->size = 0;
-      st_defs->alignment = 1;
-
-      Tree *decl_cur = decl_spec->st_spec->members;
-      Member head = {.next = NULL};
-      Member *mem_cur = &head;
-      while (decl_cur) {
-        analyze_decl_spec(decl_cur->decl_specs, state, false);
-        Type *base_type = gettype_decl_spec(decl_cur->decl_specs);
-
-        for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
-          push_lvar_scope(state);
-          analyze_declarator(cur, state);
-          pop_lvar_scope(state);
-
-          Type *obj_type = gettype_declarator(cur, base_type);
-          char *obj_name = getname_declarator(cur);
-
-          Member *mem = calloc(1, sizeof(Member));
-
-          mem->member_name = obj_name;
-          mem->type = obj_type;
-          mem->offset = (st_defs->size % type_alignment(obj_type) == 0)
-                            ? st_defs->size
-                            : st_defs->size + type_alignment(obj_type) -
-                                  st_defs->size % type_alignment(obj_type);
-
-          st_defs->size = mem->offset + type_size(obj_type);
-          if (type_alignment(obj_type) > st_defs->alignment)
-            st_defs->alignment = type_alignment(obj_type);
-
-          mem_cur->next = mem;
-          mem_cur = mem;
-        }
-
-        decl_cur = decl_cur->next;
-      }
-
-      st_defs->members = head.next;
-
-      st_defs->size = (st_defs->size % st_defs->alignment == 0)
-                          ? st_defs->size
-                          : st_defs->size + st_defs->alignment -
-                                st_defs->size % st_defs->alignment;
-    }
-
-    decl_spec->st_def = st_defs;
   } else if (decl_spec->type_spec_kind == TypeSpec_UNION) {
-    UnionDef *union_def = NULL;
 
-    if (decl_spec->union_spec->union_name)
-      union_def = find_union(state, decl_spec->union_spec->union_name);
-
-    if (!union_def) {
-      union_def = calloc(1, sizeof(UnionDef));
-
-      if (decl_spec->union_spec->union_name) {
-        union_def->union_name = decl_spec->union_spec->union_name;
-        if (is_global)
-          add_str_dict(state->glb_union_def_dict, union_def->union_name,
-                       union_def);
-        else
-          add_str_dict(state->locals->local_union_def_dict,
-                       union_def->union_name, union_def);
-      }
-    }
-
-    if (union_def->is_defined && decl_spec->union_spec->has_decl)
-      error("redefine union");
-
-    if (decl_spec->union_spec->has_decl) {
-      union_def->is_defined = true;
-      union_def->size = 0;
-      union_def->alignment = 1;
-
-      Tree *decl_cur = decl_spec->union_spec->members;
-      Member head = {.next = NULL};
-      Member *mem_cur = &head;
-
-      while (decl_cur) {
-        analyze_decl_spec(decl_cur->decl_specs, state, false);
-        Type *obj_type = gettype_decl_spec(decl_cur->decl_specs);
-
-        if (decl_cur->declarator->next)
-          not_implemented(__func__);
-
-        push_lvar_scope(state);
-        analyze_declarator(decl_cur->declarator, state);
-        pop_lvar_scope(state);
-
-        obj_type = gettype_declarator(decl_cur->declarator, obj_type);
-        char *obj_name = getname_declarator(decl_cur->declarator);
-
-        Member *mem = calloc(1, sizeof(Member));
-
-        mem->member_name = obj_name;
-        mem->type = obj_type;
-        mem->offset = 0;
-
-        union_def->size =
-            (type_size(obj_type) > union_def->size ? type_size(obj_type)
-                                                   : union_def->size);
-        union_def->alignment = (type_alignment(obj_type) > union_def->alignment
-                                    ? type_alignment(obj_type)
-                                    : union_def->alignment);
-        mem_cur->next = mem;
-        mem_cur = mem;
-
-        decl_cur = decl_cur->next;
-      }
-
-      union_def->members = head.next;
-      union_def->size = (union_def->size % union_def->alignment == 0)
-                            ? union_def->size
-                            : union_def->size + union_def->alignment -
-                                  union_def->size % union_def->alignment;
-    }
-
-    decl_spec->union_def = union_def;
-
+    decl_spec->union_def =
+        analyze_union_spec(decl_spec->union_spec, state, is_global);
   } else if (decl_spec->type_spec_kind == TypeSpec_ENUM) {
     EnumDef *en_def = NULL;
 
@@ -396,6 +263,219 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
   } else if (decl_spec->type_spec_kind == TypeSpec_TYPEDEF_NAME) {
     decl_spec->defined_type = find_typedef(state, decl_spec->def_name);
   }
+}
+
+StructDef *analyze_struct_spec(StructSpec *st_spec, Analyze *state,
+                               bool is_global) {
+  StructDef *st_defs = NULL;
+
+  if (st_spec->st_name)
+    st_defs = find_struct(state, st_spec->st_name);
+
+  if (!st_defs) {
+    st_defs = calloc(1, sizeof(StructDef));
+
+    if (st_spec->st_name) {
+      st_defs->st_name = st_spec->st_name;
+
+      if (is_global)
+        add_str_dict(state->glb_struct_def_dict, st_defs->st_name, st_defs);
+      else
+        add_str_dict(state->locals->local_struct_def_dict, st_defs->st_name,
+                     st_defs);
+    }
+  }
+
+  if (st_defs->is_defined && st_spec->has_decl)
+    error("redifine struct");
+
+  if (st_spec->has_decl) {
+    st_defs->is_defined = true;
+    st_defs->size = 0;
+    st_defs->alignment = 1;
+
+    Tree *decl_cur = st_spec->members;
+    Member head = {.next = NULL};
+    Member *mem_cur = &head;
+    while (decl_cur) {
+      // new type decl_spec in struct is on same scope
+      analyze_decl_spec(decl_cur->decl_specs, state, is_global);
+      Type *base_type = gettype_decl_spec(decl_cur->decl_specs);
+
+      if (decl_cur->declarator) {
+
+        for (Declarator *cur = decl_cur->declarator; cur; cur = cur->next) {
+          push_lvar_scope(state);
+          analyze_declarator(cur, state);
+          pop_lvar_scope(state);
+
+          Type *obj_type = gettype_declarator(cur, base_type);
+          char *obj_name = getname_declarator(cur);
+
+          Member *mem = calloc(1, sizeof(Member));
+
+          mem->member_name = obj_name;
+          mem->type = obj_type;
+          mem->offset = (st_defs->size % type_alignment(obj_type) == 0)
+                            ? st_defs->size
+                            : st_defs->size + type_alignment(obj_type) -
+                                  st_defs->size % type_alignment(obj_type);
+
+          st_defs->size = mem->offset + type_size(obj_type);
+          if (type_alignment(obj_type) > st_defs->alignment)
+            st_defs->alignment = type_alignment(obj_type);
+
+          mem_cur->next = mem;
+          mem_cur = mem;
+        }
+
+      } else {
+        // anonymous struct
+        int append_size, append_align;
+        Member *append_members;
+
+        if (decl_cur->decl_specs->type_spec_kind == TypeSpec_STRUCT) {
+          append_size = decl_cur->decl_specs->st_def->size;
+          append_align = decl_cur->decl_specs->st_def->alignment;
+          append_members = decl_cur->decl_specs->st_def->members;
+        } else if (decl_cur->decl_specs->type_spec_kind == TypeSpec_UNION) {
+          append_size = decl_cur->decl_specs->union_def->size;
+          append_align = decl_cur->decl_specs->union_def->alignment;
+          append_members = decl_cur->decl_specs->union_def->members;
+        } else
+          error("must be struct or union");
+
+        int start_size =
+            (st_defs->size % append_align == 0)
+                ? st_defs->size
+                : st_defs->size + append_align - st_defs->size % append_align;
+
+        for (Member *append_cur = append_members; append_cur;
+             append_cur = append_cur->next)
+          append_cur->offset += start_size;
+
+        st_defs->size = start_size + append_size;
+        if (append_align > st_defs->alignment)
+          st_defs->alignment = append_align;
+
+        mem_cur->next = append_members;
+        while (mem_cur->next)
+          mem_cur = mem_cur->next;
+      }
+
+      decl_cur = decl_cur->next;
+    }
+
+    st_defs->members = head.next;
+
+    st_defs->size = (st_defs->size % st_defs->alignment == 0)
+                        ? st_defs->size
+                        : st_defs->size + st_defs->alignment -
+                              st_defs->size % st_defs->alignment;
+  }
+
+  return st_defs;
+}
+
+UnionDef *analyze_union_spec(UnionSpec *union_spec, Analyze *state,
+                             bool is_global) {
+  UnionDef *union_def = NULL;
+
+  if (union_spec->union_name)
+    union_def = find_union(state, union_spec->union_name);
+
+  if (!union_def) {
+    union_def = calloc(1, sizeof(UnionDef));
+
+    if (union_spec->union_name) {
+      union_def->union_name = union_spec->union_name;
+      if (is_global)
+        add_str_dict(state->glb_union_def_dict, union_def->union_name,
+                     union_def);
+      else
+        add_str_dict(state->locals->local_union_def_dict, union_def->union_name,
+                     union_def);
+    }
+  }
+
+  if (union_def->is_defined && union_spec->has_decl)
+    error("redefine union");
+
+  if (union_spec->has_decl) {
+    union_def->is_defined = true;
+    union_def->size = 0;
+    union_def->alignment = 1;
+
+    Tree *decl_cur = union_spec->members;
+    Member head = {.next = NULL};
+    Member *mem_cur = &head;
+
+    while (decl_cur) {
+      // new type decl_spec in union is on same scope
+      analyze_decl_spec(decl_cur->decl_specs, state, is_global);
+      Type *obj_type = gettype_decl_spec(decl_cur->decl_specs);
+
+      if (decl_cur->declarator) {
+
+        push_lvar_scope(state);
+        analyze_declarator(decl_cur->declarator, state);
+        pop_lvar_scope(state);
+
+        obj_type = gettype_declarator(decl_cur->declarator, obj_type);
+        char *obj_name = getname_declarator(decl_cur->declarator);
+
+        Member *mem = calloc(1, sizeof(Member));
+
+        mem->member_name = obj_name;
+        mem->type = obj_type;
+        mem->offset = 0;
+
+        union_def->size =
+            (type_size(obj_type) > union_def->size ? type_size(obj_type)
+                                                   : union_def->size);
+        union_def->alignment = (type_alignment(obj_type) > union_def->alignment
+                                    ? type_alignment(obj_type)
+                                    : union_def->alignment);
+        mem_cur->next = mem;
+        mem_cur = mem;
+      } else {
+        // anonymous struct
+        int append_size, append_align;
+        Member *append_members;
+
+        if (decl_cur->decl_specs->type_spec_kind == TypeSpec_STRUCT) {
+          append_size = decl_cur->decl_specs->st_def->size;
+          append_align = decl_cur->decl_specs->st_def->alignment;
+          append_members = decl_cur->decl_specs->st_def->members;
+        } else if (decl_cur->decl_specs->type_spec_kind == TypeSpec_UNION) {
+          append_size = decl_cur->decl_specs->union_def->size;
+          append_align = decl_cur->decl_specs->union_def->alignment;
+          append_members = decl_cur->decl_specs->union_def->members;
+        } else
+          error("must be struct or union");
+
+        union_def->size =
+            (append_size > union_def->size ? append_size : union_def->size);
+        union_def->alignment =
+            (append_align > union_def->alignment ? append_align
+                                                 : union_def->alignment);
+
+        mem_cur->next = append_members;
+        while (mem_cur->next)
+          mem_cur = mem_cur->next;
+      }
+
+      decl_cur = decl_cur->next;
+    }
+
+    union_def->members = head.next;
+    union_def->size = (union_def->size % union_def->alignment == 0)
+                          ? union_def->size
+                          : union_def->size + union_def->alignment -
+                                union_def->size % union_def->alignment;
+  }
+
+  return union_def;
 }
 
 void analyze_declarator(Declarator *declarator, Analyze *state) {
