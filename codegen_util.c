@@ -104,8 +104,8 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
 
 void mul_reg(FILE *codegen_output, Type *type) {
   if (type->is_unsigned) {
-    fprintf(codegen_output, "  mul%c %s, %s\n", get_size_suffix(type),
-            get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
+    fprintf(codegen_output, "  mul%c %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rdi, type));
   } else {
     fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(type),
             get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
