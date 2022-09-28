@@ -440,7 +440,29 @@ UnionDef *analyze_union_spec(UnionSpec *union_spec, Analyze *state,
         mem_cur = mem;
       } else {
         // anonymous struct
-        not_implemented(__func__);
+        int append_size, append_align;
+        Member *append_members;
+
+        if (decl_cur->decl_specs->type_spec_kind == TypeSpec_STRUCT) {
+          append_size = decl_cur->decl_specs->st_def->size;
+          append_align = decl_cur->decl_specs->st_def->alignment;
+          append_members = decl_cur->decl_specs->st_def->members;
+        } else if (decl_cur->decl_specs->type_spec_kind == TypeSpec_UNION) {
+          append_size = decl_cur->decl_specs->union_def->size;
+          append_align = decl_cur->decl_specs->union_def->alignment;
+          append_members = decl_cur->decl_specs->union_def->members;
+        } else
+          error("must be struct or union");
+
+        union_def->size =
+            (append_size > union_def->size ? append_size : union_def->size);
+        union_def->alignment =
+            (append_align > union_def->alignment ? append_align
+                                                 : union_def->alignment);
+
+        mem_cur->next = append_members;
+        while (mem_cur->next)
+          mem_cur = mem_cur->next;
       }
 
       decl_cur = decl_cur->next;
