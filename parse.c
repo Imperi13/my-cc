@@ -1738,7 +1738,9 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
 
     Token *num_tok = consume_kind(&tok, tok, TK_NUM);
     primary->num = num_tok->val;
+    primary->is_unsigned = num_tok->is_unsigned;
     primary->is_long = num_tok->is_long;
+    primary->is_longlong = num_tok->is_longlong;
   } else if (equal_kind(tok, TK_STR)) {
     primary = calloc(1, sizeof(Tree));
     primary->kind = STR;

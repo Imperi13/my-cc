@@ -957,7 +957,6 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     load2rax_from_raxaddr(codegen_output, expr->type);
   } break;
   case NUM: {
-    // fprintf(codegen_output, "  movq $%d, %%rax\n", expr->num);
     mov_imm(codegen_output, &reg_rax, expr->type, expr->num);
   } break;
   case STR: {

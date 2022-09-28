@@ -6,7 +6,7 @@ cc_option="--std=gnu11 -g --static -Wall -Wextra"
 
 echo ${compile}
 
-rm -f ./build/*.s
+rm -f ./build/*
 
 ${cc} ${cc_option} -o ./build/mycc1 ${compile}
 
