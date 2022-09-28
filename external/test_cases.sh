@@ -591,4 +591,7 @@ run_test unsigned_6 'int main(){unsigned int n = 0x80000000U; unsigned int m = 0
 run_test unsigned_7 'int main(){unsigned int n = 0x80000000U; if(n >> 28 == 0x8)return 174;else return 160;}' 174
 run_test unsigned_8 'int main(){unsigned int n = 2; unsigned int m = 5; if(n * m == 10)return 174;else return 160;}' 174
 run_test unsigned_9 'int main(){unsigned long long n = 0xffffffffffffffffULL; if(n >> 60 == 0xf)return 174;else return 160;}' 174
-run_test unsigned_9 'int main(){unsigned long long n = 0x8000000000000000ULL; if(n >> 60 == 0x8)return 174;else return 160;}' 174
+run_test unsigned_10 'int main(){unsigned long long n = 0x8000000000000000ULL; if(n >> 60 == 0x8)return 174;else return 160;}' 174
+
+run_test anonymous_struct_1 'struct Test{ int n; union {int m; int *p;}; }; int main(){ return 174; }' 174
+run_test anonymous_struct_2 'struct Test{ int n; union {int m; int *p;}; }; int main(){ struct Test t; t.n = 10; t.m = 20; return 144+t.n+t.m; }' 174
