@@ -1083,7 +1083,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setl %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  setb %%al\n");
+      else
+        fprintf(codegen_output, "  setl %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
@@ -1099,7 +1104,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setle %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  setna %%al\n");
+      else
+        fprintf(codegen_output, "  setle %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
@@ -1115,7 +1125,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setg %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  seta %%al\n");
+      else
+        fprintf(codegen_output, "  setg %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");
@@ -1131,7 +1146,12 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
               get_size_suffix(expr->lhs->type),
               get_reg_alias(&reg_rdi, expr->rhs->type),
               get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setge %%al\n");
+
+      if (expr->lhs->type->is_unsigned)
+        fprintf(codegen_output, "  setnb %%al\n");
+      else
+        fprintf(codegen_output, "  setge %%al\n");
+
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
       fprintf(codegen_output, "  cmpq %%rdi, %%rax\n");

@@ -584,3 +584,6 @@ run_test cast_2 'int main(){int *p = (void *) 0; _Bool t = p; if(t)return 164;el
 
 run_test unsigned_1 'int main(){unsigned char n = 0xff; if(n==0xff)return 174;else return 160;}' 174
 run_test unsigned_2 'int main(){unsigned char n = 0xff; unsigned char m = 0x10; if(m - n < 0)return 174;else return 160;}' 174
+run_test unsigned_3 'int main(){unsigned int n = 0x7fffffff; unsigned int m = 0x80000000; if(n < m)return 174;else return 160;}' 174
+run_test unsigned_4 'int main(){unsigned int n = 0x7fffffff; unsigned int m = 0x80000000; if(n <= m)return 174;else return 160;}' 174
+run_test unsigned_5 'int main(){unsigned int n = 0x80000000; unsigned int m = 0x80000000; if(n <= m)return 174;else return 160;}' 174
