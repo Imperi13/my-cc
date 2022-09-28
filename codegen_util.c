@@ -166,3 +166,25 @@ void mod_reg(FILE *codegen_output, Type *type) {
       not_implemented(__func__);
   }
 }
+
+void lshift_reg(FILE *codegen_output, Type *lhs_type, Type *rhs_type) {
+  mov_reg(codegen_output, &reg_rdi, &reg_rcx, rhs_type);
+
+  if (lhs_type->is_unsigned)
+    fprintf(codegen_output, "  shl%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
+  else
+    fprintf(codegen_output, "  sal%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
+}
+
+void rshift_reg(FILE *codegen_output, Type *lhs_type, Type *rhs_type) {
+  mov_reg(codegen_output, &reg_rdi, &reg_rcx, rhs_type);
+
+  if (lhs_type->is_unsigned)
+    fprintf(codegen_output, "  shr%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
+  else
+    fprintf(codegen_output, "  sar%c %%cl, %s\n", get_size_suffix(lhs_type),
+            get_reg_alias(&reg_rax, lhs_type));
+}

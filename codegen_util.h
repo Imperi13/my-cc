@@ -34,3 +34,5 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
 void mul_reg(FILE *codegen_output, Type *type);
 void div_reg(FILE *codegen_output, Type *type);
 void mod_reg(FILE *codegen_output, Type *type);
+void lshift_reg(FILE *codegen_output, Type *lhs_type, Type *rhs_type);
+void rshift_reg(FILE *codegen_output, Type *lhs_type, Type *rhs_type);

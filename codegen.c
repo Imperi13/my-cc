@@ -734,11 +734,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
     reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
 
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, promoted_rtype);
-
-    fprintf(codegen_output, "  sal%c %%cl, %s\n",
-            get_size_suffix(promoted_ltype),
-            get_reg_alias(&reg_rax, promoted_ltype));
+    lshift_reg(codegen_output, promoted_ltype, promoted_rtype);
 
     reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
@@ -760,11 +756,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
     reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
 
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, promoted_rtype);
-
-    fprintf(codegen_output, "  sar%c %%cl, %s\n",
-            get_size_suffix(promoted_ltype),
-            get_reg_alias(&reg_rax, promoted_ltype));
+    rshift_reg(codegen_output, promoted_ltype, promoted_rtype);
 
     reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
@@ -1158,16 +1150,10 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     }
   } break;
   case LSHIFT: {
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
-    fprintf(codegen_output, "  sal%c %%cl, %s\n",
-            get_size_suffix(expr->lhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    lshift_reg(codegen_output, expr->lhs->type, expr->rhs->type);
   } break;
   case RSHIFT: {
-    mov_reg(codegen_output, &reg_rdi, &reg_rcx, expr->rhs->type);
-    fprintf(codegen_output, "  sar%c %%cl, %s\n",
-            get_size_suffix(expr->lhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    rshift_reg(codegen_output, expr->lhs->type, expr->rhs->type);
   } break;
   case ADD: {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
