@@ -92,9 +92,14 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
   if (type_size(dst_type) <= type_size(src_type))
     return;
 
-  fprintf(codegen_output, "  movs%c%c %s, %s\n", get_size_suffix(src_type),
-          get_size_suffix(dst_type), get_reg_alias(reg, src_type),
-          get_reg_alias(reg, dst_type));
+  if (src_type->is_unsigned)
+    fprintf(codegen_output, "  movz%c%c %s, %s\n", get_size_suffix(src_type),
+            get_size_suffix(dst_type), get_reg_alias(reg, src_type),
+            get_reg_alias(reg, dst_type));
+  else
+    fprintf(codegen_output, "  movs%c%c %s, %s\n", get_size_suffix(src_type),
+            get_size_suffix(dst_type), get_reg_alias(reg, src_type),
+            get_reg_alias(reg, dst_type));
 }
 
 void div_reg(FILE *codegen_output, Type *type) {
