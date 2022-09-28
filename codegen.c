@@ -576,9 +576,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
     reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
 
-    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(result_type),
-            get_reg_alias(&reg_rdi, result_type),
-            get_reg_alias(&reg_rax, result_type));
+    mul_reg(codegen_output, result_type);
 
     reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
@@ -1212,9 +1210,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case MUL: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on MUL");
-    fprintf(codegen_output, "  imul%c %s, %s\n", get_size_suffix(expr->type),
-            get_reg_alias(&reg_rdi, expr->rhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    mul_reg(codegen_output, expr->lhs->type);
   } break;
   case DIV: {
     div_reg(codegen_output, expr->type);

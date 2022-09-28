@@ -31,5 +31,6 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
 // arithmetic operator
 // lhs: rax, rhs:rdi
 // result save to rax
+void mul_reg(FILE *codegen_output, Type *type);
 void div_reg(FILE *codegen_output, Type *type);
 void mod_reg(FILE *codegen_output, Type *type);
