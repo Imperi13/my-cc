@@ -590,3 +590,5 @@ run_test unsigned_5 'int main(){unsigned int n = 0x80000000; unsigned int m = 0x
 run_test unsigned_6 'int main(){unsigned int n = 0x80000000; unsigned int m = 0x400000; if(n/m == 0x200)return 174;else return 160;}' 174
 run_test unsigned_7 'int main(){unsigned int n = 0x80000000; if(n >> 28 == 0x8)return 174;else return 160;}' 174
 run_test unsigned_8 'int main(){unsigned int n = 2; unsigned int m = 5; if(n * m == 10)return 174;else return 160;}' 174
+run_test unsigned_9 'int main(){unsigned long long n = 0xffffffffffffffff; if(n >> 60 == 0xf)return 174;else return 160;}' 174
+run_test unsigned_9 'int main(){unsigned long long n = 0x8000000000000000; if(n >> 60 == 0x8)return 174;else return 160;}' 174
