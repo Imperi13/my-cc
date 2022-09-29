@@ -387,10 +387,15 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   if (equal(tok, "(") && !isblank(*(tok->str - 1))) {
     consume(&tok, tok, "(");
 
+    new_def->is_function_like = true;
+
     int cnt = 0;
     while (!equal(tok, ")")) {
-      if (equal(tok, "..."))
-        not_implemented_token(tok);
+      if (equal(tok, "...")) {
+        consume(&tok, tok, "...");
+        new_def->is_va = true;
+        break;
+      }
 
       char *name = getname_ident(&tok, tok);
       MacroArg *macro_arg = calloc(1, sizeof(MacroArg));
@@ -406,7 +411,6 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
     }
     expect(&tok, tok, ")");
 
-    new_def->is_function_like = true;
     new_def->argc = cnt;
   }
 
@@ -427,6 +431,11 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
       MacroArg *macro_arg = find_str_dict(macro_arg_dict, tok->ident_str);
       replace_tok->kind = TK_MACRO_ARG;
       replace_tok->nth_arg = macro_arg->nth;
+    }
+
+    if (equal_kind(tok, TK_IDENT) && cmp_ident(tok, "__VA_ARGS__")) {
+      replace_tok->kind = TK_MACRO_ARG;
+      replace_tok->is_va_args = true;
     }
 
     cur = cur->next;
