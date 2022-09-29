@@ -151,8 +151,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type);
 
-      // get size for null-size array []
-      if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
+      // get size for null-size array declaration []
+      if (!ast->decl_specs->has_extern && obj_type->kind == ARRAY &&
+          get_arr_declarator(cur)->is_null_size) {
         if (!cur->init_expr)
           error("tentative array def must have initialize value");
 
