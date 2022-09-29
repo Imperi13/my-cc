@@ -226,16 +226,14 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
 
-      if (decl_spec->en_spec->en_name) {
-        if (is_global) {
-          en_def->en_name = decl_spec->en_spec->en_name;
-          en_def->next = state->glb_enum_defs;
-          state->glb_enum_defs = en_def;
-        } else {
-          en_def->en_name = decl_spec->en_spec->en_name;
-          en_def->next = state->locals->local_enum_defs;
-          state->locals->local_enum_defs = en_def;
-        }
+      if (is_global) {
+        en_def->en_name = decl_spec->en_spec->en_name;
+        en_def->next = state->glb_enum_defs;
+        state->glb_enum_defs = en_def;
+      } else {
+        en_def->en_name = decl_spec->en_spec->en_name;
+        en_def->next = state->locals->local_enum_defs;
+        state->locals->local_enum_defs = en_def;
       }
     }
 
@@ -1711,7 +1709,7 @@ EnumDef *find_enum(Analyze *state, char *en_name) {
 
 EnumDef *find_enum_in_scope(EnumDef *en_defs, char *en_name) {
   for (EnumDef *cur = en_defs; cur; cur = cur->next)
-    if (strcmp(en_name, cur->en_name) == 0)
+    if (cur->en_name && strcmp(en_name, cur->en_name) == 0)
       return cur;
   return NULL;
 }
