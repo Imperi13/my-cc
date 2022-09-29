@@ -98,11 +98,11 @@ int main(int argc, char **argv) {
 
   FilePathList *linker_list = NULL;
 
-  add_include_path("/usr/local/musl/include");
-  /*
+  //  add_include_path("/usr/local/musl/include");
   add_include_path("/usr/include");
+  add_include_path("/usr/local/include");
+  add_include_path("/usr/include/x86_64-linux-gnu");
   add_include_path("/usr/lib/gcc/x86_64-linux-gnu/10/include");
-  */
 
   for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
        input_index++) {
