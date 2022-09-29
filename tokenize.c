@@ -304,7 +304,7 @@ Token *tokenize(char *p, char *filepath) {
       continue;
     }
 
-    if (*p == '\n') {
+    if (*p == '\n' || *p == '\x0c') {
       cur = new_token(TK_NEWLINE, cur, p, 1, filepath, file_buf);
       p++;
       continue;

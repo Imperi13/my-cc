@@ -1,7 +1,6 @@
 
-
 #include <errno.h>
-#include <limits.h>
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,4 +84,13 @@ char *get_caronical_path(char *path) {
     error("cannot normalized path: %s", strerror(errno));
 
   return caronical_path;
+}
+
+char *get_file_directory(char *path) {
+  assert(path[0] == '/', "path must be absolute path");
+
+  int dir_len = strrchr(path, '/') - path;
+  char *dir_buf = calloc(dir_len + 1, sizeof(char));
+  strncpy(dir_buf, path, dir_len + 1);
+  return dir_buf;
 }

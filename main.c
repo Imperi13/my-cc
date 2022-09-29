@@ -43,7 +43,7 @@ void assemble(char *input_path, char *output_path) {
   run_cmd(argv);
 }
 
-// use musl-gcc instead of ld because I'm not sure about the linker option
+// use gcc instead of ld because I'm not sure about the linker option
 // TODO use ld linker
 void linker(FilePathList *linker_list, char *output_path) {
   int cnt = 3;
@@ -51,7 +51,7 @@ void linker(FilePathList *linker_list, char *output_path) {
     cnt++;
 
   char **argv = calloc(cnt + 1, sizeof(char *));
-  argv[0] = "/usr/local/musl/bin/musl-gcc";
+  argv[0] = "gcc";
   argv[1] = "-o";
   argv[2] = output_path;
 
@@ -98,11 +98,11 @@ int main(int argc, char **argv) {
 
   FilePathList *linker_list = NULL;
 
-  add_include_path("/usr/local/musl/include");
-  /*
+  //  add_include_path("/usr/local/musl/include");
   add_include_path("/usr/include");
+  add_include_path("/usr/local/include");
+  add_include_path("/usr/include/x86_64-linux-gnu");
   add_include_path("/usr/lib/gcc/x86_64-linux-gnu/10/include");
-  */
 
   for (int input_index = 0; input_index < cmd_opt->input_file_cnt;
        input_index++) {

@@ -151,8 +151,9 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type);
 
-      // get size for null-size array []
-      if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
+      // get size for null-size array declaration []
+      if (!ast->decl_specs->has_extern && obj_type->kind == ARRAY &&
+          get_arr_declarator(cur)->is_null_size) {
         if (!cur->init_expr)
           error("tentative array def must have initialize value");
 
@@ -225,16 +226,14 @@ void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state, bool is_global) {
     if (!en_def) {
       en_def = calloc(1, sizeof(EnumDef));
 
-      if (decl_spec->en_spec->en_name) {
-        if (is_global) {
-          en_def->en_name = decl_spec->en_spec->en_name;
-          en_def->next = state->glb_enum_defs;
-          state->glb_enum_defs = en_def;
-        } else {
-          en_def->en_name = decl_spec->en_spec->en_name;
-          en_def->next = state->locals->local_enum_defs;
-          state->locals->local_enum_defs = en_def;
-        }
+      if (is_global) {
+        en_def->en_name = decl_spec->en_spec->en_name;
+        en_def->next = state->glb_enum_defs;
+        state->glb_enum_defs = en_def;
+      } else {
+        en_def->en_name = decl_spec->en_spec->en_name;
+        en_def->next = state->locals->local_enum_defs;
+        state->locals->local_enum_defs = en_def;
       }
     }
 
@@ -1710,7 +1709,7 @@ EnumDef *find_enum(Analyze *state, char *en_name) {
 
 EnumDef *find_enum_in_scope(EnumDef *en_defs, char *en_name) {
   for (EnumDef *cur = en_defs; cur; cur = cur->next)
-    if (strcmp(en_name, cur->en_name) == 0)
+    if (cur->en_name && strcmp(en_name, cur->en_name) == 0)
       return cur;
   return NULL;
 }

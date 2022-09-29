@@ -598,3 +598,5 @@ run_test anonymous_struct_2 'struct Test{ int n; union {int *p; int m;}; }; int 
 run_test anonymous_struct_3 'struct Test{ int n; struct {int *p; int m;}; }; int main(){ struct Test t; t.n = 10; t.m = 20; return 144+t.n+t.m; }' 174
 run_test anonymous_struct_4 'union Test{ int n; struct {int *p; int m;}; }; int main(){ union Test t; t.n = 10; t.m = 20; return 144+t.n+t.m; }' 174
 run_test anonymous_struct_5 'union Test{ int n; union {int *p; int m;}; }; int main(){ union Test t; t.n = 10; return 164+t.n; }' 174
+
+run_test enum_1 'enum { A,B }; int main(){ return 173+B; }' 174

@@ -1,6 +1,6 @@
 
 #include <ctype.h>
-#include <limits.h>
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -119,7 +119,9 @@ void process_macro_group(Token **post, Token **pre, Token *tok) {
   } else if (cmp_ident(tok->next, "pragma")) {
     process_pragma_line(post, pre, tok);
   } else {
-    warn("ignore unrecognized macro group");
+    if (post)
+      warn("ignore unrecognized macro group: %.*s", tok->next->len,
+           tok->next->str);
     consume_line(pre, tok);
   }
 }
@@ -322,13 +324,20 @@ void process_include_line(Token **post, Token **pre, Token *tok) {
 
     *pre = tok;
   } else if (equal_kind(tok, TK_STR)) {
-    Token *file = consume_kind(&tok, tok, TK_STR);
-    char *filepath = file->str_literal->str;
-    filepath = get_caronical_path(filepath);
+    char *current_filepath = tok->filepath;
+    char *current_dir = get_file_directory(current_filepath);
 
-    if (!is_included(filepath)) {
-      char *buf = read_file(filepath);
-      Token *inc_tok = tokenize(buf, filepath);
+    Token *file = consume_kind(&tok, tok, TK_STR);
+    char *include_path = file->str_literal->str;
+
+    char tmp[PATH_MAX + 1];
+    snprintf(tmp, PATH_MAX + 1, "%s/%s", current_dir, include_path);
+
+    include_path = get_caronical_path(tmp);
+
+    if (!is_included(include_path)) {
+      char *buf = read_file(include_path);
+      Token *inc_tok = tokenize(buf, include_path);
 
       insert_token_seq(tok, inc_tok);
     }

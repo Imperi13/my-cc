@@ -918,6 +918,7 @@ Declarator *parse_abstract_declarator(Token **rest, Token *tok,
   return declarator;
 }
 
+// check either type-name or declaration
 bool is_declaration(Token *tok, Analyze *state) {
   if (!is_decl_specs(tok, state))
     return false;
@@ -935,39 +936,13 @@ bool is_declarator(Token *tok, Analyze *state) {
   }
 
   if (equal_kind(tok, TK_IDENT)) {
-    consume_kind(&tok, tok, TK_IDENT);
+    return true;
   } else if (equal(tok, "(")) {
     consume(&tok, tok, "(");
-    if (!is_declarator(tok, state))
-      return false;
-    parse_declarator(&tok, tok, state);
-    if (!equal(tok, ")"))
-      return false;
-    consume(&tok, tok, ")");
-  } else {
-    return false;
+    return is_declarator(tok, state);
   }
 
-  if (equal(tok, "(")) {
-    consume(&tok, tok, "(");
-    if (equal(tok, ")") || (equal_kind(tok, TK_VOID) && equal(tok->next, ")")))
-      return true;
-
-    parse_parameter_type_list(&tok, tok, state);
-    if (!equal(tok, ")"))
-      return false;
-    consume(&tok, tok, ")");
-  } else if (equal(tok, "[")) {
-    consume(&tok, tok, "[");
-    if (!equal_kind(tok, TK_NUM))
-      return false;
-    consume_kind(&tok, tok, TK_NUM);
-    if (!equal(tok, "]"))
-      return false;
-    consume(&tok, tok, "]");
-  }
-
-  return true;
+  return false;
 }
 
 Tree *parse_stmt(Token **rest, Token *tok, Analyze *state) {
