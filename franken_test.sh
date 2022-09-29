@@ -1,7 +1,8 @@
 #!/bin/bash
 
 compile="*.c"
-cc=/usr/local/musl/bin/musl-gcc
+#cc=/usr/local/musl/bin/musl-gcc
+cc=gcc
 cc_option="--std=gnu11 -g --static -Wall -Wextra"
 
 echo ${compile}
