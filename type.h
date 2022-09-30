@@ -61,7 +61,8 @@ extern Type type_char;
 extern Type type_uchar;
 
 // type alias
-#define type_ptrdiff type_long
+#define type_ptrdiff_t type_long
+#define type_size_t type_ulong
 
 Type *newtype_ptr(Type *type);
 Type *newtype_struct(StructDef *st_def);

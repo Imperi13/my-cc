@@ -1027,7 +1027,7 @@ void analyze_expr(Tree *ast, Analyze *state) {
       // replace "sizeof" -> num
       ast->kind = NUM;
       ast->num = type_size(base_type);
-      ast->type = &type_int; // TODO size_t in stddef.h
+      ast->type = &type_size_t;
     } else {
       analyze_stmt(ast->lhs, state);
 
@@ -1051,7 +1051,7 @@ void analyze_expr(Tree *ast, Analyze *state) {
     // replace "sizeof" -> num
     ast->kind = NUM;
     ast->num = type_alignment(base_type);
-    ast->type = &type_int; // TODO size_t in stddef.h
+    ast->type = &type_size_t;
   } break;
 
     // postfix
@@ -1449,7 +1449,7 @@ void analyze_binary_operator(Tree *ast, Analyze *state) {
       add_arithmetic_conversions(ast->lhs, ast->rhs);
       ast->type = ast->lhs->type;
     } else if (ltype->kind == PTR && is_integer(rtype)) {
-      add_cast_stmt(ast->rhs, &type_ptrdiff); // TODO ptrdiff_t in stddef.h
+      add_cast_stmt(ast->rhs, &type_ptrdiff_t);
       ast->type = ltype;
     } else if (rtype->kind == PTR && is_integer(ltype)) {
       add_cast_stmt(ast->lhs, &type_long);
@@ -1466,10 +1466,10 @@ void analyze_binary_operator(Tree *ast, Analyze *state) {
       add_arithmetic_conversions(ast->lhs, ast->rhs);
       ast->type = ast->lhs->type;
     } else if (ltype->kind == PTR && is_integer(rtype)) {
-      add_cast_stmt(ast->rhs, &type_ptrdiff); // TODO ptrdiff_t in stddef.h
+      add_cast_stmt(ast->rhs, &type_ptrdiff_t);
       ast->type = ltype;
     } else if (rtype->kind == PTR && ltype->kind == PTR) {
-      ast->type = &type_ptrdiff; // TODO ptrdiff_t in stddef.h
+      ast->type = &type_ptrdiff_t;
     } else
       error_token(ast->error_token, "unexpected type pair");
   } break;
