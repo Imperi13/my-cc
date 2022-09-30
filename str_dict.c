@@ -11,12 +11,13 @@
 // TODO replace to hash list or self-balancing binary search tree
 //
 
-// tmp hash (bad impl)
+// simple rolling hash
 static u_int64_t hash_string(char *str) {
   assert(str, "str is NULL");
   u_int64_t ret = 0;
   size_t len = strlen(str);
   for (size_t i = 0; i < len; i++) {
+    ret *= 0x319735UL;
     ret += (u_int64_t)str[i];
   }
 
