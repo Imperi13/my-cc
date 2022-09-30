@@ -65,7 +65,10 @@ struct Token {
   char *filepath;
   char *file_buf;
   bool is_recursived;
-  int nth_arg; // for func-like macro
+
+  // for func-like macro
+  int nth_arg;
+  bool is_va_args;
 
   // for TK_NUM
   unsigned long long val;

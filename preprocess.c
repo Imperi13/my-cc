@@ -387,10 +387,15 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
   if (equal(tok, "(") && !isblank(*(tok->str - 1))) {
     consume(&tok, tok, "(");
 
+    new_def->is_function_like = true;
+
     int cnt = 0;
     while (!equal(tok, ")")) {
-      if (equal(tok, "..."))
-        not_implemented_token(tok);
+      if (equal(tok, "...")) {
+        consume(&tok, tok, "...");
+        new_def->is_va = true;
+        break;
+      }
 
       char *name = getname_ident(&tok, tok);
       MacroArg *macro_arg = calloc(1, sizeof(MacroArg));
@@ -406,7 +411,6 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
     }
     expect(&tok, tok, ")");
 
-    new_def->is_function_like = true;
     new_def->argc = cnt;
   }
 
@@ -427,6 +431,11 @@ void process_define_line(Token **post, Token **pre, Token *tok) {
       MacroArg *macro_arg = find_str_dict(macro_arg_dict, tok->ident_str);
       replace_tok->kind = TK_MACRO_ARG;
       replace_tok->nth_arg = macro_arg->nth;
+    }
+
+    if (equal_kind(tok, TK_IDENT) && cmp_ident(tok, "__VA_ARGS__")) {
+      replace_tok->kind = TK_MACRO_ARG;
+      replace_tok->is_va_args = true;
     }
 
     cur = cur->next;
@@ -502,13 +511,35 @@ void expand_define(Token **pre, Token *tok) {
 
     // expand func-like macro
     Token **arg_token_list = calloc(def->argc + 1, sizeof(Token *));
+    Token *va_args_token = new_eof_token();
 
     consume_kind(&tok, tok, TK_IDENT);
     consume(&tok, tok, "(");
     int cnt = 0;
     while (!equal(tok, ")")) {
-      if (cnt >= def->argc)
+      if (!def->is_va && cnt >= def->argc)
         error("excess macro argument");
+
+      if (cnt >= def->argc) {
+        // __VA_ARGS__
+        va_args_token = copy_macro_arg(&tok, tok);
+        Token *cur = va_args_token;
+        while (cur->next->kind != TK_EOF)
+          cur = cur->next;
+
+        while (!equal(tok, ")")) {
+          Token *comma = copy_and_consume(&tok, tok);
+          comma->next = cur->next;
+          cur->next = comma;
+          cur = cur->next;
+
+          insert_token_seq(cur, copy_macro_arg(&tok, tok));
+          while (cur->next->kind != TK_EOF)
+            cur = cur->next;
+        }
+
+        break;
+      }
 
       arg_token_list[cnt] = copy_macro_arg(&tok, tok);
       cnt++;
@@ -520,8 +551,12 @@ void expand_define(Token **pre, Token *tok) {
     // replace TK_MACRO_ARG (remain TK_MACRO_ARG token)
     for (Token *cur = replacement_list; cur->kind != TK_EOF; cur = cur->next) {
       if (cur->kind == TK_MACRO_ARG) {
-        int index = cur->nth_arg;
-        insert_token_seq(cur, copy_token_seq(arg_token_list[index]));
+        if (cur->is_va_args) {
+          insert_token_seq(cur, copy_token_seq(va_args_token));
+        } else {
+          int index = cur->nth_arg;
+          insert_token_seq(cur, copy_token_seq(arg_token_list[index]));
+        }
       }
     }
 
