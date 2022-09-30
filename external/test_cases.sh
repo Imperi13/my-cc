@@ -602,4 +602,5 @@ run_test anonymous_struct_5 'union Test{ int n; union {int *p; int m;}; }; int m
 run_test enum_1 'enum { A,B }; int main(){ return 173+B; }' 174
 
 run_test va_args_macro_1 '#define test(a,b,...) \n int main(){return 174;}' 174
-run_test va_args_macro_1 '#define test(a,b,...) a+b+sum(__VA_ARGS__) \n int sum(int a,int b){return a+b;} int main(){return test(114,10,20,30);}' 174
+run_test va_args_macro_2 '#define test(a,b,...) a+b+sum(__VA_ARGS__) \n int sum(int a,int b){return a+b;} int main(){return test(114,10,20,30);}' 174
+run_test va_args_macro_3 '#define test(a,b,...) a+b+sum(__VA_ARGS__) \n int sum(int a,int b,int c){return a+b*c;} int main(){return test(114,10,20,5,6);}' 174
