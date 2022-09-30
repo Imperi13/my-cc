@@ -4,7 +4,7 @@
 #include "error.h"
 #include "vector.h"
 
-const long default_capacity = 4;
+#define DEFAULT_CAPACITY 4
 
 struct Vector {
   long size;
@@ -15,8 +15,8 @@ struct Vector {
 Vector *new_vector(void) {
   Vector *vec = calloc(1, sizeof(Vector));
   vec->size = 0;
-  vec->capacity = default_capacity;
-  vec->data = calloc(default_capacity, sizeof(void *));
+  vec->capacity = DEFAULT_CAPACITY;
+  vec->data = calloc(DEFAULT_CAPACITY, sizeof(void *));
   return vec;
 }
 
