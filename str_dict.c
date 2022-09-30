@@ -6,9 +6,7 @@
 #include "str_dict.h"
 
 // implementation of string_dictionary (key:string to value:"void *")
-// currently,using linked-list
-//
-// TODO replace to hash list or self-balancing binary search tree
+// currently,using hash-table
 //
 
 // simple rolling hash
