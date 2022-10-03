@@ -1170,7 +1170,7 @@ void analyze_expr(Tree *ast, Analyze *state) {
   } break;
   case VAR: {
     // predefined ident
-    if (!memcmp(ast->var_name, "__func__", 8)) {
+    if (strcmp(ast->var_name, "__func__") == 0) {
 
       if (!state->current_func)
         error_token(ast->error_token, "__func__ is not in function");
