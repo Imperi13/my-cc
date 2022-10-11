@@ -188,8 +188,14 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     *pre = tok;
   } else if (equal_kind(tok, TK_IF)) {
     consume_kind(&tok, tok, TK_IF);
-    bool cond = (process_constant(&tok, tok) != 0);
-    expect_kind(&tok, tok, TK_NEWLINE);
+    bool cond = false;
+
+    if (post) {
+      cond = (process_constant(&tok, tok) != 0);
+      expect_kind(&tok, tok, TK_NEWLINE);
+    } else {
+      consume_line(&tok, tok);
+    }
 
     while (!equal(tok, "#") ||
            !(cmp_ident(tok->next, "endif") || cmp_ident(tok->next, "elif") ||
@@ -223,8 +229,14 @@ void process_elif_group(Token **post, Token **pre, Token *tok,
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "elif");
 
-  bool cond = (process_constant(&tok, tok) != 0);
-  expect_kind(&tok, tok, TK_NEWLINE);
+  bool cond = false;
+
+  if (post) {
+    cond = (process_constant(&tok, tok) != 0);
+    expect_kind(&tok, tok, TK_NEWLINE);
+  } else {
+    consume_line(&tok, tok);
+  }
 
   while (!equal(tok, "#") ||
          !(cmp_ident(tok->next, "endif") || cmp_ident(tok->next, "elif") ||

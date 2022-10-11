@@ -101,6 +101,8 @@ int main(int argc, char **argv) {
   //  add_include_path("/usr/local/musl/include");
   add_include_path("/usr/include");
   add_include_path("/usr/local/include");
+  add_include_path("/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include");
+  add_include_path("/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include-fixed");
   add_include_path("/usr/include/x86_64-linux-gnu");
   add_include_path("/usr/lib/gcc/x86_64-linux-gnu/10/include");
 
