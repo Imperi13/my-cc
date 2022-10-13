@@ -40,6 +40,7 @@ struct Obj {
 
   // for function
   int stack_size;
+  int saved_argument_offset;
 
   Obj *args;
 

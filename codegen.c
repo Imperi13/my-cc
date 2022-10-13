@@ -121,6 +121,8 @@ void codegen_function(FILE *codegen_output, Tree *func) {
     for (int i = 5; i >= 0; i--) {
       push_reg(codegen_output, call_register[i], &type_long);
     }
+    current_function->saved_argument_offset =
+        current_function->stack_size + 0x30;
   }
 
   Tree *cur = getargs_declarator(func->declarator);
@@ -366,7 +368,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x8);
     fprintf(codegen_output, "  leaq -%d(%%rbp), %%rax\n",
-            current_function->stack_size + 0x30);
+            current_function->saved_argument_offset);
     fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x10);
   } break;
