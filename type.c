@@ -289,6 +289,10 @@ int type_size(Type *type) {
     return 1;
   else if (type->kind == PTR)
     return 8;
+  else if (type->kind == FLOAT)
+    return 4;
+  else if (type->kind == DOUBLE)
+    return 8;
   else if (type->kind == ARRAY)
     return type->arr_size * type_size(type->ptr_to);
   else if (type->kind == STRUCT)
@@ -314,6 +318,10 @@ int type_alignment(Type *type) {
   else if (type->kind == BOOL)
     return 1;
   else if (type->kind == PTR)
+    return 8;
+  else if (type->kind == FLOAT)
+    return 4;
+  else if (type->kind == DOUBLE)
     return 8;
   else if (type->kind == ARRAY)
     return type_alignment(type->ptr_to);
