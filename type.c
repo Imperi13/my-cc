@@ -24,6 +24,9 @@ Type type_ushort = {.kind = SHORT, .is_unsigned = true};
 Type type_char = {.kind = CHAR};
 Type type_uchar = {.kind = CHAR, .is_unsigned = true};
 
+Type type_double = {.kind = DOUBLE};
+Type type_float = {.kind = FLOAT};
+
 void builtin_type_init(Analyze *state) {
 
   // struct __builtin_va_list
@@ -96,6 +99,10 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
     return &type_void;
   } else if (decl_spec->type_spec_kind == TypeSpec_BOOL) {
     return &type_bool;
+  } else if (decl_spec->type_spec_kind == TypeSpec_DOUBLE) {
+    return &type_double;
+  } else if (decl_spec->type_spec_kind == TypeSpec_FLOAT) {
+    return &type_float;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->union_def) {

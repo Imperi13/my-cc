@@ -85,6 +85,10 @@ typedef enum TypeSpecKind {
   TypeSpec_ULONG,
   TypeSpec_LONGLONG,
   TypeSpec_ULONGLONG,
+
+  TypeSpec_FLOAT,
+  TypeSpec_DOUBLE,
+
   TypeSpec_TYPEDEF_NAME,
   TypeSpec_STRUCT,
   TypeSpec_UNION,

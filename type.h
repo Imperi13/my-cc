@@ -2,6 +2,8 @@
 
 typedef enum TypeKind {
   VOID,
+
+  // integer or scalar
   LONGLONG,
   LONG,
   INT,
@@ -9,6 +11,12 @@ typedef enum TypeKind {
   CHAR,
   BOOL,
   PTR,
+
+  // floating-point
+  FLOAT,
+  DOUBLE,
+
+  // aggregate
   STRUCT,
   UNION,
   FUNC,
@@ -59,6 +67,9 @@ extern Type type_short;
 extern Type type_ushort;
 extern Type type_char;
 extern Type type_uchar;
+
+extern Type type_double;
+extern Type type_float;
 
 // type alias
 #define type_ptrdiff_t type_long
