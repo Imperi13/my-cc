@@ -24,6 +24,9 @@ struct Analyze {
   EnumDef *glb_enum_defs;
   Obj *current_func;
 
+  StrDict *str_literal_dict;
+  int str_literal_cnt;
+
   // local scope
   ObjScope *locals;
   LabelScope *break_labels;

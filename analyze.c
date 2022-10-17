@@ -3,10 +3,12 @@
 #include <string.h>
 
 #include "analyze.h"
+#include "codegen.h"
 #include "constexpr.h"
 #include "error.h"
 #include "parse.h"
 #include "type.h"
+#include "vector.h"
 
 static void analyze_external_decl(Tree *ast, Analyze *state);
 static void analyze_decl_spec(DeclSpec *decl_spec, Analyze *state,
@@ -61,6 +63,9 @@ Analyze *new_analyze_state(void) {
   state->glb_union_def_dict = new_str_dict();
   state->glb_typedef_dict = new_str_dict();
   state->label_cnt = 0;
+
+  state->str_literal_dict = new_str_dict();
+  state->str_literal_cnt = 0;
   return state;
 }
 
@@ -77,6 +82,7 @@ void analyze_translation_unit(Tree *ast) {
   Analyze *state = new_analyze_state();
 
   builtin_type_init(state);
+  str_literal_vector = new_vector();
 
   Tree *cur = ast;
   while (cur) {
@@ -1162,6 +1168,17 @@ void analyze_expr(Tree *ast, Analyze *state) {
     }
   } break;
   case STR: {
+    if (!find_str_dict(state->str_literal_dict, ast->str_literal->str)) {
+      ast->str_literal->id = state->str_literal_cnt;
+      state->str_literal_cnt++;
+      add_str_dict(state->str_literal_dict, ast->str_literal->str,
+                   ast->str_literal);
+      push_back_vector(str_literal_vector, ast->str_literal);
+    } else {
+      ast->str_literal =
+          find_str_dict(state->str_literal_dict, ast->str_literal->str);
+    }
+
     Type *array_char = calloc(1, sizeof(Type));
     array_char->kind = ARRAY;
     array_char->ptr_to = &type_char;
@@ -1170,7 +1187,7 @@ void analyze_expr(Tree *ast, Analyze *state) {
   } break;
   case VAR: {
     // predefined ident
-    if (!memcmp(ast->var_name, "__func__", 8)) {
+    if (strcmp(ast->var_name, "__func__") == 0) {
 
       if (!state->current_func)
         error_token(ast->error_token, "__func__ is not in function");
@@ -1181,19 +1198,26 @@ void analyze_expr(Tree *ast, Analyze *state) {
       func_name->str = calloc(func_name->len + 1, sizeof(char));
       memcpy(func_name->str, state->current_func->obj_name, func_name->len);
 
-      if (!str_literals) {
-        func_name->id = 0;
-        str_literals = func_name;
+      ast->kind = STR;
+      ast->str_literal = func_name;
+
+      if (!find_str_dict(state->str_literal_dict, ast->str_literal->str)) {
+        ast->str_literal->id = state->str_literal_cnt;
+        state->str_literal_cnt++;
+        add_str_dict(state->str_literal_dict, ast->str_literal->str,
+                     ast->str_literal);
+        push_back_vector(str_literal_vector, ast->str_literal);
       } else {
-        func_name->id = str_literals->id + 1;
-        func_name->next = str_literals;
-        str_literals = func_name;
+        ast->str_literal =
+            find_str_dict(state->str_literal_dict, ast->str_literal->str);
       }
 
       // replace ast type
-      ast->kind = STR;
-      ast->str_literal = func_name;
-      ast->type = newtype_ptr(&type_char);
+      Type *array_char = calloc(1, sizeof(Type));
+      array_char->kind = ARRAY;
+      array_char->ptr_to = &type_char;
+      array_char->arr_size = ast->str_literal->len + 1;
+      ast->type = array_char;
       return;
     }
 

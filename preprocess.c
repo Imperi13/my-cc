@@ -188,7 +188,7 @@ void process_if_group(Token **post, Token **pre, Token *tok) {
     *pre = tok;
   } else if (equal_kind(tok, TK_IF)) {
     consume_kind(&tok, tok, TK_IF);
-    bool cond = false;
+    bool cond;
 
     if (post) {
       cond = (process_constant(&tok, tok) != 0);
@@ -229,7 +229,7 @@ void process_elif_group(Token **post, Token **pre, Token *tok,
   expect(&tok, tok, "#");
   expect_ident(&tok, tok, "elif");
 
-  bool cond = false;
+  bool cond;
 
   if (post) {
     cond = (process_constant(&tok, tok) != 0);
