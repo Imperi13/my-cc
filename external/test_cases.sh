@@ -616,6 +616,8 @@ run_test float_3 'int main(){float a = 10; float b = 3; if(a/b > 3) return 174; 
 run_test float_3 'int main(){float a = 10; float b = 3; if(a/b >= 3) return 174; else return 164;}' 174
 run_test float_3 'int main(){float a = 10; float b = 3; if(a/b < 4) return 174; else return 164;}' 174
 run_test float_3 'int main(){float a = 10; float b = 3; if(a/b <= 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b == 4) return 164; else return 174;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b != 4) return 174; else return 164;}' 174
 run_test float_3 'int main(){float a = 10; float b = 3; a += b; if(a > 12) return 174; else return 164;}' 174
 run_test float_3 'int main(){float a = 10; float b = 3; a -= b; if(a < 8) return 174; else return 164;}' 174
 run_test float_3 'int main(){float a = 10; float b = 3; a *= b; if(a > 29) return 174; else return 164;}' 174
