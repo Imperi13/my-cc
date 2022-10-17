@@ -24,10 +24,13 @@ static void load2rax_from_raxaddr(FILE *codegen_output, Type *type);
 static void store2rdiaddr_from_rax(FILE *codegen_output, Type *type);
 
 Obj *current_function = NULL;
+Vector *str_literal_vector;
 
 void codegen_translation_unit(FILE *codegen_output, Tree *head) {
 
-  for (StrLiteral *now = str_literals; now; now = now->next) {
+  int str_literal_cnt = size_vector(str_literal_vector);
+  for (int i = 0; i < str_literal_cnt; i++) {
+    StrLiteral *now = get_vector(str_literal_vector, i);
     codegen_str_literal(codegen_output, now);
   }
 

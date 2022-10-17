@@ -87,14 +87,9 @@ struct StrLiteral {
   char *str;
   int len;
   int id;
-
-  // for linked-list
-  StrLiteral *next;
 };
 
 extern const char *variable_letters;
-
-extern StrLiteral *str_literals;
 
 bool equal(Token *token, char *op);
 bool equal_kind(Token *token, TokenKind kind);

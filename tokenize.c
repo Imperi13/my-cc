@@ -345,15 +345,6 @@ Token *tokenize(char *p, char *filepath) {
         i++;
       }
 
-      if (!str_literals) {
-        push_literal->id = 0;
-        str_literals = push_literal;
-      } else {
-        push_literal->id = str_literals->id + 1;
-        push_literal->next = str_literals;
-        str_literals = push_literal;
-      }
-
       Token *tmp = new_token(TK_STR, cur, tok_start, str_cur - tok_start + 1,
                              filepath, file_buf);
       tmp->str_literal = push_literal;
