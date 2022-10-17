@@ -34,6 +34,16 @@ char get_size_suffix(Type *type) {
     error("invalid type");
 }
 
+char get_floating_point_suffix(Type *floating_type) {
+  assert(is_floating_point(floating_type), "not floating type");
+  if (floating_type->kind == FLOAT)
+    return 's';
+  else if (floating_type->kind == DOUBLE)
+    return 'd';
+  else
+    error("invalid type");
+}
+
 char *get_reg_alias(Register *reg, Type *type) {
   assert(is_scalar(type), "not scalar type");
   if (type_size(type) == 1)

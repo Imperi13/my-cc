@@ -1222,13 +1222,15 @@ void codegen_arithmetic_cast(FILE *codegen_output, Type *src_type,
   if (is_integer(src_type) && is_integer(dst_type))
     reg_integer_cast(codegen_output, &reg_rax, src_type, dst_type);
   else if (is_integer(src_type) && is_floating_point(dst_type))
-    not_implemented(__func__);
+    fprintf(codegen_output, "cvtsi2s%c%c %s, %%xmm0\n",
+            get_floating_point_suffix(dst_type), get_size_suffix(src_type),
+            get_reg_alias(&reg_rax, src_type));
   else if (is_floating_point(src_type) && is_integer(dst_type))
     not_implemented(__func__);
   else if (is_floating_point(src_type) && is_floating_point(dst_type))
     not_implemented(__func__);
   else
-    error("invalid type");
+    error("not arithmetic cast");
 }
 
 // raxレジスタで指しているアドレスからtype型の値をraxにロードする
@@ -1239,11 +1241,14 @@ void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
           get_reg_alias(&reg_rax, type));
 }
 
-// raxレジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
+// rax ,xmm0レジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
 void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
   if (is_scalar(type)) {
     fprintf(codegen_output, "  mov%c %s, (%%rdi)\n", get_size_suffix(type),
             get_reg_alias(&reg_rax, type));
+  } else if (is_floating_point(type)) {
+    fprintf(codegen_output, "  movs%c %%xmm0, (%%rdi)\n",
+            get_floating_point_suffix(type));
   } else if (type->kind == STRUCT || type->kind == UNION) {
     fprintf(codegen_output, "  movq %%rax, %%rsi\n");
     fprintf(codegen_output, "  movq $%d, %%rcx\n", type_size(type));

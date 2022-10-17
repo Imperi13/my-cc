@@ -607,4 +607,5 @@ run_test va_args_macro_3 '#define test(a,b,...) a+b+sum(__VA_ARGS__) \n int sum(
 
 run_test float_1 'int main(){float a; return 174;}' 174
 run_test float_2 'int main(){float a = 0; return 174;}' 174
+run_test float_2 'int main(){float a = 0; int b = a; return 174;}' 174
 run_test float_3 'int main(){float a = 10; float b = 3; if(a/b > 3) return 174; else return 164;}' 174
