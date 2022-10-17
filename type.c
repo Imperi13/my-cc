@@ -227,6 +227,15 @@ Type *get_arithmetic_converted_type(Type *lhs_type, Type *rhs_type) {
   if (is_same_type(lhs_type, rhs_type))
     return lhs_type;
 
+  if (is_floating_point(lhs_type) || is_floating_point(rhs_type)) {
+    if (lhs_type->kind == DOUBLE || rhs_type->kind == DOUBLE)
+      return &type_double;
+    else if (lhs_type->kind == FLOAT || rhs_type->kind == FLOAT)
+      return &type_float;
+    else
+      error("not floating type");
+  }
+
   if (lhs_type->is_unsigned == rhs_type->is_unsigned) {
     if (integer_rank(lhs_type) >= integer_rank(rhs_type))
       return lhs_type;
