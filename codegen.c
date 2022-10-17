@@ -17,6 +17,9 @@ static void codegen_expr(FILE *codegen_output, Tree *expr);
 static void codegen_binary_operator(FILE *codegen_output, Tree *expr);
 static void codegen_addr(FILE *codegen_output, Tree *stmt);
 
+static void codegen_arithmetic_cast(FILE *codegen_output, Type *src_type,
+                                    Type *dst_type);
+
 static void store2rdiaddr_local_var_initialize(FILE *codegen_output,
                                                Type *var_type, Tree *init_val);
 
@@ -846,12 +849,15 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
 
     // normal cast
     if (expr->type->kind == BOOL) {
-      fprintf(codegen_output, "  cmp%c $0, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setne %%al\n");
-    } else if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
-      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, expr->type);
+      if (is_scalar(expr->lhs->type)) {
+        fprintf(codegen_output, "  cmp%c $0, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+        fprintf(codegen_output, "  setne %%al\n");
+      } else
+        not_implemented(__func__);
+    } else if (is_arithmetic(expr->type) && is_arithmetic(expr->lhs->type)) {
+      codegen_arithmetic_cast(codegen_output, expr->lhs->type, expr->type);
     }
 
   } break;
@@ -1209,6 +1215,20 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   default:
     error("cannnot codegen binary_op");
   }
+}
+
+void codegen_arithmetic_cast(FILE *codegen_output, Type *src_type,
+                             Type *dst_type) {
+  if (is_integer(src_type) && is_integer(dst_type))
+    reg_integer_cast(codegen_output, &reg_rax, src_type, dst_type);
+  else if (is_integer(src_type) && is_floating_point(dst_type))
+    not_implemented(__func__);
+  else if (is_floating_point(src_type) && is_integer(dst_type))
+    not_implemented(__func__);
+  else if (is_floating_point(src_type) && is_floating_point(dst_type))
+    not_implemented(__func__);
+  else
+    error("invalid type");
 }
 
 // raxレジスタで指しているアドレスからtype型の値をraxにロードする

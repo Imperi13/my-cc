@@ -96,6 +96,7 @@ int type_alignment(Type *type);
 
 bool is_arithmetic(Type *type);
 bool is_integer(Type *type);
+bool is_floating_point(Type *type);
 bool is_scalar(Type *type);
 bool is_same_type(Type *a, Type *b);
 bool is_compatible(Type *a, Tree *b);

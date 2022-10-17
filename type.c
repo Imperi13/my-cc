@@ -337,12 +337,18 @@ int type_alignment(Type *type) {
 }
 
 bool is_arithmetic(Type *type) {
-  return is_integer(type); // TODO check float
+  return is_integer(type) || is_floating_point(type); // TODO check float
 }
 
 bool is_integer(Type *type) {
   if (type->kind == LONGLONG || type->kind == LONG || type->kind == INT ||
       type->kind == SHORT || type->kind == CHAR || type->kind == BOOL)
+    return true;
+  return false;
+}
+
+bool is_floating_point(Type *type) {
+  if (type->kind == FLOAT || type->kind == DOUBLE)
     return true;
   return false;
 }
@@ -359,7 +365,7 @@ bool is_void_ptr(Type *type) {
 }
 
 bool is_primitive_type(Type *type) {
-  if (is_integer(type) || type->kind == VOID)
+  if (is_integer(type) || is_floating_point(type) || type->kind == VOID)
     return true;
   else
     return false;
@@ -391,7 +397,7 @@ bool is_compatible(Type *a, Tree *b) {
     return true;
   else if (a->kind == BOOL && is_scalar(b->type))
     return true;
-  else if (is_integer(a) && is_integer(b->type))
+  else if (is_arithmetic(a) && is_arithmetic(b->type))
     return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))
