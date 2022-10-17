@@ -1204,9 +1204,16 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on arithmetic SUB");
-      fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(expr->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
+
+      if (is_integer(expr->lhs->type))
+        fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(expr->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, "  subs%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("SUB");
     } else if (expr->lhs->type->kind == PTR && is_integer(expr->rhs->type)) {
       fprintf(codegen_output, "  imulq $%d, %%rdi\n",
               type_size(expr->lhs->type->ptr_to));
