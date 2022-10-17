@@ -1222,11 +1222,13 @@ void codegen_arithmetic_cast(FILE *codegen_output, Type *src_type,
   if (is_integer(src_type) && is_integer(dst_type))
     reg_integer_cast(codegen_output, &reg_rax, src_type, dst_type);
   else if (is_integer(src_type) && is_floating_point(dst_type))
-    fprintf(codegen_output, "cvtsi2s%c%c %s, %%xmm0\n",
+    fprintf(codegen_output, " cvtsi2s%c%c %s, %%xmm0\n",
             get_floating_point_suffix(dst_type), get_size_suffix(src_type),
             get_reg_alias(&reg_rax, src_type));
   else if (is_floating_point(src_type) && is_integer(dst_type))
-    not_implemented(__func__);
+    fprintf(codegen_output, "  cvtts%c2si%c %%xmm0, %s\n",
+            get_floating_point_suffix(src_type), get_size_suffix(dst_type),
+            get_reg_alias(&reg_rax, dst_type));
   else if (is_floating_point(src_type) && is_floating_point(dst_type))
     not_implemented(__func__);
   else
