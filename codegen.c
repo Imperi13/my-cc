@@ -1012,7 +1012,9 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   assert(expr, "expr is NULL");
   assert(expr->lhs && expr->rhs, "not binary operator");
 
-  // floating value stored in xmm* reg
+  // load lhs(rhs) value to register
+  // integer    lhs: rax rhs: rdi
+  // floating point lhs: xmm0 rhs: xmm1
 
   if (is_floating_point(expr->lhs->type)) {
     assert(is_floating_point(expr->rhs->type), "rhs is not floating-type");

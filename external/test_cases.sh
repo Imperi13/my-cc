@@ -613,3 +613,12 @@ run_test float_2 'int main(){float a = 10; float b = a - 20; return 174;}' 174
 run_test float_2 'int main(){float a = 10; float b = a * 20; return 174;}' 174
 run_test float_2 'int main(){float a = 10; float b = a / 20; return 174;}' 174
 run_test float_3 'int main(){float a = 10; float b = 3; if(a/b > 3) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b >= 3) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b < 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b <= 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a += b; if(a > 12) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a -= b; if(a < 8) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a *= b; if(a > 29) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a /= b; if(a < 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = +a; if(b > 9) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = -a; if(b < -9) return 174; else return 164;}' 174
