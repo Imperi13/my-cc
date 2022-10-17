@@ -1233,12 +1233,16 @@ void codegen_arithmetic_cast(FILE *codegen_output, Type *src_type,
     error("not arithmetic cast");
 }
 
-// raxレジスタで指しているアドレスからtype型の値をraxにロードする
+// raxレジスタで指しているアドレスからtype型の値をrax,xmm0にロードする
 void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
-  assert(is_scalar(type), "not scalar type");
-
-  fprintf(codegen_output, "  mov%c (%%rax), %s\n", get_size_suffix(type),
-          get_reg_alias(&reg_rax, type));
+  if (is_scalar(type))
+    fprintf(codegen_output, "  mov%c (%%rax), %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rax, type));
+  else if (is_floating_point(type))
+    fprintf(codegen_output, "  movs%c (%%rax), %%xmm0\n",
+            get_floating_point_suffix(type));
+  else
+    error("invalid type");
 }
 
 // rax ,xmm0レジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
