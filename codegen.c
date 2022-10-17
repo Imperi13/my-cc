@@ -1009,14 +1009,28 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   assert(expr, "expr is NULL");
   assert(expr->lhs && expr->rhs, "not binary operator");
 
-  codegen_stmt(codegen_output, expr->lhs);
-  // fprintf(codegen_output, "  push rax\n");
-  push_reg(codegen_output, &reg_rax, expr->lhs->type);
-  codegen_stmt(codegen_output, expr->rhs);
-  // fprintf(codegen_output, "  mov rdi,rax\n");
-  mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
-  // fprintf(codegen_output, "  pop rax\n");
-  pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+  // floating value stored in xmm* reg
+
+  if (is_floating_point(expr->lhs->type)) {
+    assert(is_floating_point(expr->rhs->type), "rhs is not floating-type");
+    codegen_stmt(codegen_output, expr->lhs);
+    fprintf(codegen_output, "  subq $8, %%rsp\n");
+    fprintf(codegen_output, "  movs%c %%xmm0, 0(%%rsp)\n",
+            get_floating_point_suffix(expr->lhs->type));
+
+    codegen_stmt(codegen_output, expr->rhs);
+    fprintf(codegen_output, "  movs%c %%xmm0, %%xmm1\n",
+            get_floating_point_suffix(expr->rhs->type));
+    fprintf(codegen_output, "  movs%c 0(%%rsp), %%xmm0\n",
+            get_floating_point_suffix(expr->lhs->type));
+    fprintf(codegen_output, "  addq $8, %%rsp\n");
+  } else {
+    codegen_stmt(codegen_output, expr->lhs);
+    push_reg(codegen_output, &reg_rax, expr->lhs->type);
+    codegen_stmt(codegen_output, expr->rhs);
+    mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+  }
 
   switch (expr->kind) {
   case BIT_AND: {
@@ -1166,9 +1180,15 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on arithmetic ADD");
-      fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(expr->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
+      if (is_integer(expr->lhs->type))
+        fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(expr->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, "  adds%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("ADD");
     } else if (expr->lhs->type->kind == PTR) {
       fprintf(codegen_output, "  imulq $%d, %%rdi\n",
               type_size(expr->lhs->type->ptr_to));
