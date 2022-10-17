@@ -1230,10 +1230,26 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case MUL: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on MUL");
-    mul_reg(codegen_output, expr->lhs->type);
+
+    if (is_integer(expr->lhs->type))
+      mul_reg(codegen_output, expr->lhs->type);
+    else if (is_floating_point(expr->lhs->type))
+      fprintf(codegen_output, "  muls%c %%xmm1, %%xmm0\n",
+              get_floating_point_suffix(expr->lhs->type));
+    else
+      error("MUL");
   } break;
   case DIV: {
-    div_reg(codegen_output, expr->type);
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on DIV");
+
+    if (is_integer(expr->lhs->type))
+      div_reg(codegen_output, expr->type);
+    else if (is_floating_point(expr->lhs->type))
+      fprintf(codegen_output, "  divs%c %%xmm1, %%xmm0\n",
+              get_floating_point_suffix(expr->lhs->type));
+    else
+      error("DIV");
   } break;
   case MOD: {
     mod_reg(codegen_output, expr->type);
