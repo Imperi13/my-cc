@@ -80,9 +80,17 @@ void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
 
 void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type) {
   assert(is_scalar(type), "not scalar type");
+  assert(src->is_SSE ^ is_scalar(type), "invalid register");
+  assert(dst->is_SSE ^ is_scalar(type), "invalid register");
 
-  fprintf(codegen_output, "  mov%c %s, %s\n", get_size_suffix(type),
-          get_reg_alias(src, type), get_reg_alias(dst, type));
+  if (is_scalar(type))
+    fprintf(codegen_output, "  mov%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(src, type), get_reg_alias(dst, type));
+  else if (is_floating_point(type))
+    fprintf(codegen_output, "  movs%c %s, %s\n",
+            get_floating_point_suffix(type), src->alias[0], dst->alias[0]);
+  else
+    error("mov_reg");
 }
 
 void mov_imm(FILE *codegen_output, Register *reg, Type *type,
@@ -126,6 +134,16 @@ void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
 
   if (is_same_type(src_type, dst_type))
     return;
+
+  if (dst_type->kind == BOOL) {
+    if (is_scalar(src_type)) {
+      fprintf(codegen_output, "  cmp%c $0, %s\n", get_size_suffix(src_type),
+              get_reg_alias(src_reg, src_type));
+      fprintf(codegen_output, "  setne %s\n", get_reg_alias(dst_reg, dst_type));
+    } else
+      not_implemented(__func__);
+    return;
+  }
 
   if (is_integer(src_type) && is_integer(dst_type)) {
 
