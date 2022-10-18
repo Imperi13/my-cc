@@ -7,6 +7,7 @@
 
 struct Register {
   char *alias[4];
+  bool is_SSE;
 };
 
 Register reg_rax = {.alias = {"%al", "%ax", "%eax", "%rax"}};
@@ -16,6 +17,9 @@ Register reg_rdx = {.alias = {"%dl", "%dx", "%edx", "%rdx"}};
 Register reg_rcx = {.alias = {"%cl", "%cx", "%ecx", "%rcx"}};
 Register reg_r8 = {.alias = {"%r8b", "%r8w", "%r8d", "%r8"}};
 Register reg_r9 = {.alias = {"%r9b", "%r9w", "%r9d", "%r9"}};
+
+Register reg_xmm0 = {.alias = {"%xmm0", "", "", ""}, .is_SSE = true};
+Register reg_xmm1 = {.alias = {"%xmm1", "", "", ""}, .is_SSE = true};
 
 Register *call_register[6] = {&reg_rdi, &reg_rsi, &reg_rdx,
                               &reg_rcx, &reg_r8,  &reg_r9};
