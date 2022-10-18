@@ -117,6 +117,47 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
             get_reg_alias(reg, dst_type));
 }
 
+void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
+                         Register *dst_reg, Type *src_type, Type *dst_type) {
+  assert(is_arithmetic(src_type) && is_arithmetic(dst_type),
+         "not arithmetic type");
+  assert(src_reg->is_SSE ^ is_integer(src_type), "invalid register");
+  assert(dst_reg->is_SSE ^ is_integer(dst_type), "invalid register");
+
+  if (is_same_type(src_type, dst_type))
+    return;
+
+  // handle cast2bool
+  if (dst_type->kind == BOOL) {
+    fprintf(codegen_output, "  cmp%c $0, %s\n", get_size_suffix(src_type),
+            get_reg_alias(src_reg, src_type));
+    fprintf(codegen_output, "  setne %s\n", get_reg_alias(dst_reg, dst_type));
+  }
+
+  if (is_integer(src_type) && is_integer(dst_type)) {
+
+    if (type_size(dst_type) <= type_size(src_type))
+      return;
+
+    if (src_type->is_unsigned)
+      fprintf(codegen_output, "  movz%c%c %s, %s\n", get_size_suffix(src_type),
+              get_size_suffix(dst_type), get_reg_alias(src_reg, src_type),
+              get_reg_alias(dst_reg, dst_type));
+    else
+      fprintf(codegen_output, "  movs%c%c %s, %s\n", get_size_suffix(src_type),
+              get_size_suffix(dst_type), get_reg_alias(src_reg, src_type),
+              get_reg_alias(dst_reg, dst_type));
+
+  } else if (is_floating_point(src_type) && is_integer(dst_type)) {
+    not_implemented(__func__);
+  } else if (is_integer(src_type) && is_floating_point(dst_type)) {
+    not_implemented(__func__);
+  } else if (is_floating_point(src_type) && is_floating_point(dst_type)) {
+    not_implemented(__func__);
+  } else
+    error("invalid type pair");
+}
+
 void mul_reg(FILE *codegen_output, Type *type) {
   if (type->is_unsigned) {
     fprintf(codegen_output, "  mul%c %s\n", get_size_suffix(type),
