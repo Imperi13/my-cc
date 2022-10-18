@@ -127,13 +127,6 @@ void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
   if (is_same_type(src_type, dst_type))
     return;
 
-  // handle cast2bool
-  if (dst_type->kind == BOOL) {
-    fprintf(codegen_output, "  cmp%c $0, %s\n", get_size_suffix(src_type),
-            get_reg_alias(src_reg, src_type));
-    fprintf(codegen_output, "  setne %s\n", get_reg_alias(dst_reg, dst_type));
-  }
-
   if (is_integer(src_type) && is_integer(dst_type)) {
 
     if (type_size(dst_type) <= type_size(src_type))
