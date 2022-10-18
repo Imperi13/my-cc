@@ -149,9 +149,15 @@ void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
               get_reg_alias(dst_reg, dst_type));
 
   } else if (is_floating_point(src_type) && is_integer(dst_type)) {
-    not_implemented(__func__);
+    fprintf(codegen_output, "  cvtts%c2si%c %s, %s\n",
+            get_floating_point_suffix(src_type), get_size_suffix(dst_type),
+            src_reg->alias[0], get_reg_alias(dst_reg, dst_type));
+
   } else if (is_integer(src_type) && is_floating_point(dst_type)) {
-    not_implemented(__func__);
+    fprintf(codegen_output, " cvtsi2s%c%c %s, %s\n",
+            get_floating_point_suffix(dst_type), get_size_suffix(src_type),
+            get_reg_alias(src_reg, src_type), dst_reg->alias[0]);
+
   } else if (is_floating_point(src_type) && is_floating_point(dst_type)) {
     not_implemented(__func__);
   } else
