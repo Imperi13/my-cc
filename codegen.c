@@ -480,32 +480,52 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     } else {
       // arithmetic ADD_ASSIGN
 
-      Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
-      Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
-      Type *result_type =
-          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
-
       codegen_addr(codegen_output, expr->lhs);
       fprintf(codegen_output, "  pushq %%rax\n");
       codegen_stmt(codegen_output, expr->rhs);
-      mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+
+      Register *rhs_reg = is_integer(expr->rhs->type) ? &reg_rdi : &reg_xmm1;
+      mov_reg(codegen_output,
+              is_integer(expr->rhs->type) ? &reg_rax : &reg_xmm0, rhs_reg,
+              expr->rhs->type);
+
       fprintf(codegen_output, "  popq %%rsi\n");
       fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+      Register *lhs_reg = is_integer(expr->lhs->type) ? &reg_rax : &reg_xmm0;
       load2rax_from_raxaddr(codegen_output, expr->lhs->type);
 
       // lhs value: rax , rhs value: rdi
-      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type,
-                       promoted_ltype);
-      reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type,
-                       promoted_rtype);
-      reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
-      reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+      Type *promoted_ltype = is_integer(expr->lhs->type)
+                                 ? get_integer_promoted_type(expr->lhs->type)
+                                 : expr->lhs->type;
+      Register *promoted_lhs_reg =
+          is_integer(promoted_ltype) ? &reg_rax : &reg_xmm0;
+      reg_arithmetic_cast(codegen_output, lhs_reg, promoted_lhs_reg,
+                          expr->lhs->type, promoted_ltype);
 
-      fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(result_type),
-              get_reg_alias(&reg_rdi, result_type),
-              get_reg_alias(&reg_rax, result_type));
+      Type *promoted_rtype = is_integer(expr->rhs->type)
+                                 ? get_integer_promoted_type(expr->rhs->type)
+                                 : expr->rhs->type;
+      Register *promoted_rhs_reg =
+          is_integer(promoted_rtype) ? &reg_rdi : &reg_xmm1;
+      reg_arithmetic_cast(codegen_output, rhs_reg, promoted_rhs_reg,
+                          expr->rhs->type, promoted_rtype);
 
-      reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+      Type *result_type =
+          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+      Register *result_type_lhs_reg =
+          is_integer(result_type) ? &reg_rax : &reg_xmm0;
+      Register *result_type_rhs_reg =
+          is_integer(result_type) ? &reg_rdi : &reg_xmm1;
+      reg_arithmetic_cast(codegen_output, promoted_lhs_reg, result_type_lhs_reg,
+                          promoted_ltype, result_type);
+      reg_arithmetic_cast(codegen_output, promoted_rhs_reg, result_type_rhs_reg,
+                          promoted_rtype, result_type);
+
+      add_reg(codegen_output, result_type);
+
+      reg_arithmetic_cast(codegen_output, result_type_lhs_reg, lhs_reg,
+                          result_type, expr->lhs->type);
       fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
       store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
     }

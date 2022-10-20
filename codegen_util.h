@@ -35,8 +35,10 @@ void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
                          Register *dst_reg, Type *src_type, Type *dst_type);
 
 // arithmetic operator
-// lhs: rax, rhs:rdi
+// scalar type : lhs - rax, rhs - rdi
+// floating point type : lhs - xmm0, rhs - xmm1
 // result save to rax
+void add_reg(FILE *codegen_output, Type *type);
 void mul_reg(FILE *codegen_output, Type *type);
 void div_reg(FILE *codegen_output, Type *type);
 void mod_reg(FILE *codegen_output, Type *type);

@@ -212,7 +212,7 @@ int integer_rank(Type *type) {
 
 // bool,(u)char,(u)short convert to int
 Type *get_integer_promoted_type(Type *integer_type) {
-  assert(is_integer(integer_type), "not integer type");
+  assert(is_arithmetic(integer_type), "not integer type");
 
   if (integer_rank(integer_type) < integer_rank(&type_int))
     return &type_int;

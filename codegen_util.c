@@ -79,7 +79,6 @@ void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
 }
 
 void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type) {
-  assert(is_scalar(type), "not scalar type");
   assert(src->is_SSE ^ is_scalar(type), "invalid register");
   assert(dst->is_SSE ^ is_scalar(type), "invalid register");
 
@@ -173,6 +172,16 @@ void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
     not_implemented(__func__);
   } else
     error("invalid type pair");
+}
+
+void add_reg(FILE *codegen_output, Type *type) {
+  if (is_scalar(type)) {
+    fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
+  } else {
+    fprintf(codegen_output, "  adds%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  }
 }
 
 void mul_reg(FILE *codegen_output, Type *type) {
