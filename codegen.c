@@ -651,28 +651,51 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
   } break;
   case DIV_ASSIGN: {
-    Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
-    Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
-    Type *result_type =
-        get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
-
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  pushq %%rax\n");
     codegen_stmt(codegen_output, expr->rhs);
-    mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+
+    Register *rhs_reg = is_integer(expr->rhs->type) ? &reg_rdi : &reg_xmm1;
+    mov_reg(codegen_output, is_integer(expr->rhs->type) ? &reg_rax : &reg_xmm0,
+            rhs_reg, expr->rhs->type);
+
     fprintf(codegen_output, "  popq %%rsi\n");
     fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+    Register *lhs_reg = is_integer(expr->lhs->type) ? &reg_rax : &reg_xmm0;
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
 
     // lhs value: rax , rhs value: rdi
-    reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
-    reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
-    reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
-    reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+    Type *promoted_ltype = is_integer(expr->lhs->type)
+                               ? get_integer_promoted_type(expr->lhs->type)
+                               : expr->lhs->type;
+    Register *promoted_lhs_reg =
+        is_integer(promoted_ltype) ? &reg_rax : &reg_xmm0;
+    reg_arithmetic_cast(codegen_output, lhs_reg, promoted_lhs_reg,
+                        expr->lhs->type, promoted_ltype);
+
+    Type *promoted_rtype = is_integer(expr->rhs->type)
+                               ? get_integer_promoted_type(expr->rhs->type)
+                               : expr->rhs->type;
+    Register *promoted_rhs_reg =
+        is_integer(promoted_rtype) ? &reg_rdi : &reg_xmm1;
+    reg_arithmetic_cast(codegen_output, rhs_reg, promoted_rhs_reg,
+                        expr->rhs->type, promoted_rtype);
+
+    Type *result_type =
+        get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+    Register *result_type_lhs_reg =
+        is_integer(result_type) ? &reg_rax : &reg_xmm0;
+    Register *result_type_rhs_reg =
+        is_integer(result_type) ? &reg_rdi : &reg_xmm1;
+    reg_arithmetic_cast(codegen_output, promoted_lhs_reg, result_type_lhs_reg,
+                        promoted_ltype, result_type);
+    reg_arithmetic_cast(codegen_output, promoted_rhs_reg, result_type_rhs_reg,
+                        promoted_rtype, result_type);
 
     div_reg(codegen_output, result_type);
 
-    reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+    reg_arithmetic_cast(codegen_output, result_type_lhs_reg, lhs_reg,
+                        result_type, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
   } break;
@@ -1351,13 +1374,7 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on DIV");
 
-    if (is_integer(expr->lhs->type))
-      div_reg(codegen_output, expr->type);
-    else if (is_floating_point(expr->lhs->type))
-      fprintf(codegen_output, "  divs%c %%xmm1, %%xmm0\n",
-              get_floating_point_suffix(expr->lhs->type));
-    else
-      error("DIV");
+    div_reg(codegen_output, expr->lhs->type);
   } break;
   case MOD: {
     mod_reg(codegen_output, expr->type);

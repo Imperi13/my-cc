@@ -210,7 +210,10 @@ void mul_reg(FILE *codegen_output, Type *type) {
 void div_reg(FILE *codegen_output, Type *type) {
   assert(is_arithmetic(type), "not arighmetic type");
 
-  if (is_integer(type)) {
+  if (is_floating_point(type)) {
+    fprintf(codegen_output, "  divs%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  } else if (is_integer(type)) {
     if (type->is_unsigned) {
       if (type_size(type) == 4) {
         fprintf(codegen_output, "  movl $0, %%edx\n");
