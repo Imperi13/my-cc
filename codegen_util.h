@@ -39,6 +39,7 @@ void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
 // floating point type : lhs - xmm0, rhs - xmm1
 // result save to rax
 void add_reg(FILE *codegen_output, Type *type);
+void sub_reg(FILE *codegen_output, Type *type);
 void mul_reg(FILE *codegen_output, Type *type);
 void div_reg(FILE *codegen_output, Type *type);
 void mod_reg(FILE *codegen_output, Type *type);

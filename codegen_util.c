@@ -184,6 +184,16 @@ void add_reg(FILE *codegen_output, Type *type) {
   }
 }
 
+void sub_reg(FILE *codegen_output, Type *type) {
+  if (is_scalar(type)) {
+    fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
+  } else {
+    fprintf(codegen_output, "  subs%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  }
+}
+
 void mul_reg(FILE *codegen_output, Type *type) {
   if (type->is_unsigned) {
     fprintf(codegen_output, "  mul%c %s\n", get_size_suffix(type),
