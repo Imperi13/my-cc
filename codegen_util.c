@@ -195,7 +195,10 @@ void sub_reg(FILE *codegen_output, Type *type) {
 }
 
 void mul_reg(FILE *codegen_output, Type *type) {
-  if (type->is_unsigned) {
+  if (is_floating_point(type)) {
+    fprintf(codegen_output, "  muls%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  } else if (type->is_unsigned) {
     fprintf(codegen_output, "  mul%c %s\n", get_size_suffix(type),
             get_reg_alias(&reg_rdi, type));
   } else {
