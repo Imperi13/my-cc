@@ -604,3 +604,27 @@ run_test enum_1 'enum { A,B }; int main(){ return 173+B; }' 174
 run_test va_args_macro_1 '#define test(a,b,...) \n int main(){return 174;}' 174
 run_test va_args_macro_2 '#define test(a,b,...) a+b+sum(__VA_ARGS__) \n int sum(int a,int b){return a+b;} int main(){return test(114,10,20,30);}' 174
 run_test va_args_macro_3 '#define test(a,b,...) a+b+sum(__VA_ARGS__) \n int sum(int a,int b,int c){return a+b*c;} int main(){return test(114,10,20,5,6);}' 174
+
+run_test float_1 'int main(){float a; return 174;}' 174
+run_test float_2 'int main(){float a = 0; return 174;}' 174
+run_test float_2 'int main(){float a = 0; int b = a; return 174;}' 174
+run_test float_2 'int main(){float a = 10; float b = a + 20; return 174;}' 174
+run_test float_2 'int main(){float a = 10; float b = a - 20; return 174;}' 174
+run_test float_2 'int main(){float a = 10; float b = a * 20; return 174;}' 174
+run_test float_2 'int main(){float a = 10; float b = a / 20; return 174;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b > 3) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b >= 3) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b < 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b <= 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b == 4) return 164; else return 174;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; if(a/b != 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a += b; if(a > 12) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a -= b; if(a < 8) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a *= b; if(a > 29) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = 3; a /= b; if(a < 4) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = +a; if(b > 9) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = -a; if(b < -9) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = ++a; if(a > 10 && b > 10) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = a++; if(a > 10 && b < 11) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = --a; if(a < 10 && b < 10) return 174; else return 164;}' 174
+run_test float_3 'int main(){float a = 10; float b = a--; if(a < 10 && b > 9) return 174; else return 164;}' 174

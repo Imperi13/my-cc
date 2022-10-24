@@ -7,6 +7,7 @@
 
 struct Register {
   char *alias[4];
+  bool is_SSE;
 };
 
 Register reg_rax = {.alias = {"%al", "%ax", "%eax", "%rax"}};
@@ -16,6 +17,9 @@ Register reg_rdx = {.alias = {"%dl", "%dx", "%edx", "%rdx"}};
 Register reg_rcx = {.alias = {"%cl", "%cx", "%ecx", "%rcx"}};
 Register reg_r8 = {.alias = {"%r8b", "%r8w", "%r8d", "%r8"}};
 Register reg_r9 = {.alias = {"%r9b", "%r9w", "%r9d", "%r9"}};
+
+Register reg_xmm0 = {.alias = {"%xmm0", "", "", ""}, .is_SSE = true};
+Register reg_xmm1 = {.alias = {"%xmm1", "", "", ""}, .is_SSE = true};
 
 Register *call_register[6] = {&reg_rdi, &reg_rsi, &reg_rdx,
                               &reg_rcx, &reg_r8,  &reg_r9};
@@ -30,6 +34,16 @@ char get_size_suffix(Type *type) {
     return 'l';
   else if (type_size(type) == 8)
     return 'q';
+  else
+    error("invalid type");
+}
+
+char get_floating_point_suffix(Type *floating_type) {
+  assert(is_floating_point(floating_type), "not floating type");
+  if (floating_type->kind == FLOAT)
+    return 's';
+  else if (floating_type->kind == DOUBLE)
+    return 'd';
   else
     error("invalid type");
 }
@@ -65,10 +79,17 @@ void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
 }
 
 void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type) {
-  assert(is_scalar(type), "not scalar type");
+  assert(src->is_SSE ^ is_scalar(type), "invalid register");
+  assert(dst->is_SSE ^ is_scalar(type), "invalid register");
 
-  fprintf(codegen_output, "  mov%c %s, %s\n", get_size_suffix(type),
-          get_reg_alias(src, type), get_reg_alias(dst, type));
+  if (is_scalar(type))
+    fprintf(codegen_output, "  mov%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(src, type), get_reg_alias(dst, type));
+  else if (is_floating_point(type))
+    fprintf(codegen_output, "  movs%c %s, %s\n",
+            get_floating_point_suffix(type), src->alias[0], dst->alias[0]);
+  else
+    error("mov_reg");
 }
 
 void mov_imm(FILE *codegen_output, Register *reg, Type *type,
@@ -103,8 +124,81 @@ void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
             get_reg_alias(reg, dst_type));
 }
 
+void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
+                         Register *dst_reg, Type *src_type, Type *dst_type) {
+  assert(is_arithmetic(src_type) && is_arithmetic(dst_type),
+         "not arithmetic type");
+  assert(src_reg->is_SSE ^ is_integer(src_type), "invalid register");
+  assert(dst_reg->is_SSE ^ is_integer(dst_type), "invalid register");
+
+  if (is_same_type(src_type, dst_type))
+    return;
+
+  if (dst_type->kind == BOOL) {
+    if (is_scalar(src_type)) {
+      fprintf(codegen_output, "  cmp%c $0, %s\n", get_size_suffix(src_type),
+              get_reg_alias(src_reg, src_type));
+      fprintf(codegen_output, "  setne %s\n", get_reg_alias(dst_reg, dst_type));
+    } else
+      not_implemented(__func__);
+    return;
+  }
+
+  if (is_integer(src_type) && is_integer(dst_type)) {
+
+    if (type_size(dst_type) <= type_size(src_type))
+      return;
+
+    if (src_type->is_unsigned)
+      fprintf(codegen_output, "  movz%c%c %s, %s\n", get_size_suffix(src_type),
+              get_size_suffix(dst_type), get_reg_alias(src_reg, src_type),
+              get_reg_alias(dst_reg, dst_type));
+    else
+      fprintf(codegen_output, "  movs%c%c %s, %s\n", get_size_suffix(src_type),
+              get_size_suffix(dst_type), get_reg_alias(src_reg, src_type),
+              get_reg_alias(dst_reg, dst_type));
+
+  } else if (is_floating_point(src_type) && is_integer(dst_type)) {
+    fprintf(codegen_output, "  cvtts%c2si%c %s, %s\n",
+            get_floating_point_suffix(src_type), get_size_suffix(dst_type),
+            src_reg->alias[0], get_reg_alias(dst_reg, dst_type));
+
+  } else if (is_integer(src_type) && is_floating_point(dst_type)) {
+    fprintf(codegen_output, " cvtsi2s%c%c %s, %s\n",
+            get_floating_point_suffix(dst_type), get_size_suffix(src_type),
+            get_reg_alias(src_reg, src_type), dst_reg->alias[0]);
+
+  } else if (is_floating_point(src_type) && is_floating_point(dst_type)) {
+    not_implemented(__func__);
+  } else
+    error("invalid type pair");
+}
+
+void add_reg(FILE *codegen_output, Type *type) {
+  if (is_scalar(type)) {
+    fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
+  } else {
+    fprintf(codegen_output, "  adds%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  }
+}
+
+void sub_reg(FILE *codegen_output, Type *type) {
+  if (is_scalar(type)) {
+    fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rdi, type), get_reg_alias(&reg_rax, type));
+  } else {
+    fprintf(codegen_output, "  subs%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  }
+}
+
 void mul_reg(FILE *codegen_output, Type *type) {
-  if (type->is_unsigned) {
+  if (is_floating_point(type)) {
+    fprintf(codegen_output, "  muls%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  } else if (type->is_unsigned) {
     fprintf(codegen_output, "  mul%c %s\n", get_size_suffix(type),
             get_reg_alias(&reg_rdi, type));
   } else {
@@ -116,7 +210,10 @@ void mul_reg(FILE *codegen_output, Type *type) {
 void div_reg(FILE *codegen_output, Type *type) {
   assert(is_arithmetic(type), "not arighmetic type");
 
-  if (is_integer(type)) {
+  if (is_floating_point(type)) {
+    fprintf(codegen_output, "  divs%c %%xmm1, %%xmm0\n",
+            get_floating_point_suffix(type));
+  } else if (is_integer(type)) {
     if (type->is_unsigned) {
       if (type_size(type) == 4) {
         fprintf(codegen_output, "  movl $0, %%edx\n");

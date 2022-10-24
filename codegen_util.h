@@ -14,9 +14,13 @@ extern Register reg_rcx;
 extern Register reg_r8;
 extern Register reg_r9;
 
+extern Register reg_xmm0;
+extern Register reg_xmm1;
+
 extern Register *call_register[6];
 
 char get_size_suffix(Type *type);
+char get_floating_point_suffix(Type *floating_type);
 char *get_reg_alias(Register *reg, Type *type);
 
 void push_reg(FILE *codegen_output, Register *reg, Type *type);
@@ -25,13 +29,17 @@ void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type);
 
 void mov_imm(FILE *codegen_output, Register *reg, Type *type,
              unsigned long long imm_val);
-
 void reg_integer_cast(FILE *codegen_output, Register *reg, Type *src_type,
                       Type *dst_type);
+void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
+                         Register *dst_reg, Type *src_type, Type *dst_type);
 
 // arithmetic operator
-// lhs: rax, rhs:rdi
+// scalar type : lhs - rax, rhs - rdi
+// floating point type : lhs - xmm0, rhs - xmm1
 // result save to rax
+void add_reg(FILE *codegen_output, Type *type);
+void sub_reg(FILE *codegen_output, Type *type);
 void mul_reg(FILE *codegen_output, Type *type);
 void div_reg(FILE *codegen_output, Type *type);
 void mod_reg(FILE *codegen_output, Type *type);

@@ -24,6 +24,9 @@ Type type_ushort = {.kind = SHORT, .is_unsigned = true};
 Type type_char = {.kind = CHAR};
 Type type_uchar = {.kind = CHAR, .is_unsigned = true};
 
+Type type_double = {.kind = DOUBLE};
+Type type_float = {.kind = FLOAT};
+
 void builtin_type_init(Analyze *state) {
 
   // struct __builtin_va_list
@@ -96,6 +99,10 @@ Type *gettype_decl_spec(DeclSpec *decl_spec) {
     return &type_void;
   } else if (decl_spec->type_spec_kind == TypeSpec_BOOL) {
     return &type_bool;
+  } else if (decl_spec->type_spec_kind == TypeSpec_DOUBLE) {
+    return &type_double;
+  } else if (decl_spec->type_spec_kind == TypeSpec_FLOAT) {
+    return &type_float;
   } else if (decl_spec->st_def) {
     return newtype_struct(decl_spec->st_def);
   } else if (decl_spec->union_def) {
@@ -205,7 +212,7 @@ int integer_rank(Type *type) {
 
 // bool,(u)char,(u)short convert to int
 Type *get_integer_promoted_type(Type *integer_type) {
-  assert(is_integer(integer_type), "not integer type");
+  assert(is_arithmetic(integer_type), "not integer type");
 
   if (integer_rank(integer_type) < integer_rank(&type_int))
     return &type_int;
@@ -219,6 +226,15 @@ Type *get_arithmetic_converted_type(Type *lhs_type, Type *rhs_type) {
 
   if (is_same_type(lhs_type, rhs_type))
     return lhs_type;
+
+  if (is_floating_point(lhs_type) || is_floating_point(rhs_type)) {
+    if (lhs_type->kind == DOUBLE || rhs_type->kind == DOUBLE)
+      return &type_double;
+    else if (lhs_type->kind == FLOAT || rhs_type->kind == FLOAT)
+      return &type_float;
+    else
+      error("not floating type");
+  }
 
   if (lhs_type->is_unsigned == rhs_type->is_unsigned) {
     if (integer_rank(lhs_type) >= integer_rank(rhs_type))
@@ -282,6 +298,10 @@ int type_size(Type *type) {
     return 1;
   else if (type->kind == PTR)
     return 8;
+  else if (type->kind == FLOAT)
+    return 4;
+  else if (type->kind == DOUBLE)
+    return 8;
   else if (type->kind == ARRAY)
     return type->arr_size * type_size(type->ptr_to);
   else if (type->kind == STRUCT)
@@ -308,6 +328,10 @@ int type_alignment(Type *type) {
     return 1;
   else if (type->kind == PTR)
     return 8;
+  else if (type->kind == FLOAT)
+    return 4;
+  else if (type->kind == DOUBLE)
+    return 8;
   else if (type->kind == ARRAY)
     return type_alignment(type->ptr_to);
   else if (type->kind == STRUCT)
@@ -322,12 +346,18 @@ int type_alignment(Type *type) {
 }
 
 bool is_arithmetic(Type *type) {
-  return is_integer(type); // TODO check float
+  return is_integer(type) || is_floating_point(type); // TODO check float
 }
 
 bool is_integer(Type *type) {
   if (type->kind == LONGLONG || type->kind == LONG || type->kind == INT ||
       type->kind == SHORT || type->kind == CHAR || type->kind == BOOL)
+    return true;
+  return false;
+}
+
+bool is_floating_point(Type *type) {
+  if (type->kind == FLOAT || type->kind == DOUBLE)
     return true;
   return false;
 }
@@ -344,7 +374,7 @@ bool is_void_ptr(Type *type) {
 }
 
 bool is_primitive_type(Type *type) {
-  if (is_integer(type) || type->kind == VOID)
+  if (is_integer(type) || is_floating_point(type) || type->kind == VOID)
     return true;
   else
     return false;
@@ -376,7 +406,7 @@ bool is_compatible(Type *a, Tree *b) {
     return true;
   else if (a->kind == BOOL && is_scalar(b->type))
     return true;
-  else if (is_integer(a) && is_integer(b->type))
+  else if (is_arithmetic(a) && is_arithmetic(b->type))
     return true;
   else if (a->kind == PTR && b->type->kind == PTR &&
            (is_void_ptr(a) || is_void_ptr(b->type)))

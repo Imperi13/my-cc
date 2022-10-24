@@ -2,6 +2,8 @@
 
 typedef enum TypeKind {
   VOID,
+
+  // integer or scalar
   LONGLONG,
   LONG,
   INT,
@@ -9,6 +11,12 @@ typedef enum TypeKind {
   CHAR,
   BOOL,
   PTR,
+
+  // floating-point
+  FLOAT,
+  DOUBLE,
+
+  // aggregate
   STRUCT,
   UNION,
   FUNC,
@@ -60,6 +68,9 @@ extern Type type_ushort;
 extern Type type_char;
 extern Type type_uchar;
 
+extern Type type_double;
+extern Type type_float;
+
 // type alias
 #define type_ptrdiff_t type_long
 #define type_size_t type_ulong
@@ -85,6 +96,7 @@ int type_alignment(Type *type);
 
 bool is_arithmetic(Type *type);
 bool is_integer(Type *type);
+bool is_floating_point(Type *type);
 bool is_scalar(Type *type);
 bool is_same_type(Type *a, Type *b);
 bool is_compatible(Type *a, Tree *b);

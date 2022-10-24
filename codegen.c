@@ -124,6 +124,8 @@ void codegen_function(FILE *codegen_output, Tree *func) {
     for (int i = 5; i >= 0; i--) {
       push_reg(codegen_output, call_register[i], &type_long);
     }
+    current_function->saved_argument_offset =
+        current_function->stack_size + 0x30;
   }
 
   Tree *cur = getargs_declarator(func->declarator);
@@ -369,7 +371,7 @@ void codegen_stmt(FILE *codegen_output, Tree *stmt) {
     fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x8);
     fprintf(codegen_output, "  leaq -%d(%%rbp), %%rax\n",
-            current_function->stack_size + 0x30);
+            current_function->saved_argument_offset);
     fprintf(codegen_output, "  movq %%rax, -%d(%%rbp)\n",
             va_obj->rbp_offset - 0x10);
   } break;
@@ -478,32 +480,52 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     } else {
       // arithmetic ADD_ASSIGN
 
-      Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
-      Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
-      Type *result_type =
-          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
-
       codegen_addr(codegen_output, expr->lhs);
       fprintf(codegen_output, "  pushq %%rax\n");
       codegen_stmt(codegen_output, expr->rhs);
-      mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+
+      Register *rhs_reg = is_integer(expr->rhs->type) ? &reg_rdi : &reg_xmm1;
+      mov_reg(codegen_output,
+              is_integer(expr->rhs->type) ? &reg_rax : &reg_xmm0, rhs_reg,
+              expr->rhs->type);
+
       fprintf(codegen_output, "  popq %%rsi\n");
       fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+      Register *lhs_reg = is_integer(expr->lhs->type) ? &reg_rax : &reg_xmm0;
       load2rax_from_raxaddr(codegen_output, expr->lhs->type);
 
       // lhs value: rax , rhs value: rdi
-      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type,
-                       promoted_ltype);
-      reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type,
-                       promoted_rtype);
-      reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
-      reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+      Type *promoted_ltype = is_integer(expr->lhs->type)
+                                 ? get_integer_promoted_type(expr->lhs->type)
+                                 : expr->lhs->type;
+      Register *promoted_lhs_reg =
+          is_integer(promoted_ltype) ? &reg_rax : &reg_xmm0;
+      reg_arithmetic_cast(codegen_output, lhs_reg, promoted_lhs_reg,
+                          expr->lhs->type, promoted_ltype);
 
-      fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(result_type),
-              get_reg_alias(&reg_rdi, result_type),
-              get_reg_alias(&reg_rax, result_type));
+      Type *promoted_rtype = is_integer(expr->rhs->type)
+                                 ? get_integer_promoted_type(expr->rhs->type)
+                                 : expr->rhs->type;
+      Register *promoted_rhs_reg =
+          is_integer(promoted_rtype) ? &reg_rdi : &reg_xmm1;
+      reg_arithmetic_cast(codegen_output, rhs_reg, promoted_rhs_reg,
+                          expr->rhs->type, promoted_rtype);
 
-      reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+      Type *result_type =
+          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+      Register *result_type_lhs_reg =
+          is_integer(result_type) ? &reg_rax : &reg_xmm0;
+      Register *result_type_rhs_reg =
+          is_integer(result_type) ? &reg_rdi : &reg_xmm1;
+      reg_arithmetic_cast(codegen_output, promoted_lhs_reg, result_type_lhs_reg,
+                          promoted_ltype, result_type);
+      reg_arithmetic_cast(codegen_output, promoted_rhs_reg, result_type_rhs_reg,
+                          promoted_rtype, result_type);
+
+      add_reg(codegen_output, result_type);
+
+      reg_arithmetic_cast(codegen_output, result_type_lhs_reg, lhs_reg,
+                          result_type, expr->lhs->type);
       fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
       store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
     }
@@ -529,85 +551,151 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     } else {
       // arithmetic SUB_ASSIGN
 
-      Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
-      Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
-      Type *result_type =
-          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
-
       codegen_addr(codegen_output, expr->lhs);
       fprintf(codegen_output, "  pushq %%rax\n");
       codegen_stmt(codegen_output, expr->rhs);
-      mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+
+      Register *rhs_reg = is_integer(expr->rhs->type) ? &reg_rdi : &reg_xmm1;
+      mov_reg(codegen_output,
+              is_integer(expr->rhs->type) ? &reg_rax : &reg_xmm0, rhs_reg,
+              expr->rhs->type);
+
       fprintf(codegen_output, "  popq %%rsi\n");
       fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+      Register *lhs_reg = is_integer(expr->lhs->type) ? &reg_rax : &reg_xmm0;
       load2rax_from_raxaddr(codegen_output, expr->lhs->type);
 
       // lhs value: rax , rhs value: rdi
-      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type,
-                       promoted_ltype);
-      reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type,
-                       promoted_rtype);
-      reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
-      reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+      Type *promoted_ltype = is_integer(expr->lhs->type)
+                                 ? get_integer_promoted_type(expr->lhs->type)
+                                 : expr->lhs->type;
+      Register *promoted_lhs_reg =
+          is_integer(promoted_ltype) ? &reg_rax : &reg_xmm0;
+      reg_arithmetic_cast(codegen_output, lhs_reg, promoted_lhs_reg,
+                          expr->lhs->type, promoted_ltype);
 
-      fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(result_type),
-              get_reg_alias(&reg_rdi, result_type),
-              get_reg_alias(&reg_rax, result_type));
+      Type *promoted_rtype = is_integer(expr->rhs->type)
+                                 ? get_integer_promoted_type(expr->rhs->type)
+                                 : expr->rhs->type;
+      Register *promoted_rhs_reg =
+          is_integer(promoted_rtype) ? &reg_rdi : &reg_xmm1;
+      reg_arithmetic_cast(codegen_output, rhs_reg, promoted_rhs_reg,
+                          expr->rhs->type, promoted_rtype);
 
-      reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+      Type *result_type =
+          get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+      Register *result_type_lhs_reg =
+          is_integer(result_type) ? &reg_rax : &reg_xmm0;
+      Register *result_type_rhs_reg =
+          is_integer(result_type) ? &reg_rdi : &reg_xmm1;
+      reg_arithmetic_cast(codegen_output, promoted_lhs_reg, result_type_lhs_reg,
+                          promoted_ltype, result_type);
+      reg_arithmetic_cast(codegen_output, promoted_rhs_reg, result_type_rhs_reg,
+                          promoted_rtype, result_type);
+
+      sub_reg(codegen_output, result_type);
+
+      reg_arithmetic_cast(codegen_output, result_type_lhs_reg, lhs_reg,
+                          result_type, expr->lhs->type);
       fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
       store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
     }
   } break;
   case MUL_ASSIGN: {
-    Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
-    Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
-    Type *result_type =
-        get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
-
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  pushq %%rax\n");
     codegen_stmt(codegen_output, expr->rhs);
-    mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+
+    Register *rhs_reg = is_integer(expr->rhs->type) ? &reg_rdi : &reg_xmm1;
+    mov_reg(codegen_output, is_integer(expr->rhs->type) ? &reg_rax : &reg_xmm0,
+            rhs_reg, expr->rhs->type);
+
     fprintf(codegen_output, "  popq %%rsi\n");
     fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+    Register *lhs_reg = is_integer(expr->lhs->type) ? &reg_rax : &reg_xmm0;
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
 
     // lhs value: rax , rhs value: rdi
-    reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
-    reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
-    reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
-    reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+    Type *promoted_ltype = is_integer(expr->lhs->type)
+                               ? get_integer_promoted_type(expr->lhs->type)
+                               : expr->lhs->type;
+    Register *promoted_lhs_reg =
+        is_integer(promoted_ltype) ? &reg_rax : &reg_xmm0;
+    reg_arithmetic_cast(codegen_output, lhs_reg, promoted_lhs_reg,
+                        expr->lhs->type, promoted_ltype);
+
+    Type *promoted_rtype = is_integer(expr->rhs->type)
+                               ? get_integer_promoted_type(expr->rhs->type)
+                               : expr->rhs->type;
+    Register *promoted_rhs_reg =
+        is_integer(promoted_rtype) ? &reg_rdi : &reg_xmm1;
+    reg_arithmetic_cast(codegen_output, rhs_reg, promoted_rhs_reg,
+                        expr->rhs->type, promoted_rtype);
+
+    Type *result_type =
+        get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+    Register *result_type_lhs_reg =
+        is_integer(result_type) ? &reg_rax : &reg_xmm0;
+    Register *result_type_rhs_reg =
+        is_integer(result_type) ? &reg_rdi : &reg_xmm1;
+    reg_arithmetic_cast(codegen_output, promoted_lhs_reg, result_type_lhs_reg,
+                        promoted_ltype, result_type);
+    reg_arithmetic_cast(codegen_output, promoted_rhs_reg, result_type_rhs_reg,
+                        promoted_rtype, result_type);
 
     mul_reg(codegen_output, result_type);
 
-    reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+    reg_arithmetic_cast(codegen_output, result_type_lhs_reg, lhs_reg,
+                        result_type, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
   } break;
   case DIV_ASSIGN: {
-    Type *promoted_ltype = get_integer_promoted_type(expr->lhs->type);
-    Type *promoted_rtype = get_integer_promoted_type(expr->rhs->type);
-    Type *result_type =
-        get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
-
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  pushq %%rax\n");
     codegen_stmt(codegen_output, expr->rhs);
-    mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+
+    Register *rhs_reg = is_integer(expr->rhs->type) ? &reg_rdi : &reg_xmm1;
+    mov_reg(codegen_output, is_integer(expr->rhs->type) ? &reg_rax : &reg_xmm0,
+            rhs_reg, expr->rhs->type);
+
     fprintf(codegen_output, "  popq %%rsi\n");
     fprintf(codegen_output, "  movq %%rsi, %%rax\n");
+    Register *lhs_reg = is_integer(expr->lhs->type) ? &reg_rax : &reg_xmm0;
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
 
     // lhs value: rax , rhs value: rdi
-    reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, promoted_ltype);
-    reg_integer_cast(codegen_output, &reg_rdi, expr->rhs->type, promoted_rtype);
-    reg_integer_cast(codegen_output, &reg_rax, promoted_ltype, result_type);
-    reg_integer_cast(codegen_output, &reg_rdi, promoted_rtype, result_type);
+    Type *promoted_ltype = is_integer(expr->lhs->type)
+                               ? get_integer_promoted_type(expr->lhs->type)
+                               : expr->lhs->type;
+    Register *promoted_lhs_reg =
+        is_integer(promoted_ltype) ? &reg_rax : &reg_xmm0;
+    reg_arithmetic_cast(codegen_output, lhs_reg, promoted_lhs_reg,
+                        expr->lhs->type, promoted_ltype);
+
+    Type *promoted_rtype = is_integer(expr->rhs->type)
+                               ? get_integer_promoted_type(expr->rhs->type)
+                               : expr->rhs->type;
+    Register *promoted_rhs_reg =
+        is_integer(promoted_rtype) ? &reg_rdi : &reg_xmm1;
+    reg_arithmetic_cast(codegen_output, rhs_reg, promoted_rhs_reg,
+                        expr->rhs->type, promoted_rtype);
+
+    Type *result_type =
+        get_arithmetic_converted_type(promoted_ltype, promoted_rtype);
+    Register *result_type_lhs_reg =
+        is_integer(result_type) ? &reg_rax : &reg_xmm0;
+    Register *result_type_rhs_reg =
+        is_integer(result_type) ? &reg_rdi : &reg_xmm1;
+    reg_arithmetic_cast(codegen_output, promoted_lhs_reg, result_type_lhs_reg,
+                        promoted_ltype, result_type);
+    reg_arithmetic_cast(codegen_output, promoted_rhs_reg, result_type_rhs_reg,
+                        promoted_rtype, result_type);
 
     div_reg(codegen_output, result_type);
 
-    reg_integer_cast(codegen_output, &reg_rax, result_type, expr->lhs->type);
+    reg_arithmetic_cast(codegen_output, result_type_lhs_reg, lhs_reg,
+                        result_type, expr->lhs->type);
     fprintf(codegen_output, "  movq %%rsi, %%rdi\n");
     store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
   } break;
@@ -845,14 +933,23 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
         (expr->lhs->type->kind == ARRAY || expr->lhs->type->kind == FUNC))
       break;
 
-    // normal cast
     if (expr->type->kind == BOOL) {
-      fprintf(codegen_output, "  cmp%c $0, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-      fprintf(codegen_output, "  setne %%al\n");
-    } else if (is_integer(expr->type) && is_integer(expr->lhs->type)) {
-      reg_integer_cast(codegen_output, &reg_rax, expr->lhs->type, expr->type);
+      if (is_scalar(expr->lhs->type)) {
+        fprintf(codegen_output, "  cmp%c $0, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+        fprintf(codegen_output, "  setne %%al\n");
+      } else
+        not_implemented(__func__);
+      return;
+    }
+
+    // normal cast
+    if (is_arithmetic(expr->type) && is_arithmetic(expr->lhs->type)) {
+      Register *src_reg = is_integer(expr->lhs->type) ? &reg_rax : &reg_xmm0;
+      Register *dst_reg = is_integer(expr->type) ? &reg_rax : &reg_xmm0;
+      reg_arithmetic_cast(codegen_output, src_reg, dst_reg, expr->lhs->type,
+                          expr->type);
     }
 
   } break;
@@ -861,8 +958,15 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   } break;
   case MINUS: {
     codegen_stmt(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  neg%c %s\n", get_size_suffix(expr->lhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    if (is_integer(expr->lhs->type)) {
+      fprintf(codegen_output, "  neg%c %s\n", get_size_suffix(expr->lhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+    } else {
+      fprintf(codegen_output, "  movq $%lld, %%rax\n",
+              1ULL << (8 * type_size(expr->lhs->type) - 1));
+      fprintf(codegen_output, "  movq %%rax, %%xmm1\n");
+      fprintf(codegen_output, "  pxor %%xmm1, %%xmm0\n");
+    }
   } break;
   case ADDR: {
     codegen_addr(codegen_output, expr->lhs);
@@ -875,6 +979,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     load2rax_from_raxaddr(codegen_output, expr->type);
   } break;
   case FUNC_CALL: {
+    // TODO floating point arguments
     fprintf(codegen_output, "  movq %%rsp, %%r10\n");
     fprintf(codegen_output, "  andq $0xfffffffffffffff0, %%rsp\n");
     fprintf(codegen_output, "  pushq %%r10\n");
@@ -915,35 +1020,61 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    push_reg(codegen_output, &reg_rax, expr->lhs->type);
-    if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  add%c $%d, %s\n",
-              get_size_suffix(expr->lhs->type),
-              type_size(expr->lhs->type->ptr_to),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    else
-      fprintf(codegen_output, "  add%c $1, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    if (is_scalar(expr->lhs->type)) {
+      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      if (expr->lhs->type->kind == PTR)
+        fprintf(codegen_output, "  add%c $%d, %s\n",
+                get_size_suffix(expr->lhs->type),
+                type_size(expr->lhs->type->ptr_to),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else
+        fprintf(codegen_output, "  add%c $1, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    } else {
+      fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
+              get_floating_point_suffix(expr->lhs->type));
+      unsigned long long one =
+          expr->lhs->type->kind == FLOAT ? 127ULL << 23 : 1023ULL << 52;
+      fprintf(codegen_output, "  movq $%lld, %%rax\n", one);
+      fprintf(codegen_output, "  movq %%rax, %%xmm1\n");
+      add_reg(codegen_output, expr->lhs->type);
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      fprintf(codegen_output, "  movs%c %%xmm2, %%xmm0\n",
+              get_floating_point_suffix(expr->lhs->type));
+    }
   } break;
   case POST_DECREMENT: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    push_reg(codegen_output, &reg_rax, expr->lhs->type);
-    if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  sub%c $%d, %s\n",
-              get_size_suffix(expr->lhs->type),
-              type_size(expr->lhs->type->ptr_to),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    else
-      fprintf(codegen_output, "  sub%c $1, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    if (is_scalar(expr->lhs->type)) {
+      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      if (expr->lhs->type->kind == PTR)
+        fprintf(codegen_output, "  sub%c $%d, %s\n",
+                get_size_suffix(expr->lhs->type),
+                type_size(expr->lhs->type->ptr_to),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else
+        fprintf(codegen_output, "  sub%c $1, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    } else {
+      fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
+              get_floating_point_suffix(expr->lhs->type));
+      unsigned long long one =
+          expr->lhs->type->kind == FLOAT ? 127ULL << 23 : 1023ULL << 52;
+      fprintf(codegen_output, "  movq $%lld, %%rax\n", one);
+      fprintf(codegen_output, "  movq %%rax, %%xmm1\n");
+      sub_reg(codegen_output, expr->lhs->type);
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      fprintf(codegen_output, "  movs%c %%xmm2, %%xmm0\n",
+              get_floating_point_suffix(expr->lhs->type));
+    }
   } break;
   case DOT: {
     codegen_addr(codegen_output, expr);
@@ -1004,14 +1135,30 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   assert(expr, "expr is NULL");
   assert(expr->lhs && expr->rhs, "not binary operator");
 
-  codegen_stmt(codegen_output, expr->lhs);
-  // fprintf(codegen_output, "  push rax\n");
-  push_reg(codegen_output, &reg_rax, expr->lhs->type);
-  codegen_stmt(codegen_output, expr->rhs);
-  // fprintf(codegen_output, "  mov rdi,rax\n");
-  mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
-  // fprintf(codegen_output, "  pop rax\n");
-  pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+  // load lhs(rhs) value to register
+  // integer    lhs: rax rhs: rdi
+  // floating point lhs: xmm0 rhs: xmm1
+
+  if (is_floating_point(expr->lhs->type)) {
+    assert(is_floating_point(expr->rhs->type), "rhs is not floating-type");
+    codegen_stmt(codegen_output, expr->lhs);
+    fprintf(codegen_output, "  subq $8, %%rsp\n");
+    fprintf(codegen_output, "  movs%c %%xmm0, 0(%%rsp)\n",
+            get_floating_point_suffix(expr->lhs->type));
+
+    codegen_stmt(codegen_output, expr->rhs);
+    fprintf(codegen_output, "  movs%c %%xmm0, %%xmm1\n",
+            get_floating_point_suffix(expr->rhs->type));
+    fprintf(codegen_output, "  movs%c 0(%%rsp), %%xmm0\n",
+            get_floating_point_suffix(expr->lhs->type));
+    fprintf(codegen_output, "  addq $8, %%rsp\n");
+  } else {
+    codegen_stmt(codegen_output, expr->lhs);
+    push_reg(codegen_output, &reg_rax, expr->lhs->type);
+    codegen_stmt(codegen_output, expr->rhs);
+    mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
+    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+  }
 
   switch (expr->kind) {
   case BIT_AND: {
@@ -1039,10 +1186,18 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on EQUAL");
-      fprintf(codegen_output, "  cmp%c %s, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
+
+      if (is_scalar(expr->lhs->type))
+        fprintf(codegen_output, "  cmp%c %s, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, " comis%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("EQUAL");
+
       fprintf(codegen_output, "  sete %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
@@ -1055,10 +1210,18 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on NOT_EQUAL");
-      fprintf(codegen_output, "  cmp%c %s, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
+
+      if (is_scalar(expr->lhs->type))
+        fprintf(codegen_output, "  cmp%c %s, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, " comis%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("NOT_EQUAL");
+
       fprintf(codegen_output, "  setne %%al\n");
       fprintf(codegen_output, "  movzbl %%al, %%eax\n");
     } else {
@@ -1071,12 +1234,18 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on SMALLER");
-      fprintf(codegen_output, "  cmp%c %s, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
+      if (is_scalar(expr->lhs->type))
+        fprintf(codegen_output, "  cmp%c %s, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, " comis%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("SMALLER");
 
-      if (expr->lhs->type->is_unsigned)
+      if (expr->lhs->type->is_unsigned || is_floating_point(expr->lhs->type))
         fprintf(codegen_output, "  setb %%al\n");
       else
         fprintf(codegen_output, "  setl %%al\n");
@@ -1092,12 +1261,19 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on SMALLER_EQUAL");
-      fprintf(codegen_output, "  cmp%c %s, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
 
-      if (expr->lhs->type->is_unsigned)
+      if (is_scalar(expr->lhs->type))
+        fprintf(codegen_output, "  cmp%c %s, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, " comis%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("SMALLER_EQUAL");
+
+      if (expr->lhs->type->is_unsigned || is_floating_point(expr->lhs->type))
         fprintf(codegen_output, "  setna %%al\n");
       else
         fprintf(codegen_output, "  setle %%al\n");
@@ -1113,12 +1289,19 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on GREATER");
-      fprintf(codegen_output, "  cmp%c %s, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
 
-      if (expr->lhs->type->is_unsigned)
+      if (is_scalar(expr->lhs->type))
+        fprintf(codegen_output, "  cmp%c %s, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, " comis%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("GREATER");
+
+      if (expr->lhs->type->is_unsigned || is_floating_point(expr->lhs->type))
         fprintf(codegen_output, "  seta %%al\n");
       else
         fprintf(codegen_output, "  setg %%al\n");
@@ -1134,12 +1317,19 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on GREATER_EQUAL");
-      fprintf(codegen_output, "  cmp%c %s, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
 
-      if (expr->lhs->type->is_unsigned)
+      if (is_scalar(expr->lhs->type))
+        fprintf(codegen_output, "  cmp%c %s, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, " comis%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("GREATER_EQUAL");
+
+      if (expr->lhs->type->is_unsigned || is_floating_point(expr->lhs->type))
         fprintf(codegen_output, "  setnb %%al\n");
       else
         fprintf(codegen_output, "  setge %%al\n");
@@ -1161,9 +1351,15 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on arithmetic ADD");
-      fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(expr->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
+      if (is_integer(expr->lhs->type))
+        fprintf(codegen_output, "  add%c %s, %s\n", get_size_suffix(expr->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, "  adds%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("ADD");
     } else if (expr->lhs->type->kind == PTR) {
       fprintf(codegen_output, "  imulq $%d, %%rdi\n",
               type_size(expr->lhs->type->ptr_to));
@@ -1179,9 +1375,16 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     if (is_arithmetic(expr->lhs->type) && is_arithmetic(expr->rhs->type)) {
       assert(is_same_type(expr->lhs->type, expr->rhs->type),
              "not same type on arithmetic SUB");
-      fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(expr->type),
-              get_reg_alias(&reg_rdi, expr->rhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
+
+      if (is_integer(expr->lhs->type))
+        fprintf(codegen_output, "  sub%c %s, %s\n", get_size_suffix(expr->type),
+                get_reg_alias(&reg_rdi, expr->rhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else if (is_floating_point(expr->lhs->type))
+        fprintf(codegen_output, "  subs%c %%xmm1, %%xmm0\n",
+                get_floating_point_suffix(expr->lhs->type));
+      else
+        error("SUB");
     } else if (expr->lhs->type->kind == PTR && is_integer(expr->rhs->type)) {
       fprintf(codegen_output, "  imulq $%d, %%rdi\n",
               type_size(expr->lhs->type->ptr_to));
@@ -1198,10 +1401,14 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   case MUL: {
     assert(is_same_type(expr->lhs->type, expr->rhs->type),
            "not same type on MUL");
+
     mul_reg(codegen_output, expr->lhs->type);
   } break;
   case DIV: {
-    div_reg(codegen_output, expr->type);
+    assert(is_same_type(expr->lhs->type, expr->rhs->type),
+           "not same type on DIV");
+
+    div_reg(codegen_output, expr->lhs->type);
   } break;
   case MOD: {
     mod_reg(codegen_output, expr->type);
@@ -1212,19 +1419,26 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
   }
 }
 
-// raxレジスタで指しているアドレスからtype型の値をraxにロードする
+// raxレジスタで指しているアドレスからtype型の値をrax,xmm0にロードする
 void load2rax_from_raxaddr(FILE *codegen_output, Type *type) {
-  assert(is_scalar(type), "not scalar type");
-
-  fprintf(codegen_output, "  mov%c (%%rax), %s\n", get_size_suffix(type),
-          get_reg_alias(&reg_rax, type));
+  if (is_scalar(type))
+    fprintf(codegen_output, "  mov%c (%%rax), %s\n", get_size_suffix(type),
+            get_reg_alias(&reg_rax, type));
+  else if (is_floating_point(type))
+    fprintf(codegen_output, "  movs%c (%%rax), %%xmm0\n",
+            get_floating_point_suffix(type));
+  else
+    error("invalid type");
 }
 
-// raxレジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
+// rax ,xmm0レジスタが表すtype型の値をrdiレジスタが指すアドレスにstoreする
 void store2rdiaddr_from_rax(FILE *codegen_output, Type *type) {
   if (is_scalar(type)) {
     fprintf(codegen_output, "  mov%c %s, (%%rdi)\n", get_size_suffix(type),
             get_reg_alias(&reg_rax, type));
+  } else if (is_floating_point(type)) {
+    fprintf(codegen_output, "  movs%c %%xmm0, (%%rdi)\n",
+            get_floating_point_suffix(type));
   } else if (type->kind == STRUCT || type->kind == UNION) {
     fprintf(codegen_output, "  movq %%rax, %%rsi\n");
     fprintf(codegen_output, "  movq $%d, %%rcx\n", type_size(type));
