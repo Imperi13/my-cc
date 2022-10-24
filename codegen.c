@@ -958,8 +958,15 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
   } break;
   case MINUS: {
     codegen_stmt(codegen_output, expr->lhs);
-    fprintf(codegen_output, "  neg%c %s\n", get_size_suffix(expr->lhs->type),
-            get_reg_alias(&reg_rax, expr->lhs->type));
+    if (is_integer(expr->lhs->type)) {
+      fprintf(codegen_output, "  neg%c %s\n", get_size_suffix(expr->lhs->type),
+              get_reg_alias(&reg_rax, expr->lhs->type));
+    } else {
+      fprintf(codegen_output, "  movq $%lld, %%rax\n",
+              1ULL << (8 * type_size(expr->lhs->type) - 1));
+      fprintf(codegen_output, "  movq %%rax, %%xmm1\n");
+      fprintf(codegen_output, "  pxor %%xmm1, %%xmm0\n");
+    }
   } break;
   case ADDR: {
     codegen_addr(codegen_output, expr->lhs);
