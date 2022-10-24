@@ -169,7 +169,10 @@ void reg_arithmetic_cast(FILE *codegen_output, Register *src_reg,
             get_reg_alias(src_reg, src_type), dst_reg->alias[0]);
 
   } else if (is_floating_point(src_type) && is_floating_point(dst_type)) {
-    not_implemented(__func__);
+    fprintf(codegen_output, "  cvts%c2s%c %s, %s\n",
+            get_floating_point_suffix(src_type),
+            get_floating_point_suffix(dst_type), src_reg->alias[0],
+            dst_reg->alias[0]);
   } else
     error("invalid type pair");
 }
