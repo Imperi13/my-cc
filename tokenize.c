@@ -398,6 +398,7 @@ Token *tokenize(char *p, char *filepath) {
     }
 
     if (isdigit(*p)) {
+      // TODO floating constants
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);

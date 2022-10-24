@@ -979,6 +979,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     load2rax_from_raxaddr(codegen_output, expr->type);
   } break;
   case FUNC_CALL: {
+    // TODO floating point arguments
     fprintf(codegen_output, "  movq %%rsp, %%r10\n");
     fprintf(codegen_output, "  andq $0xfffffffffffffff0, %%rsp\n");
     fprintf(codegen_output, "  pushq %%r10\n");
