@@ -1019,35 +1019,61 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    push_reg(codegen_output, &reg_rax, expr->lhs->type);
-    if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  add%c $%d, %s\n",
-              get_size_suffix(expr->lhs->type),
-              type_size(expr->lhs->type->ptr_to),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    else
-      fprintf(codegen_output, "  add%c $1, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    if (is_scalar(expr->lhs->type)) {
+      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      if (expr->lhs->type->kind == PTR)
+        fprintf(codegen_output, "  add%c $%d, %s\n",
+                get_size_suffix(expr->lhs->type),
+                type_size(expr->lhs->type->ptr_to),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else
+        fprintf(codegen_output, "  add%c $1, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    } else {
+      fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
+              get_floating_point_suffix(expr->lhs->type));
+      unsigned long long one =
+          expr->lhs->type->kind == FLOAT ? 127ULL << 23 : 1023ULL << 52;
+      fprintf(codegen_output, "  movq $%lld, %%rax\n", one);
+      fprintf(codegen_output, "  movq %%rax, %%xmm1\n");
+      add_reg(codegen_output, expr->lhs->type);
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      fprintf(codegen_output, "  movs%c %%xmm2, %%xmm0\n",
+              get_floating_point_suffix(expr->lhs->type));
+    }
   } break;
   case POST_DECREMENT: {
     codegen_addr(codegen_output, expr->lhs);
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
-    push_reg(codegen_output, &reg_rax, expr->lhs->type);
-    if (expr->lhs->type->kind == PTR)
-      fprintf(codegen_output, "  sub%c $%d, %s\n",
-              get_size_suffix(expr->lhs->type),
-              type_size(expr->lhs->type->ptr_to),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    else
-      fprintf(codegen_output, "  sub%c $1, %s\n",
-              get_size_suffix(expr->lhs->type),
-              get_reg_alias(&reg_rax, expr->lhs->type));
-    store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    if (is_scalar(expr->lhs->type)) {
+      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      if (expr->lhs->type->kind == PTR)
+        fprintf(codegen_output, "  sub%c $%d, %s\n",
+                get_size_suffix(expr->lhs->type),
+                type_size(expr->lhs->type->ptr_to),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      else
+        fprintf(codegen_output, "  sub%c $1, %s\n",
+                get_size_suffix(expr->lhs->type),
+                get_reg_alias(&reg_rax, expr->lhs->type));
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    } else {
+      fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
+              get_floating_point_suffix(expr->lhs->type));
+      unsigned long long one =
+          expr->lhs->type->kind == FLOAT ? 127ULL << 23 : 1023ULL << 52;
+      fprintf(codegen_output, "  movq $%lld, %%rax\n", one);
+      fprintf(codegen_output, "  movq %%rax, %%xmm1\n");
+      sub_reg(codegen_output, expr->lhs->type);
+      store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
+      fprintf(codegen_output, "  movs%c %%xmm2, %%xmm0\n",
+              get_floating_point_suffix(expr->lhs->type));
+    }
   } break;
   case DOT: {
     codegen_addr(codegen_output, expr);
