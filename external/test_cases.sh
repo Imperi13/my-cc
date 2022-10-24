@@ -628,3 +628,27 @@ run_test float_3 'int main(){float a = 10; float b = ++a; if(a > 10 && b > 10) r
 run_test float_3 'int main(){float a = 10; float b = a++; if(a > 10 && b < 11) return 174; else return 164;}' 174
 run_test float_3 'int main(){float a = 10; float b = --a; if(a < 10 && b < 10) return 174; else return 164;}' 174
 run_test float_3 'int main(){float a = 10; float b = a--; if(a < 10 && b > 9) return 174; else return 164;}' 174
+
+run_test double_1 'int main(){double a; return 174;}' 174
+run_test double_2 'int main(){double a = 0; return 174;}' 174
+run_test double_2 'int main(){double a = 0; int b = a; return 174;}' 174
+run_test double_2 'int main(){double a = 10; double b = a + 20; return 174;}' 174
+run_test double_2 'int main(){double a = 10; double b = a - 20; return 174;}' 174
+run_test double_2 'int main(){double a = 10; double b = a * 20; return 174;}' 174
+run_test double_2 'int main(){double a = 10; double b = a / 20; return 174;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; if(a/b > 3) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; if(a/b >= 3) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; if(a/b < 4) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; if(a/b <= 4) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; if(a/b == 4) return 164; else return 174;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; if(a/b != 4) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; a += b; if(a > 12) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; a -= b; if(a < 8) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; a *= b; if(a > 29) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = 3; a /= b; if(a < 4) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = +a; if(b > 9) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = -a; if(b < -9) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = ++a; if(a > 10 && b > 10) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = a++; if(a > 10 && b < 11) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = --a; if(a < 10 && b < 10) return 174; else return 164;}' 174
+run_test double_3 'int main(){double a = 10; double b = a--; if(a < 10 && b > 9) return 174; else return 164;}' 174
