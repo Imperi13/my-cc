@@ -1727,6 +1727,9 @@ Tree *parse_primary(Token **rest, Token *tok, Analyze *state) {
     primary->is_unsigned = num_tok->is_unsigned;
     primary->is_long = num_tok->is_long;
     primary->is_longlong = num_tok->is_longlong;
+
+    primary->is_floating_constant = num_tok->is_floatint_constant;
+    primary->floating_val = num_tok->floating_val;
   } else if (equal_kind(tok, TK_STR)) {
     primary = calloc(1, sizeof(Tree));
     primary->kind = STR;

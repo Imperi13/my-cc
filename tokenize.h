@@ -76,6 +76,10 @@ struct Token {
   bool is_long;
   bool is_longlong;
 
+  // floating constant
+  bool is_floatint_constant;
+  double floating_val;
+
   // for TK_IDENT
   char *ident_str;
 
