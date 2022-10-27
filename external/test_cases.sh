@@ -658,3 +658,7 @@ run_test floating_cast 'int main(){double a = 10;float b = a; if(19<a+b && a+b <
 
 run_test floating_constant 'int main(){float a = 1.23; return 174;}' 174
 run_test floating_constant 'int main(){float a = 10.5; if(2*a > 20.5) return 174; else return 164;}' 174
+
+run_test floating_return 'float add(int a,int b){float sum = 0; sum+=a; sum+=b; return sum;} int main(){float a = add(10,20); if(a > 29)return 174;else return 164;}' 174
+
+run_test floating_argument 'float add(float a,float b){float sum = 0;sum += a;sum += b;return sum;} int main(){float a = add(10.0,20.0); if(a > 29)return 174;else return 164; }' 174
