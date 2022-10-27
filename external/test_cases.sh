@@ -655,3 +655,6 @@ run_test double_3 'int main(){double a = 10; double b = a--; if(a < 10 && b > 9)
 
 run_test floating_cast 'int main(){float a = 10;double b = 20; if(29<a+b && a+b < 31) return 174;else return 164;}' 174
 run_test floating_cast 'int main(){double a = 10;float b = a; if(19<a+b && a+b < 21) return 174;else return 164;}' 174
+
+run_test floating_constant 'int main(){float a = 1.23; return 174;}' 174
+run_test floating_constant 'int main(){float a = 10.5; if(2*a > 20.5) return 174; else return 164;}' 174
