@@ -402,8 +402,13 @@ Token *tokenize(char *p, char *filepath) {
       char *prev = p;
       cur = new_token(TK_NUM, cur, p, 1, filepath, file_buf);
       cur->val = num_literal(p, &p);
-
-      consume_num_suffix(&p, p, cur);
+      if (*p == '.' || *p == 'e' || *p == 'E' || *p == 'p' || *p == 'P') {
+        p = prev;
+        cur->is_floatint_constant = true;
+        cur->floating_val = strtod(p, &p);
+      } else {
+        consume_num_suffix(&p, p, cur);
+      }
 
       cur->len = p - prev;
       continue;

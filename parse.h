@@ -177,6 +177,12 @@ struct Tree {
   bool is_unsigned;
   bool is_long;
   bool is_longlong;
+  
+  // floating-constant
+  bool is_floating_constant;
+  double floating_val;
+
+  // str-literal
   StrLiteral *str_literal;
 
   // for member

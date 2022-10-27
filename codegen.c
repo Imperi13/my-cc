@@ -1091,7 +1091,17 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     load2rax_from_raxaddr(codegen_output, expr->type);
   } break;
   case NUM: {
-    mov_imm(codegen_output, &reg_rax, expr->type, expr->num);
+    if (expr->is_floating_constant) {
+      union {
+        double a;
+        unsigned long b;
+      } tmp;
+      tmp.a = expr->floating_val;
+      fprintf(codegen_output, "  movq $%ld, %%rax\n", tmp.b);
+      fprintf(codegen_output, "  movq %%rax, %%xmm0\n");
+    } else {
+      mov_imm(codegen_output, &reg_rax, expr->type, expr->num);
+    }
   } break;
   case STR: {
     fprintf(codegen_output, "  leaq .LC%d(%%rip), %%rax\n",
