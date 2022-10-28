@@ -659,6 +659,9 @@ run_test floating_cast 'int main(){double a = 10;float b = a; if(19<a+b && a+b <
 run_test floating_constant 'int main(){float a = 1.23; return 174;}' 174
 run_test floating_constant 'int main(){float a = 10.5; if(2*a > 20.5) return 174; else return 164;}' 174
 
+run_test typedef 'typedef int T[3]; int main(){ T test; test[0] = 10; return 164 + test[0]; }' 174
+run_test typedef 'typedef int T[]; int main(){ T test = {10,20,30}; return 114 + test[0] + test[1] + test[2]; }' 174
+
 run_test floating_return 'float add(int a,int b){float sum = 0; sum+=a; sum+=b; return sum;} int main(){float a = add(10,20); if(a > 29)return 174;else return 164;}' 174
 
 run_test floating_argument 'float add(float a,float b){float sum = 0;sum += a;sum += b;return sum;} int main(){float a = add(10.0,20.0); if(a > 29)return 174;else return 164; }' 174
