@@ -31,12 +31,9 @@ void builtin_type_init(Analyze *state) {
 
   // struct __builtin_va_list
   StructDef *st_def = calloc(1, sizeof(StructDef));
-  st_def->st_name = "__builtin_va_list";
   st_def->is_defined = true;
   st_def->size = 0x18;
   st_def->alignment = 0x8;
-
-  add_str_dict(state->glb_struct_def_dict, st_def->st_name, st_def);
 
   st_def->members = calloc(1, sizeof(Member));
   Member *cur = st_def->members;
@@ -66,10 +63,15 @@ void builtin_type_init(Analyze *state) {
   cur->type = newtype_ptr(&type_void);
   cur->offset = 0x10;
 
+  Type *arr_type = calloc(1, sizeof(Type));
+  arr_type->kind = ARRAY;
+  arr_type->arr_size = 1;
+  arr_type->ptr_to = newtype_struct(st_def);
+
   // typedef struct __builtin_va_list __builtin_va_list
   Typedef *new_def = calloc(1, sizeof(Typedef));
   new_def->name = "__builtin_va_list";
-  new_def->type = newtype_struct(st_def);
+  new_def->type = arr_type;
 
   add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
 }
