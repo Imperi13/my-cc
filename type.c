@@ -154,7 +154,9 @@ Type *gettype_declarator(Declarator *declarator, Type *base_type) {
     while (cur) {
       Type *ty = calloc(1, sizeof(Type));
       ty->kind = ARRAY;
-      if (!cur->is_null_size) {
+      if (cur->is_null_size) {
+        ty->is_null_size = true;
+      } else {
         if (!is_constexpr_integer(cur->size_expr))
           error_token(cur->size_expr->error_token, "not constexpr");
         ty->arr_size = eval_constexpr_integer(cur->size_expr);

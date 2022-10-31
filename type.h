@@ -46,6 +46,7 @@ struct Type {
 
   // for ARRAY
   int arr_size;
+  bool is_null_size;
 
   // for STRUCT
   StructDef *st_def;

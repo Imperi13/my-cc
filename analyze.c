@@ -157,24 +157,6 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type);
 
-      // get size for null-size array declaration []
-      if (!ast->decl_specs->has_extern && obj_type->kind == ARRAY &&
-          get_arr_declarator(cur)->is_null_size) {
-        if (!cur->init_expr)
-          error("tentative array def must have initialize value");
-
-        if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
-          not_implemented(__func__);
-        } else if (cur->init_expr->kind == INITIALIZE_LIST) {
-          obj_type->arr_size = 0;
-          for (InitializeList *init_list_cur = cur->init_expr->init_list;
-               init_list_cur; init_list_cur = init_list_cur->next)
-            obj_type->arr_size++;
-        } else {
-          error("tentative array def must have initialize-list or str-literal");
-        }
-      }
-
       if (ast->decl_specs->has_typedef) {
         Typedef *new_def = calloc(1, sizeof(Typedef));
         new_def->name = obj_name;
@@ -182,6 +164,24 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
 
         add_str_dict(state->glb_typedef_dict, new_def->name, new_def);
       } else {
+
+        // get size for null-size array declaration []
+        if (!ast->decl_specs->has_extern && obj_type->kind == ARRAY && obj_type->is_null_size) {
+          if (!cur->init_expr)
+            error("tentative array def must have initialize value");
+
+          if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
+            not_implemented(__func__);
+          } else if (cur->init_expr->kind == INITIALIZE_LIST) {
+            obj_type->arr_size = 0;
+            for (InitializeList *init_list_cur = cur->init_expr->init_list;
+                 init_list_cur; init_list_cur = init_list_cur->next)
+              obj_type->arr_size++;
+          } else {
+            error(
+                "tentative array def must have initialize-list or str-literal");
+          }
+        }
 
         Obj *obj = find_global(state, obj_name);
         if (obj) {
@@ -573,23 +573,6 @@ void analyze_stmt(Tree *ast, Analyze *state) {
       char *obj_name = getname_declarator(cur);
       Type *obj_type = gettype_declarator(cur, base_type);
 
-      // get size for null-size array []
-      if (obj_type->kind == ARRAY && get_arr_declarator(cur)->is_null_size) {
-        if (!cur->init_expr)
-          error("tentative array def must have initialize value");
-
-        if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
-          not_implemented(__func__);
-        } else if (cur->init_expr->kind == INITIALIZE_LIST) {
-          obj_type->arr_size = 0;
-          for (InitializeList *init_list_cur = cur->init_expr->init_list;
-               init_list_cur; init_list_cur = init_list_cur->next)
-            obj_type->arr_size++;
-        } else {
-          error("tentative array def must have initialize-list or str-literal");
-        }
-      }
-
       if (ast->decl_specs->has_typedef) {
         Typedef *new_def = calloc(1, sizeof(Typedef));
         new_def->name = obj_name;
@@ -601,6 +584,25 @@ void analyze_stmt(Tree *ast, Analyze *state) {
         Obj *lvar = calloc(1, sizeof(Obj));
         lvar->obj_name = obj_name;
         lvar->type = obj_type;
+
+        // get size for null-size array []
+        if (obj_type->kind == ARRAY && obj_type->is_null_size) {
+          if (!cur->init_expr)
+            error("tentative array def must have initialize value");
+
+          if (obj_type->ptr_to->kind == CHAR && cur->init_expr->kind == STR) {
+            not_implemented(__func__);
+          } else if (cur->init_expr->kind == INITIALIZE_LIST) {
+            obj_type->arr_size = 0;
+            for (InitializeList *init_list_cur = cur->init_expr->init_list;
+                 init_list_cur; init_list_cur = init_list_cur->next)
+              obj_type->arr_size++;
+          } else {
+            error(
+                "tentative array def must have initialize-list or str-literal");
+          }
+        }
+
         lvar->rbp_offset =
             calc_rbp_offset(state->current_func->stack_size,
                             type_size(obj_type), type_alignment(obj_type));
