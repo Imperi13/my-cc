@@ -1098,6 +1098,9 @@ void analyze_expr(Tree *ast, Analyze *state) {
 
         add_cast_stmt(arg, argtype);
       }
+
+      if(!is_scalar(arg->type))
+        not_implemented(__func__);
     }
 
     ast->type = func_type->return_type;
