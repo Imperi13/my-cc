@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "codegen.h"
@@ -986,6 +987,80 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  pushq $0\n");
 
     long call_arg_size = size_vector(expr->call_args_vector);
+    long gp_cnt = 0, fp_cnt = 0;
+    long memory_arg = 0;
+
+    ArgClass *arg_classes = calloc(call_arg_size, sizeof(ArgClass));
+    for (long i = 0; i < call_arg_size; i++) {
+      Tree *arg = get_vector(expr->call_args_vector, i);
+      ArgClass tmp = classify_argument(arg->type);
+
+      // pass by stack
+      if (tmp == ARG_INTEGER && gp_cnt >= 6)
+        tmp = ARG_MEMORY;
+
+      if (tmp == ARG_SSE && fp_cnt >= 8)
+        tmp = ARG_MEMORY;
+
+      if (tmp == ARG_INTEGER)
+        gp_cnt++;
+      else if (tmp == ARG_SSE)
+        fp_cnt++;
+      else if (tmp == ARG_MEMORY)
+        memory_arg++;
+
+      arg_classes[i] = tmp;
+    }
+
+    bool need_padding = memory_arg % 2 == 1;
+
+    if (need_padding)
+      fprintf(codegen_output, "  pushq $0\n");
+
+    for (long i = call_arg_size - 1; i >= 0; i--) {
+      if (arg_classes[i] == ARG_MEMORY) {
+        Tree *arg = get_vector(expr->call_args_vector, i);
+        codegen_stmt(codegen_output, arg);
+
+        if (is_scalar(arg->type))
+          push_reg(codegen_output, &reg_rax, arg->type);
+        else if (is_floating_point(arg->type))
+          push_reg(codegen_output, &reg_xmm0, arg->type);
+      }
+    }
+
+    // store fp arg
+    for (long i = call_arg_size - 1; i >= 0; i--) {
+      if (arg_classes[i] == ARG_SSE) {
+        Tree *arg = get_vector(expr->call_args_vector, i);
+        codegen_stmt(codegen_output, arg);
+        push_reg(codegen_output, &reg_xmm0, arg->type);
+      }
+    }
+
+    // store gp arg
+    for (long i = call_arg_size - 1; i >= 0; i--) {
+      if (arg_classes[i] == ARG_INTEGER) {
+        Tree *arg = get_vector(expr->call_args_vector, i);
+        codegen_stmt(codegen_output, arg);
+        push_reg(codegen_output, &reg_rax, arg->type);
+      }
+    }
+
+    codegen_stmt(codegen_output, expr->lhs);
+
+    for (long i = 0; i < gp_cnt; i++) {
+      pop_reg(codegen_output, call_register[i], &type_long);
+    }
+
+    for (long i = 0; i < fp_cnt; i++) {
+      pop_reg(codegen_output, call_SSE_register[i], &type_double);
+    }
+
+    fprintf(codegen_output, "  call *%%rax\n");
+
+    /*
+    long call_arg_size = size_vector(expr->call_args_vector);
 
     bool need_padding = (call_arg_size > 6) && (call_arg_size % 2 == 1);
     if (need_padding)
@@ -1009,6 +1084,14 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     // clean stack_arg
     for (int i = 0; i < ((call_arg_size > 6) ? call_arg_size - 6 : 0); i++)
       fprintf(codegen_output, " popq %%r10\n");
+
+    if (need_padding)
+      fprintf(codegen_output, "  popq %%r10\n");
+      */
+
+    for (long i = 0; i < memory_arg; i++) {
+      fprintf(codegen_output, "  popq %%r10\n");
+    }
 
     if (need_padding)
       fprintf(codegen_output, "  popq %%r10\n");

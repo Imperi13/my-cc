@@ -166,7 +166,8 @@ void analyze_external_decl(Tree *ast, Analyze *state) {
       } else {
 
         // get size for null-size array declaration []
-        if (!ast->decl_specs->has_extern && obj_type->kind == ARRAY && obj_type->is_null_size) {
+        if (!ast->decl_specs->has_extern && obj_type->kind == ARRAY &&
+            obj_type->is_null_size) {
           if (!cur->init_expr)
             error("tentative array def must have initialize value");
 
@@ -1099,7 +1100,7 @@ void analyze_expr(Tree *ast, Analyze *state) {
         add_cast_stmt(arg, argtype);
       }
 
-      if(!is_scalar(arg->type))
+      if (!is_scalar(arg->type) && !is_floating_point(arg->type))
         not_implemented(__func__);
     }
 
