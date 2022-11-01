@@ -130,7 +130,44 @@ void codegen_function(FILE *codegen_output, Tree *func) {
   }
 
   Tree *cur = getargs_declarator(func->declarator);
-  int count = 0;
+  int gp_cnt = 0, fp_cnt = 0;
+  int memory_arg_cnt = 0;
+  while (cur) {
+    Obj *cur_obj = cur->declarator->def_obj;
+    ArgClass tmp = classify_argument(cur_obj->type);
+
+    if (tmp == ARG_INTEGER && gp_cnt >= 6)
+      tmp = ARG_MEMORY;
+
+    if (tmp == ARG_SSE && fp_cnt >= 8)
+      tmp = ARG_MEMORY;
+
+    if (tmp == ARG_INTEGER) {
+      fprintf(codegen_output, "  mov%c %s, -%d(%%rbp)\n",
+              get_size_suffix(cur_obj->type),
+              get_reg_alias(call_register[gp_cnt], cur_obj->type),
+              cur_obj->rbp_offset);
+
+      gp_cnt++;
+    } else if (tmp == ARG_SSE) {
+      fprintf(codegen_output, "  movs%c %s, -%d(%%rbp)\n",
+              get_floating_point_suffix(cur_obj->type),
+              get_SSE_reg_alias(call_SSE_register[fp_cnt]),
+              cur_obj->rbp_offset);
+      fp_cnt++;
+    } else if (tmp == ARG_MEMORY) {
+      fprintf(codegen_output, "  mov%c %d(%%rbp), %s\n",
+              get_size_suffix(cur_obj->type), 0x10 + 0x8 * memory_arg_cnt,
+              get_reg_alias(&reg_rax, cur_obj->type));
+      fprintf(codegen_output, "  mov%c %s, -%d(%%rbp)\n",
+              get_size_suffix(cur_obj->type),
+              get_reg_alias(&reg_rax, cur_obj->type), cur_obj->rbp_offset);
+      memory_arg_cnt++;
+    }
+
+    cur = cur->next;
+  }
+  /*
   while (cur) {
     Obj *cur_obj = cur->declarator->def_obj;
     if (count < 6) {
@@ -149,6 +186,7 @@ void codegen_function(FILE *codegen_output, Tree *func) {
     count++;
     cur = cur->next;
   }
+  */
 
   codegen_stmt(codegen_output, func->func_body);
 

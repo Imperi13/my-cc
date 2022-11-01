@@ -29,6 +29,7 @@ extern Register *call_SSE_register[8];
 char get_size_suffix(Type *type);
 char get_floating_point_suffix(Type *floating_type);
 char *get_reg_alias(Register *reg, Type *type);
+char *get_SSE_reg_alias(Register *reg);
 
 void push_reg(FILE *codegen_output, Register *reg, Type *type);
 void pop_reg(FILE *codegen_output, Register *reg, Type *type);

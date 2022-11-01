@@ -71,6 +71,11 @@ char *get_reg_alias(Register *reg, Type *type) {
     error("invalid type");
 }
 
+char *get_SSE_reg_alias(Register *reg) {
+  assert(reg->is_SSE, "not SSE reg");
+  return reg->alias[0];
+}
+
 void push_reg(FILE *codegen_output, Register *reg, Type *type) {
   if (reg->is_SSE) {
     fprintf(codegen_output, "  subq $8, %%rsp\n");
