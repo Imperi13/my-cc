@@ -664,4 +664,5 @@ run_test typedef 'typedef int T[]; int main(){ T test = {10,20,30}; return 114 +
 
 run_test floating_return 'float add(int a,int b){float sum = 0; sum+=a; sum+=b; return sum;} int main(){float a = add(10,20); if(a > 29)return 174;else return 164;}' 174
 
+run_test_with_supplement1 floating_argument 'extern float add_float(float,float); int main(){float a = add_float(10.0,20.0); if(a > 29)return 174;else return 164;}' 174
 run_test floating_argument 'float add(float a,float b){float sum = 0;sum += a;sum += b;return sum;} int main(){float a = add(10.0,20.0); if(a > 29)return 174;else return 164; }' 174
