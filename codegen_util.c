@@ -76,7 +76,7 @@ char *get_SSE_reg_alias(Register *reg) {
   return reg->alias[0];
 }
 
-void push_reg(FILE *codegen_output, Register *reg, Type *type) {
+void push_reg(FILE *codegen_output, Register *reg) {
   if (reg->is_SSE) {
     fprintf(codegen_output, "  subq $8, %%rsp\n");
     fprintf(codegen_output, "  movsd %s, 0(%%rsp)\n", reg->alias[0]);
@@ -85,7 +85,7 @@ void push_reg(FILE *codegen_output, Register *reg, Type *type) {
   }
 }
 
-void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
+void pop_reg(FILE *codegen_output, Register *reg) {
   if (reg->is_SSE) {
     fprintf(codegen_output, "  movsd 0(%%rsp), %s\n", reg->alias[0]);
     fprintf(codegen_output, "  addq $8, %%rsp\n");

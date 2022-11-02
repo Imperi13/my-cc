@@ -31,8 +31,10 @@ char get_floating_point_suffix(Type *floating_type);
 char *get_reg_alias(Register *reg, Type *type);
 char *get_SSE_reg_alias(Register *reg);
 
-void push_reg(FILE *codegen_output, Register *reg, Type *type);
-void pop_reg(FILE *codegen_output, Register *reg, Type *type);
+// push/pop least 8bytes
+void push_reg(FILE *codegen_output, Register *reg);
+void pop_reg(FILE *codegen_output, Register *reg);
+
 void mov_reg(FILE *codegen_output, Register *src, Register *dst, Type *type);
 
 void mov_imm(FILE *codegen_output, Register *reg, Type *type,

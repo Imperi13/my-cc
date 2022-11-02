@@ -123,7 +123,7 @@ void codegen_function(FILE *codegen_output, Tree *func) {
 
   if (func->declarator->has_variable_arg) {
     for (int i = 5; i >= 0; i--) {
-      push_reg(codegen_output, call_register[i], &type_long);
+      push_reg(codegen_output, call_register[i]);
     }
     current_function->saved_argument_offset =
         current_function->stack_size + 0x30;
@@ -1061,9 +1061,9 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
         codegen_stmt(codegen_output, arg);
 
         if (is_scalar(arg->type))
-          push_reg(codegen_output, &reg_rax, arg->type);
+          push_reg(codegen_output, &reg_rax);
         else if (is_floating_point(arg->type))
-          push_reg(codegen_output, &reg_xmm0, arg->type);
+          push_reg(codegen_output, &reg_xmm0);
       }
     }
 
@@ -1072,7 +1072,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
       if (arg_classes[i] == ARG_SSE) {
         Tree *arg = get_vector(expr->call_args_vector, i);
         codegen_stmt(codegen_output, arg);
-        push_reg(codegen_output, &reg_xmm0, arg->type);
+        push_reg(codegen_output, &reg_xmm0);
       }
     }
 
@@ -1081,18 +1081,18 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
       if (arg_classes[i] == ARG_INTEGER) {
         Tree *arg = get_vector(expr->call_args_vector, i);
         codegen_stmt(codegen_output, arg);
-        push_reg(codegen_output, &reg_rax, arg->type);
+        push_reg(codegen_output, &reg_rax);
       }
     }
 
     codegen_stmt(codegen_output, expr->lhs);
 
     for (long i = 0; i < gp_cnt; i++) {
-      pop_reg(codegen_output, call_register[i], &type_long);
+      pop_reg(codegen_output, call_register[i]);
     }
 
     for (long i = 0; i < fp_cnt; i++) {
-      pop_reg(codegen_output, call_SSE_register[i], &type_double);
+      pop_reg(codegen_output, call_SSE_register[i]);
     }
 
     fprintf(codegen_output, "  call *%%rax\n");
@@ -1142,7 +1142,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
     if (is_scalar(expr->lhs->type)) {
-      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      push_reg(codegen_output, &reg_rax);
       if (expr->lhs->type->kind == PTR)
         fprintf(codegen_output, "  add%c $%d, %s\n",
                 get_size_suffix(expr->lhs->type),
@@ -1153,7 +1153,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
                 get_size_suffix(expr->lhs->type),
                 get_reg_alias(&reg_rax, expr->lhs->type));
       store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax);
     } else {
       fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
               get_floating_point_suffix(expr->lhs->type));
@@ -1172,7 +1172,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
     if (is_scalar(expr->lhs->type)) {
-      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      push_reg(codegen_output, &reg_rax);
       if (expr->lhs->type->kind == PTR)
         fprintf(codegen_output, "  sub%c $%d, %s\n",
                 get_size_suffix(expr->lhs->type),
@@ -1183,7 +1183,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
                 get_size_suffix(expr->lhs->type),
                 get_reg_alias(&reg_rax, expr->lhs->type));
       store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax);
     } else {
       fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
               get_floating_point_suffix(expr->lhs->type));
@@ -1285,10 +1285,10 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  addq $8, %%rsp\n");
   } else {
     codegen_stmt(codegen_output, expr->lhs);
-    push_reg(codegen_output, &reg_rax, expr->lhs->type);
+    push_reg(codegen_output, &reg_rax);
     codegen_stmt(codegen_output, expr->rhs);
     mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
-    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    pop_reg(codegen_output, &reg_rax);
   }
 
   switch (expr->kind) {
