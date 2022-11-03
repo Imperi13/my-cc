@@ -20,9 +20,18 @@ Register reg_r9 = {.alias = {"%r9b", "%r9w", "%r9d", "%r9"}};
 
 Register reg_xmm0 = {.alias = {"%xmm0", "", "", ""}, .is_SSE = true};
 Register reg_xmm1 = {.alias = {"%xmm1", "", "", ""}, .is_SSE = true};
+Register reg_xmm2 = {.alias = {"%xmm2", "", "", ""}, .is_SSE = true};
+Register reg_xmm3 = {.alias = {"%xmm3", "", "", ""}, .is_SSE = true};
+Register reg_xmm4 = {.alias = {"%xmm4", "", "", ""}, .is_SSE = true};
+Register reg_xmm5 = {.alias = {"%xmm5", "", "", ""}, .is_SSE = true};
+Register reg_xmm6 = {.alias = {"%xmm6", "", "", ""}, .is_SSE = true};
+Register reg_xmm7 = {.alias = {"%xmm7", "", "", ""}, .is_SSE = true};
 
 Register *call_register[6] = {&reg_rdi, &reg_rsi, &reg_rdx,
                               &reg_rcx, &reg_r8,  &reg_r9};
+
+Register *call_SSE_register[8] = {&reg_xmm0, &reg_xmm1, &reg_xmm2, &reg_xmm3,
+                                  &reg_xmm4, &reg_xmm5, &reg_xmm6, &reg_xmm7};
 
 char get_size_suffix(Type *type) {
   assert(is_scalar(type), "not scalar type");
@@ -62,17 +71,24 @@ char *get_reg_alias(Register *reg, Type *type) {
     error("invalid type");
 }
 
-void push_reg(FILE *codegen_output, Register *reg, Type *type) {
-  if (is_scalar(type)) {
-    fprintf(codegen_output, "  pushq %s\n", reg->alias[3]);
+char *get_SSE_reg_alias(Register *reg) {
+  assert(reg->is_SSE, "not SSE reg");
+  return reg->alias[0];
+}
+
+void push_reg(FILE *codegen_output, Register *reg) {
+  if (reg->is_SSE) {
+    fprintf(codegen_output, "  subq $8, %%rsp\n");
+    fprintf(codegen_output, "  movsd %s, 0(%%rsp)\n", reg->alias[0]);
   } else {
     fprintf(codegen_output, "  pushq %s\n", reg->alias[3]);
   }
 }
 
-void pop_reg(FILE *codegen_output, Register *reg, Type *type) {
-  if (is_scalar(type)) {
-    fprintf(codegen_output, "  popq %s\n", reg->alias[3]);
+void pop_reg(FILE *codegen_output, Register *reg) {
+  if (reg->is_SSE) {
+    fprintf(codegen_output, "  movsd 0(%%rsp), %s\n", reg->alias[0]);
+    fprintf(codegen_output, "  addq $8, %%rsp\n");
   } else {
     fprintf(codegen_output, "  popq %s\n", reg->alias[3]);
   }
@@ -288,4 +304,16 @@ void rshift_reg(FILE *codegen_output, Type *lhs_type, Type *rhs_type) {
   else
     fprintf(codegen_output, "  sar%c %%cl, %s\n", get_size_suffix(lhs_type),
             get_reg_alias(&reg_rax, lhs_type));
+}
+
+// argument classification
+
+ArgClass classify_argument(Type *argtype) {
+  if (is_scalar(argtype))
+    return ARG_INTEGER;
+
+  if (is_floating_point(argtype))
+    return ARG_SSE;
+
+  not_implemented(__func__);
 }

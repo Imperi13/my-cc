@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "codegen.h"
@@ -122,14 +123,51 @@ void codegen_function(FILE *codegen_output, Tree *func) {
 
   if (func->declarator->has_variable_arg) {
     for (int i = 5; i >= 0; i--) {
-      push_reg(codegen_output, call_register[i], &type_long);
+      push_reg(codegen_output, call_register[i]);
     }
     current_function->saved_argument_offset =
         current_function->stack_size + 0x30;
   }
 
   Tree *cur = getargs_declarator(func->declarator);
-  int count = 0;
+  int gp_cnt = 0, fp_cnt = 0;
+  int memory_arg_cnt = 0;
+  while (cur) {
+    Obj *cur_obj = cur->declarator->def_obj;
+    ArgClass tmp = classify_argument(cur_obj->type);
+
+    if (tmp == ARG_INTEGER && gp_cnt >= 6)
+      tmp = ARG_MEMORY;
+
+    if (tmp == ARG_SSE && fp_cnt >= 8)
+      tmp = ARG_MEMORY;
+
+    if (tmp == ARG_INTEGER) {
+      fprintf(codegen_output, "  mov%c %s, -%d(%%rbp)\n",
+              get_size_suffix(cur_obj->type),
+              get_reg_alias(call_register[gp_cnt], cur_obj->type),
+              cur_obj->rbp_offset);
+
+      gp_cnt++;
+    } else if (tmp == ARG_SSE) {
+      fprintf(codegen_output, "  movs%c %s, -%d(%%rbp)\n",
+              get_floating_point_suffix(cur_obj->type),
+              get_SSE_reg_alias(call_SSE_register[fp_cnt]),
+              cur_obj->rbp_offset);
+      fp_cnt++;
+    } else if (tmp == ARG_MEMORY) {
+      fprintf(codegen_output, "  mov%c %d(%%rbp), %s\n",
+              get_size_suffix(cur_obj->type), 0x10 + 0x8 * memory_arg_cnt,
+              get_reg_alias(&reg_rax, cur_obj->type));
+      fprintf(codegen_output, "  mov%c %s, -%d(%%rbp)\n",
+              get_size_suffix(cur_obj->type),
+              get_reg_alias(&reg_rax, cur_obj->type), cur_obj->rbp_offset);
+      memory_arg_cnt++;
+    }
+
+    cur = cur->next;
+  }
+  /*
   while (cur) {
     Obj *cur_obj = cur->declarator->def_obj;
     if (count < 6) {
@@ -148,6 +186,7 @@ void codegen_function(FILE *codegen_output, Tree *func) {
     count++;
     cur = cur->next;
   }
+  */
 
   codegen_stmt(codegen_output, func->func_body);
 
@@ -986,6 +1025,80 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  pushq $0\n");
 
     long call_arg_size = size_vector(expr->call_args_vector);
+    long gp_cnt = 0, fp_cnt = 0;
+    long memory_arg = 0;
+
+    ArgClass *arg_classes = calloc(call_arg_size, sizeof(ArgClass));
+    for (long i = 0; i < call_arg_size; i++) {
+      Tree *arg = get_vector(expr->call_args_vector, i);
+      ArgClass tmp = classify_argument(arg->type);
+
+      // pass by stack
+      if (tmp == ARG_INTEGER && gp_cnt >= 6)
+        tmp = ARG_MEMORY;
+
+      if (tmp == ARG_SSE && fp_cnt >= 8)
+        tmp = ARG_MEMORY;
+
+      if (tmp == ARG_INTEGER)
+        gp_cnt++;
+      else if (tmp == ARG_SSE)
+        fp_cnt++;
+      else if (tmp == ARG_MEMORY)
+        memory_arg++;
+
+      arg_classes[i] = tmp;
+    }
+
+    bool need_padding = memory_arg % 2 == 1;
+
+    if (need_padding)
+      fprintf(codegen_output, "  pushq $0\n");
+
+    for (long i = call_arg_size - 1; i >= 0; i--) {
+      if (arg_classes[i] == ARG_MEMORY) {
+        Tree *arg = get_vector(expr->call_args_vector, i);
+        codegen_stmt(codegen_output, arg);
+
+        if (is_scalar(arg->type))
+          push_reg(codegen_output, &reg_rax);
+        else if (is_floating_point(arg->type))
+          push_reg(codegen_output, &reg_xmm0);
+      }
+    }
+
+    // store fp arg
+    for (long i = call_arg_size - 1; i >= 0; i--) {
+      if (arg_classes[i] == ARG_SSE) {
+        Tree *arg = get_vector(expr->call_args_vector, i);
+        codegen_stmt(codegen_output, arg);
+        push_reg(codegen_output, &reg_xmm0);
+      }
+    }
+
+    // store gp arg
+    for (long i = call_arg_size - 1; i >= 0; i--) {
+      if (arg_classes[i] == ARG_INTEGER) {
+        Tree *arg = get_vector(expr->call_args_vector, i);
+        codegen_stmt(codegen_output, arg);
+        push_reg(codegen_output, &reg_rax);
+      }
+    }
+
+    codegen_stmt(codegen_output, expr->lhs);
+
+    for (long i = 0; i < gp_cnt; i++) {
+      pop_reg(codegen_output, call_register[i]);
+    }
+
+    for (long i = 0; i < fp_cnt; i++) {
+      pop_reg(codegen_output, call_SSE_register[i]);
+    }
+
+    fprintf(codegen_output, "  call *%%rax\n");
+
+    /*
+    long call_arg_size = size_vector(expr->call_args_vector);
 
     bool need_padding = (call_arg_size > 6) && (call_arg_size % 2 == 1);
     if (need_padding)
@@ -1012,6 +1125,14 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
 
     if (need_padding)
       fprintf(codegen_output, "  popq %%r10\n");
+      */
+
+    for (long i = 0; i < memory_arg; i++) {
+      fprintf(codegen_output, "  popq %%r10\n");
+    }
+
+    if (need_padding)
+      fprintf(codegen_output, "  popq %%r10\n");
 
     fprintf(codegen_output, "  popq %%r10\n");
     fprintf(codegen_output, "  popq %%rsp\n");
@@ -1021,7 +1142,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
     if (is_scalar(expr->lhs->type)) {
-      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      push_reg(codegen_output, &reg_rax);
       if (expr->lhs->type->kind == PTR)
         fprintf(codegen_output, "  add%c $%d, %s\n",
                 get_size_suffix(expr->lhs->type),
@@ -1032,7 +1153,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
                 get_size_suffix(expr->lhs->type),
                 get_reg_alias(&reg_rax, expr->lhs->type));
       store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax);
     } else {
       fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
               get_floating_point_suffix(expr->lhs->type));
@@ -1051,7 +1172,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  movq %%rax, %%rdi\n");
     load2rax_from_raxaddr(codegen_output, expr->lhs->type);
     if (is_scalar(expr->lhs->type)) {
-      push_reg(codegen_output, &reg_rax, expr->lhs->type);
+      push_reg(codegen_output, &reg_rax);
       if (expr->lhs->type->kind == PTR)
         fprintf(codegen_output, "  sub%c $%d, %s\n",
                 get_size_suffix(expr->lhs->type),
@@ -1062,7 +1183,7 @@ void codegen_expr(FILE *codegen_output, Tree *expr) {
                 get_size_suffix(expr->lhs->type),
                 get_reg_alias(&reg_rax, expr->lhs->type));
       store2rdiaddr_from_rax(codegen_output, expr->lhs->type);
-      pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+      pop_reg(codegen_output, &reg_rax);
     } else {
       fprintf(codegen_output, "  movs%c %%xmm0, %%xmm2\n",
               get_floating_point_suffix(expr->lhs->type));
@@ -1164,10 +1285,10 @@ void codegen_binary_operator(FILE *codegen_output, Tree *expr) {
     fprintf(codegen_output, "  addq $8, %%rsp\n");
   } else {
     codegen_stmt(codegen_output, expr->lhs);
-    push_reg(codegen_output, &reg_rax, expr->lhs->type);
+    push_reg(codegen_output, &reg_rax);
     codegen_stmt(codegen_output, expr->rhs);
     mov_reg(codegen_output, &reg_rax, &reg_rdi, expr->rhs->type);
-    pop_reg(codegen_output, &reg_rax, expr->lhs->type);
+    pop_reg(codegen_output, &reg_rax);
   }
 
   switch (expr->kind) {

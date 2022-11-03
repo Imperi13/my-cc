@@ -514,6 +514,7 @@ run_test_with_supplement0 more_6_args_1 'int add8(); int main(){ return add8(-1,
 run_test more_6_args_2 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d",1,2,3,4,5,6,7,8);return 174; }' 174
 run_test more_6_args_3 'int printf(); int main(){ printf("%d,%d,%d,%d,%d,%d,%d,%d,%d",1,2,3,4,5,6,7,8,9);return 174; }' 174
 run_test more_6_args_4 'int add8(int a,int b,int c,int d,int e,int f,int g,int h){return a+b+c+d+e+f+g+h;} int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
+run_test more_6_args_4 'int add8(int a,int b,int c,int d,int e,int f,int g,int h){return a-b*c+d/e+f*g*h;} int main(){ return add8(10,2,5,8,2,1,4,1); }' 8
 
 run_test type_spec_1 'int main(){unsigned long n = 10; return 164+n;}' 174
 run_test type_spec_2 'int main(){unsigned n = 10; return 164+n;}' 174
@@ -658,3 +659,12 @@ run_test floating_cast 'int main(){double a = 10;float b = a; if(19<a+b && a+b <
 
 run_test floating_constant 'int main(){float a = 1.23; return 174;}' 174
 run_test floating_constant 'int main(){float a = 10.5; if(2*a > 20.5) return 174; else return 164;}' 174
+
+run_test typedef 'typedef int T[3]; int main(){ T test; test[0] = 10; return 164 + test[0]; }' 174
+run_test typedef 'typedef int T[]; int main(){ T test = {10,20,30}; return 114 + test[0] + test[1] + test[2]; }' 174
+
+run_test floating_return 'float add(int a,int b){float sum = 0; sum+=a; sum+=b; return sum;} int main(){float a = add(10,20); if(a > 29)return 174;else return 164;}' 174
+
+run_test_with_supplement1 floating_argument 'extern float add_float(float,float); int main(){float a = add_float(10.0,20.0); if(a > 29)return 174;else return 164;}' 174
+run_test floating_argument 'float add(float a,float b){float sum = 0;sum += a;sum += b;return sum;} int main(){float a = add(10.0,20.0); if(a > 29)return 174;else return 164; }' 174
+run_test floating_argument 'void calc(float a,long b,double c,int d,float *p){float sum = 0;sum += a;sum += b*c; sum -= d; *p = sum;} int main(){float a=0; calc(10,2,12.5,5,&a); if(a > 29)return 174;else return 164; }' 174
